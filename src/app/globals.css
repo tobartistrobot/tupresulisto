@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+    .h-safe-screen {
+        height: 100vh;
+        height: 100dvh;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .glass-sidebar {
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(12px);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .input-saas {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s ease;
+    }
+
+    .input-saas:focus {
+        background: #ffffff;
+        border-color: #0ea5e9;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        outline: none;
+    }
+
+    .glass-panel {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+    }
+
+    .smooth-scroll {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .sticky-col-header {
+        position: sticky;
+        left: 0;
+        z-index: 20;
+    }
+
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+    }
+
+    .sticky-row-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .sticky-corner {
+        position: sticky;
+        left: 0;
+        top: 0;
+        z-index: 30;
+    }
+
+    /* Animations */
+    .animate-fade-in {
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .animate-slide-up {
+        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .animate-pulse-slow {
+        animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    .animation-delay-100 {
+        animation-delay: 100ms;
+    }
+
+    .animation-delay-200 {
+        animation-delay: 200ms;
+    }
+
+    .animation-delay-300 {
+        animation-delay: 300ms;
+    }
+
+    .animation-delay-500 {
+        animation-delay: 500ms;
+    }
+
+    .animation-delay-1000 {
+        animation-delay: 1000ms;
+    }
+}
