@@ -1,7 +1,7 @@
 import React from 'react';
 import { Crown, Check, X } from 'lucide-react';
 
-const UpgradeModal = ({ onClose, onUpgrade }) => {
+const UpgradeModal = ({ onClose, onUpgrade, message }) => {
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
             <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transform transition-all scale-100 ring-1 ring-slate-100">
@@ -22,7 +22,7 @@ const UpgradeModal = ({ onClose, onUpgrade }) => {
 
                 <div className="p-8">
                     <p className="text-center text-slate-600 mb-6 text-lg leading-relaxed">
-                        Has alcanzado el límite de <strong className="text-slate-900">3 productos</strong> de tu plan gratuito.
+                        {message || <>Has alcanzado el límite de <strong className="text-slate-900">3 productos</strong> de tu plan gratuito.</>}
                     </p>
 
                     <div className="bg-blue-50/50 rounded-xl p-5 mb-8 border border-blue-100">

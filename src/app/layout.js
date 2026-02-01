@@ -12,11 +12,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
+  metadataBase: new URL('https://tupresulisto.com'),
   title: "TuPresuListo - Gestión para Carpintería",
   description: "Gestión profesional y sencilla de presupuestos",
   icons: {
     icon: '/icon.svg',
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 import Script from "next/script";

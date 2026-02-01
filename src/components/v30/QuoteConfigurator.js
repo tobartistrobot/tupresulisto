@@ -4,9 +4,11 @@ import { useToast } from '../../context/ToastContext';
 import {
     Calculator, Users, Box, Settings, Trash, Plus, Save, Edit, Printer, FileText, Search, RefreshCw,
     ChevronUp, ChevronDown, Download, Upload, X, Ban, List, Undo, ArrowLeft, ArrowRight, ZoomIn, ZoomOut,
-    Wand, Sparkles, Home, Check, BarChart2, Share2, Target, Database, Percent
+    Wand, Sparkles, Home, Check, BarChart2, Share2, Target, Database, Percent, Lock
 } from 'lucide-react';
-import MatrixEditor from './MatrixEditor'; // Not used here directly but good to have context if needed (actually it is imported in ProductManager usually)
+import MatrixEditor from './MatrixEditor';
+import StatusSelector from './StatusSelector';
+import { round2, sanitizeFloat } from '../../utils/mathUtils';
 
 const formatCurrency = (amount) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount || 0);
 
@@ -25,13 +27,13 @@ const CartSummaryItem = React.memo(({ item, idx, onRemove, onUpdateQty, onMove }
                 <p className="font-bold text-sm text-slate-800 truncate pr-16">{item.product.name}</p>
                 <p className="text-xs text-slate-500">{item.width}x{item.height} {item.locationLabel && `· ${item.locationLabel}`}</p>
                 {item.selectedExtras?.length > 0 && <div className="mt-1 flex flex-wrap gap-1">{item.selectedExtras.map((e, i) => (<span key={i} className="inline-flex items-center text-[10px] bg-slate-50 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">{e.qty > 1 && <b className="text-blue-600 mr-1">{e.qty}x</b>}{e.name}</span>))}</div>}
-                <div className="flex justify-between items-center mt-2"><div className="flex items-center gap-1 bg-slate-50 rounded-lg p-0.5 border border-slate-200"><button onClick={() => onUpdateQty(item.id, -1)} className="w-6 h-6 flex items-center justify-center hover:bg-white rounded-md transition-colors text-slate-600 font-bold">-</button><span className="text-xs font-bold w-6 text-center text-slate-700">{item.quantity}</span><button onClick={() => onUpdateQty(item.id, 1)} className="w-6 h-6 flex items-center justify-center hover:bg-white rounded-md transition-colors text-slate-600 font-bold">+</button></div><b className="text-sm text-blue-900 font-mono">{formatCurrency(item.price)}</b></div>
+                <div className="flex justify-between items-center mt-2"><div className="flex items-center gap-1 bg-slate-50 rounded-lg p-0.5 border border-slate-200"><button onClick={() => onUpdateQty(item.id, -1)} className="w-12 h-12 flex items-center justify-center hover:bg-white rounded-md transition-colors text-slate-600 font-bold touch-target-48">-</button><span className="text-xs font-bold w-8 text-center text-slate-700">{item.quantity}</span><button onClick={() => onUpdateQty(item.id, 1)} className="w-12 h-12 flex items-center justify-center hover:bg-white rounded-md transition-colors text-slate-600 font-bold touch-target-48">+</button></div><b className="text-sm text-blue-900 font-mono">{formatCurrency(item.price)}</b></div>
             </div>
         </div>
     </div>
 ));
 
-const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave, onReset, initialData, clientsDb, className }) => {
+const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave, onReset, initialData, clientsDb, className, isPro, onUpgrade }) => {
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [dims, setDims] = useState({ w: 1000, h: 1000, q: 1 });
     const [locationLabel, setLocationLabel] = useState('');
@@ -46,16 +48,32 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
     const [mobileTab, setMobileTab] = useState('products');
     const [zoomLevel, setZoomLevel] = useState(0.8);
     const [docType, setDocType] = useState('quote');
+    const [saveStatus, setSaveStatus] = useState('idle');
     const toast = useToast();
 
     // Configurable VAT
     const vatRate = config.iva !== undefined && config.iva !== "" ? parseFloat(config.iva) : 21;
 
-    useEffect(() => { if (initialData) { setClient(initialData.client || { name: '', phone: '', email: '', address: '', city: '', source: initialData.client?.source || '' }); setFinancials(initialData.financials || { discountPercent: 0, deposit: 0 }); setQuoteMeta({ number: initialData.number, date: initialData.date, status: initialData.status || 'pending' }); } }, [initialData]);
+    // ... (keep existing lines)
+
+
+    useEffect(() => {
+        if (initialData) {
+            setClient(initialData.client || { name: '', phone: '', email: '', address: '', city: '', source: initialData.client?.source || '' });
+            setFinancials(initialData.financials || { discountPercent: 0, deposit: 0 });
+            setQuoteMeta({ number: initialData.number, date: initialData.date, status: initialData.status || 'pending' });
+        } else {
+            setClient({ name: '', phone: '', email: '', address: '', city: '', source: '' });
+            setFinancials({ discountPercent: 0, deposit: 0 });
+            setQuoteMeta({ number: `${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`, date: new Date().toLocaleDateString('es-ES'), status: 'pending' });
+        }
+    }, [initialData]);
 
     const [selectedExtras, setSelectedExtras] = useState([]);
     const [dropdownSelections, setDropdownSelections] = useState({});
     const [calculatedPrice, setCalculatedPrice] = useState(null);
+
+    // Precios logic UPDATED for Margin
 
     // Precios logic UPDATED for Margin
     const calcPrice = (product, w, h, q, extras, dropdowns) => {
@@ -64,21 +82,22 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
             const ws = product.matrix.widths; const hs = product.matrix.heights; const ps = product.matrix.prices;
             let c = ws.findIndex(x => x >= w); if (c === -1) c = ws.length - 1;
             let r = hs.findIndex(x => x >= h); if (r === -1) r = hs.length - 1;
-            base = parseFloat(ps[r][c]);
+            base = sanitizeFloat(ps[r][c]);
         } else if (product.priceType === 'unit') {
-            base = parseFloat(product.unitPrice);
+            base = sanitizeFloat(product.unitPrice);
         } else if (product.priceType === 'simple_area') {
-            base = (w * h / 1000000) * parseFloat(product.unitPrice);
+            base = (w * h / 1000000) * sanitizeFloat(product.unitPrice);
         } else if (product.priceType === 'simple_linear') {
-            base = (Math.max(w, h) / 1000) * parseFloat(product.unitPrice);
+            base = (Math.max(w, h) / 1000) * sanitizeFloat(product.unitPrice);
         }
 
         let extraTotal = 0;
         extras.forEach(e => {
-            if (e.type === 'fixed') extraTotal += parseFloat(e.value) * e.qty;
-            else if (e.type === 'percent') extraTotal += base * (parseFloat(e.value) / 100) * e.qty;
-            else if (e.type === 'linear') extraTotal += (Math.max(w, h) / 1000) * parseFloat(e.value) * e.qty;
-            else if (e.type === 'area') extraTotal += (w * h / 1000000) * parseFloat(e.value) * e.qty;
+            const val = sanitizeFloat(e.value);
+            if (e.type === 'fixed') extraTotal += val * e.qty;
+            else if (e.type === 'percent') extraTotal += base * (val / 100) * e.qty;
+            else if (e.type === 'linear') extraTotal += (Math.max(w, h) / 1000) * val * e.qty;
+            else if (e.type === 'area') extraTotal += (w * h / 1000000) * val * e.qty;
         });
 
         Object.keys(dropdowns).forEach(extraId => {
@@ -87,10 +106,11 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                 const optIndex = parseInt(dropdowns[extraId]);
                 const opt = extra.optionsList[optIndex];
                 if (opt) {
-                    if (opt.type === 'fixed') extraTotal += parseFloat(opt.value);
-                    else if (opt.type === 'percent') extraTotal += base * (parseFloat(opt.value) / 100);
-                    else if (opt.type === 'linear') extraTotal += (Math.max(w, h) / 1000) * parseFloat(opt.value);
-                    else if (opt.type === 'area') extraTotal += (w * h / 1000000) * parseFloat(opt.value);
+                    const val = sanitizeFloat(opt.value);
+                    if (opt.type === 'fixed') extraTotal += val;
+                    else if (opt.type === 'percent') extraTotal += base * (val / 100);
+                    else if (opt.type === 'linear') extraTotal += (Math.max(w, h) / 1000) * val;
+                    else if (opt.type === 'area') extraTotal += (w * h / 1000000) * val;
                 }
             }
         });
@@ -99,12 +119,12 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
         let priceBeforeMargin = base + extraTotal;
         let marginAmount = 0;
         if (product.marginType === 'percent' && product.marginValue) {
-            marginAmount = priceBeforeMargin * (parseFloat(product.marginValue) / 100);
+            marginAmount = priceBeforeMargin * (sanitizeFloat(product.marginValue) / 100);
         } else if (product.marginType === 'fixed' && product.marginValue) {
-            marginAmount = parseFloat(product.marginValue);
+            marginAmount = sanitizeFloat(product.marginValue);
         }
 
-        return (priceBeforeMargin + marginAmount) * q;
+        return round2((priceBeforeMargin + marginAmount) * q);
     };
 
     useEffect(() => { if (selectedProduct) { const total = calcPrice(selectedProduct, dims.w, dims.h, dims.q, selectedExtras, dropdownSelections); setCalculatedPrice(total); } }, [selectedProduct, dims, selectedExtras, dropdownSelections]);
@@ -122,9 +142,43 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
     const grandTotal = netTotal * (1 + vatRate / 100);
     const remainingBalance = grandTotal - financials.deposit;
 
-    const handleSave = () => { if (!client.name) return toast("Falta nombre cliente", "error"); if (cart.length === 0) return toast("Carrito vacío", "error"); onSave({ id: initialData?.id || Date.now(), number: quoteMeta.number, date: quoteMeta.date, status: quoteMeta.status, client, financials, items: cart, grandTotal }); toast("Presupuesto guardado", "success"); };
+    const handleSave = () => {
+        if (!client.name) {
+            toast("Falta nombre cliente", "error");
+            return;
+        }
+        if (cart.length === 0) {
+            toast("Carrito vacío", "error");
+            return;
+        }
+
+        try {
+            console.log("Guardando presupuesto...");
+            onSave({
+                id: initialData?.id || Date.now(),
+                number: quoteMeta.number,
+                date: quoteMeta.date,
+                status: quoteMeta.status,
+                client,
+                financials,
+                items: cart,
+                grandTotal
+            });
+
+            // Button Feedback
+            setSaveStatus('saved');
+            console.log("Estado guardado set to saved");
+            setTimeout(() => {
+                setSaveStatus('idle');
+                console.log("Estado guardado set to idle");
+            }, 3000);
+        } catch (error) {
+            console.error("Error saving quote:", error);
+            toast(`Error: ${error.message}`, "error");
+        }
+    };
     const downloadWord = () => { const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'><title>Presupuesto</title></head><body style="font-family:Arial;font-size:12px"><h1 style="color:${config.color}">${config.name}</h1><p>Cliente: ${client.name}</p><table>${cart.map(i => `<tr><td>${i.product.name}</td><td>${i.width}x${i.height}</td><td>${i.quantity}</td><td>${formatCurrency(i.price)}</td></tr>`).join('')}</table><h3>Total: ${formatCurrency(grandTotal)}</h3></body></html>`; const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob(['\ufeff', html], { type: 'application/msword' })); link.download = `Presupuesto_${client.name}.doc`; link.click(); };
-    const filteredClients = clientsDb.filter(c => c.name.toLowerCase().includes(clientSearchTerm.toLowerCase()) || c.phone.includes(clientSearchTerm));
+    const filteredClients = clientsDb.filter(c => (c.name || '').toLowerCase().includes(clientSearchTerm.toLowerCase()) || (c.phone || '').includes(clientSearchTerm));
 
     if (viewMode === 'print') return (
         <div className={`fixed inset-0 z-[100] bg-slate-100 flex flex-col h-safe-screen w-full fixed-print-view smooth-scroll overflow-auto`}>
@@ -144,11 +198,25 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
         </div>
     );
 
+    const handleLocalReset = () => {
+        if (onReset) onReset();
+        setClient({ name: '', phone: '', email: '', address: '', city: '', source: '' });
+        setFinancials({ discountPercent: 0, deposit: 0 });
+        setQuoteMeta({ number: `${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`, date: new Date().toLocaleDateString('es-ES'), status: 'pending' });
+        setCart([]);
+        setEditQuoteData(null);
+        setSelectedProduct(null);
+        setLocationLabel('');
+        setSelectedExtras([]);
+        setDropdownSelections({});
+        toast("Formulario limpio", "success");
+    };
+
     return (
         <div className={`flex flex-col md:flex-row h-full overflow-hidden ${className} app-tab`}>
             <div className="md:hidden flex bg-white border-b shadow-sm z-30 shrink-0"><button onClick={() => setMobileTab('products')} className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${mobileTab === 'products' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500'}`}>Catálogo</button><button onClick={() => setMobileTab('cart')} className={`flex-1 py-3 text-sm font-bold border-b-2 flex items-center justify-center gap-2 transition-colors ${mobileTab === 'cart' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500'}`}>Presupuesto <span className="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-black">{cart.length}</span></button></div>
             <div className={`${mobileTab === 'products' ? 'block' : 'hidden'} md:block w-full md:w-2/3 p-4 md:p-6 overflow-y-auto bg-slate-50/50`}>
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4"><div><h2 className="text-2xl font-black text-slate-800">Confeccionar</h2><div className="flex gap-2 mt-2"><div className="flex items-center gap-2 bg-white px-2 py-1 rounded border shadow-sm"><span className="text-[10px] font-bold text-slate-400 uppercase">REF</span><input className="bg-transparent text-sm font-bold w-20 outline-none" value={quoteMeta.number} onChange={e => setQuoteMeta({ ...quoteMeta, number: e.target.value })} /></div><div className="flex items-center gap-2 bg-white px-2 py-1 rounded border shadow-sm"><span className="text-[10px] font-bold text-slate-400 uppercase">FECHA</span><input className="bg-transparent text-sm font-bold w-20 outline-none" value={quoteMeta.date} onChange={e => setQuoteMeta({ ...quoteMeta, date: e.target.value })} /></div></div></div><button onClick={onReset} className="text-xs flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm bg-white hover:bg-red-50 text-red-600 border border-red-100 font-bold"><RefreshCw size={14} /> Limpiar Todo</button></div>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4"><div><h2 className="text-2xl font-black text-slate-800">Confeccionar</h2><div className="flex gap-2 mt-2"><div className="flex items-center gap-2 bg-white px-2 py-1 rounded border shadow-sm"><span className="text-[10px] font-bold text-slate-400 uppercase">REF</span><input className="bg-transparent text-sm font-bold w-20 outline-none" value={quoteMeta.number} onChange={e => setQuoteMeta({ ...quoteMeta, number: e.target.value })} /></div><div className="flex items-center gap-2 bg-white px-2 py-1 rounded border shadow-sm"><span className="text-[10px] font-bold text-slate-400 uppercase">FECHA</span><input className="bg-transparent text-sm font-bold w-20 outline-none" value={quoteMeta.date} onChange={e => setQuoteMeta({ ...quoteMeta, date: e.target.value })} /></div></div></div><button onClick={handleLocalReset} className="text-xs flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm bg-white hover:bg-red-50 text-red-600 border border-red-100 font-bold"><RefreshCw size={14} /> Limpiar Todo</button></div>
                 <div className="bg-white rounded-xl border shadow-sm p-0 mb-6 overflow-visible relative z-20">
                     <div className="bg-slate-50 p-3 border-b rounded-t-xl flex justify-between items-center"><span className="text-xs font-bold uppercase text-slate-500 tracking-wider ml-2">Datos del Cliente</span><button onClick={() => setShowClientSearch(!showClientSearch)} className="py-1 px-3 text-xs h-8 flex items-center gap-2 bg-white border rounded hover:bg-slate-50 text-slate-600"><Search size={14} /> Buscar</button></div>
                     <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -163,7 +231,36 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                 {!selectedProduct ? (
                     <div className="animate-fade-in">
                         <div className="mb-6 flex flex-col md:flex-row gap-4"><div className="relative flex-1 group"><Search className="absolute left-3 top-3 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} /><input className="w-full pl-10 p-3 border rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all" placeholder="Buscar producto..." value={filterTerm} onChange={e => setFilterTerm(e.target.value)} /></div><div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar md:flex-wrap">{['Todas', ...categories].map(c => <button key={c} onClick={() => setFilterCategory(c)} className={`px-4 py-2 rounded-lg whitespace-nowrap text-xs font-bold transition-all ${filterCategory === c ? 'bg-slate-800 text-white shadow-lg' : 'bg-white text-slate-600 border hover:bg-slate-50'}`}>{c}</button>)}</div></div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{products.filter(p => (filterCategory === 'Todas' || p.category === filterCategory) && p.name.toLowerCase().includes(filterTerm.toLowerCase())).map((p) => (<div key={p.id} onClick={() => setSelectedProduct(p)} className="group bg-white rounded-2xl border border-slate-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer relative"><div className="aspect-square bg-slate-50 relative w-full overflow-hidden">{p.image ? <img src={p.image} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" /> : <div className="flex h-full items-center justify-center text-slate-300"><Box size={40} /></div>}<div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center p-4"><span className="text-white font-bold text-sm bg-white/20 backdrop-blur px-3 py-1 rounded-full">Seleccionar</span></div></div><div className="p-4"><h3 className="font-bold text-sm text-slate-800 leading-tight mb-1">{p.name}</h3><p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold bg-slate-100 w-fit px-2 py-0.5 rounded">{p.category}</p></div></div>))}</div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{products.filter(p => (filterCategory === 'Todas' || p.category === filterCategory) && p.name.toLowerCase().includes(filterTerm.toLowerCase())).map((p) => {
+                            const originalIndex = products.findIndex(prod => prod.id === p.id);
+                            const isLocked = !isPro && originalIndex >= 3;
+
+                            return (
+                                <div key={p.id} onClick={() => isLocked ? onUpgrade("Este producto es parte de tu historial PRO. Reactiva tu suscripción para desbloquearlo y usarlo.") : setSelectedProduct(p)} className={`group bg-white rounded-2xl border ${isLocked ? 'border-slate-200 opacity-50 cursor-pointer grayscale' : 'border-slate-100 hover:shadow-xl hover:-translate-y-1 cursor-pointer'} overflow-hidden transition-all relative`}>
+                                    <div className="aspect-square bg-slate-50 relative w-full overflow-hidden">
+                                        {p.image ? <img src={p.image} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" /> : <div className="flex h-full items-center justify-center text-slate-300"><Box size={40} /></div>}
+                                        {isLocked ? (
+                                            <div className="absolute inset-0 bg-black/5 flex items-center justify-center">
+                                                <div className="bg-white/90 p-3 rounded-full shadow-lg backdrop-blur-sm transform group-hover:scale-110 transition-transform">
+                                                    <Lock size={24} className="text-slate-500" />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center p-4">
+                                                <span className="text-white font-bold text-sm bg-white/20 backdrop-blur px-3 py-1 rounded-full">Seleccionar</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="p-4">
+                                        <h3 className="font-bold text-sm text-slate-800 leading-tight mb-1">{p.name}</h3>
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold bg-slate-100 w-fit px-2 py-0.5 rounded">{p.category}</p>
+                                            {isLocked && <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">PRO</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}</div>
                     </div>
                 ) : (
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-0 animate-slide-up overflow-hidden">
@@ -180,9 +277,28 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                 )}
             </div>
             <div className={`${mobileTab === 'cart' ? 'flex' : 'hidden'} md:flex w-full md:w-1/3 bg-white md:border-l shadow-2xl flex-col z-20 h-full`}>
-                <div className="p-5 border-b font-bold flex justify-between items-center bg-white shrink-0"><span className="text-lg">Tu Presupuesto</span><div className="flex gap-2"><select value={quoteMeta.status} onChange={e => setQuoteMeta({ ...quoteMeta, status: e.target.value })} className={`text-xs font-bold uppercase rounded py-1 px-2 border outline-none bg-white cursor-pointer hover:border-blue-400 transition-colors ${quoteMeta.status === 'accepted' ? 'bg-emerald-100 text-emerald-700' : quoteMeta.status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600'}`}><option value="pending">Pendiente</option><option value="accepted">Aceptado</option><option value="rejected">Rechazado</option></select></div></div>
+                <div className="p-5 border-b font-bold flex justify-between items-center bg-white shrink-0">
+                    <span className="text-lg">Tu Presupuesto</span>
+                    <div className="flex gap-2">
+                        <StatusSelector
+                            currentStatus={quoteMeta.status || 'pending'}
+                            onStatusChange={(status) => setQuoteMeta({ ...quoteMeta, status })}
+                        />
+                    </div>
+                </div>
                 <div className="flex-1 overflow-y-auto p-4 bg-slate-50 space-y-2">{cart.length === 0 && <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-50"><Calculator size={64} strokeWidth={1} /><p className="mt-4 font-medium">Carrito vacío</p></div>}{cart.map((i, idx) => (<CartSummaryItem key={i.id} item={i} idx={idx} onRemove={removeFromCart} onUpdateQty={updateQuantity} onMove={moveCartItem} />))}</div>
-                <div className="bg-white border-t p-6 space-y-4 shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-30"><div className="grid grid-cols-2 gap-4 text-xs"><div><label className="text-slate-400 font-bold block mb-1">Descuento %</label><input type="number" className="w-full bg-slate-50 border p-2 rounded-lg text-right font-bold focus:ring-1 focus:ring-blue-500 outline-none" value={financials.discountPercent} onChange={e => setFinancials({ ...financials, discountPercent: parseFloat(e.target.value) || 0 })} /></div><div><label className="text-slate-400 font-bold block mb-1">Entrega €</label><input type="number" className="w-full bg-slate-50 border p-2 rounded-lg text-right font-bold focus:ring-1 focus:ring-blue-500 outline-none" value={financials.deposit} onChange={e => setFinancials({ ...financials, deposit: parseFloat(e.target.value) || 0 })} /></div></div><div className="space-y-1 py-2 border-t border-dashed"><div className="flex justify-between text-sm text-slate-500"><span>Subtotal</span><span>{formatCurrency(grossTotal)}</span></div>{discountAmount > 0 && <div className="flex justify-between text-sm text-emerald-600"><span>Ahorro</span><span>-{formatCurrency(discountAmount)}</span></div>}<div className="flex justify-between text-3xl font-black text-slate-800 tracking-tight"><span>TOTAL</span><span>{formatCurrency(grandTotal)}</span></div>{financials.deposit > 0 && <div className="flex justify-between text-sm font-bold text-slate-400 pt-1"><span>Restante</span><span>{formatCurrency(remainingBalance)}</span></div>}</div><div className="grid grid-cols-2 gap-3"><button onClick={handleSave} className="h-12 flex items-center justify-center gap-2 bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-lg font-bold"><Save size={18} /> Guardar</button><button onClick={() => setViewMode('print')} style={{ backgroundColor: config.color }} className="h-12 flex items-center justify-center gap-2 text-white shadow-lg rounded-lg font-bold"><Printer size={18} /> Finalizar</button></div></div>
+                <div className="bg-white border-t p-6 space-y-4 shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-30"><div className="grid grid-cols-2 gap-4 text-xs"><div><label className="text-slate-400 font-bold block mb-1">Descuento %</label><input type="number" className="w-full bg-slate-50 border p-2 rounded-lg text-right font-bold focus:ring-1 focus:ring-blue-500 outline-none" value={financials.discountPercent} onChange={e => setFinancials({ ...financials, discountPercent: parseFloat(e.target.value) || 0 })} /></div><div><label className="text-slate-400 font-bold block mb-1">Entrega €</label><input type="number" className="w-full bg-slate-50 border p-2 rounded-lg text-right font-bold focus:ring-1 focus:ring-blue-500 outline-none" value={financials.deposit} onChange={e => setFinancials({ ...financials, deposit: parseFloat(e.target.value) || 0 })} /></div></div><div className="space-y-1 py-2 border-t border-dashed"><div className="flex justify-between text-sm text-slate-500"><span>Subtotal</span><span>{formatCurrency(grossTotal)}</span></div>{discountAmount > 0 && <div className="flex justify-between text-sm text-emerald-600"><span>Ahorro</span><span>-{formatCurrency(discountAmount)}</span></div>}<div className="flex justify-between text-3xl font-black text-slate-800 tracking-tight"><span>TOTAL</span><span>{formatCurrency(grandTotal)}</span></div>{financials.deposit > 0 && <div className="flex justify-between text-sm font-bold text-slate-400 pt-1"><span>Restante</span><span>{formatCurrency(remainingBalance)}</span></div>}</div>                <div className="grid grid-cols-2 gap-3">
+                    <button
+                        onClick={handleSave}
+                        className={`h-12 flex items-center justify-center gap-2 border rounded-lg font-bold transition-all duration-300 ${saveStatus === 'saved'
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg scale-105'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                            }`}
+                    >
+                        {saveStatus === 'saved' ? <><Check size={20} /> ¡GUARDADO!</> : <><Save size={18} /> Guardar</>}
+                    </button>
+                    <button onClick={() => setViewMode('print')} style={{ backgroundColor: config.color }} className="h-12 flex items-center justify-center gap-2 text-white shadow-lg rounded-lg font-bold"><Printer size={18} /> Finalizar</button>
+                </div></div>
             </div>
         </div>
     );

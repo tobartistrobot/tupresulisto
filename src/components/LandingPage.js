@@ -62,11 +62,9 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
 
             {/* Hero Section - Industrial Premium */}
             <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center relative z-10">
-                <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-blue-800 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-8 animate-fade-in-up">
-                    <Zap size={14} className="fill-blue-800" /> Versión 3.0 Enterprise Ready
-                </div>
 
-                <h1 className="text-5xl md:text-7xl font-black text-slate-900 leading-tight tracking-tight mb-8 animate-fade-in-up">
+
+                <h1 className="text-5xl md:text-7xl font-black text-slate-900 leading-tight tracking-tight mb-8 mt-6 animate-fade-in-up">
                     Si se puede medir,<br />
                     <span className="text-blue-900">se puede presupuestar.</span>
                 </h1>
@@ -98,7 +96,7 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
                             </div>
                             <div className="flex-1 text-center">
                                 <div className="inline-block px-8 py-0.5 rounded-md bg-slate-900 text-[10px] text-slate-500 font-mono">
-                                    tupresulisto.com/dashboard/v3
+                                    tupresulisto.com/dashboard
                                 </div>
                             </div>
                         </div>
@@ -223,6 +221,46 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* FEATURE SPOTLIGHT: AUTO CALCULATE */}
+            <section className="py-24 bg-white border-b border-slate-200">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid lg:grid-cols-2 gap-16 items-center">
+                        {/* Left Column: Copy */}
+                        <div className="order-2 lg:order-1">
+                            <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-6">
+                                <Zap size={12} className="fill-indigo-700" />
+                                <span>Ideal para cristalería, toldos y carpintería</span>
+                            </div>
+
+                            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6 leading-tight">
+                                Rellena tu tabla de precios en segundos.
+                            </h2>
+
+                            <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                                Olvídate de usar la calculadora casilla por casilla. Con el nuevo <strong>Cálculo Automático</strong>, solo necesitas definir el precio de las 4 esquinas. Nuestro sistema calcula y rellena matemáticamente el resto de la tabla.
+                            </p>
+
+                            <div className="flex items-center gap-4 text-slate-800 font-bold">
+                                <div className="p-2 bg-green-100 text-green-700 rounded-lg">
+                                    <Check size={20} strokeWidth={3} />
+                                </div>
+                                <span className="text-lg">Cierra ventas en segundos, sin errores.</span>
+                            </div>
+                        </div>
+
+                        {/* Right Column: Visual */}
+                        <div className="order-1 lg:order-2 relative group">
+                            <div className="absolute -inset-4 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-[3rem] transform rotate-2 group-hover:rotate-1 transition-transform -z-10"></div>
+                            <img
+                                src="/auto-calc-hero.png"
+                                alt="Cálculo Automático de Precios"
+                                className="w-full h-auto rounded-2xl shadow-2xl border border-slate-200/50 transform group-hover:scale-105 transition-transform duration-500"
+                            />
                         </div>
                     </div>
                 </div>
@@ -375,7 +413,7 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
                     <button onClick={onRegister} className="px-12 py-6 bg-white text-blue-900 text-xl font-bold rounded-lg shadow-xl shadow-blue-950/50 hover:bg-blue-50 hover:scale-105 transition-all">
                         Crear Cuenta Profesional
                     </button>
-                    <p className="text-blue-300/60 text-sm mt-8 font-mono uppercase tracking-widest">Sin tarjeta de crédito · Versión 3.0</p>
+                    <p className="text-blue-300/60 text-sm mt-8 font-mono uppercase tracking-widest">Sin tarjeta de crédito</p>
                 </div>
             </section>
         </div>

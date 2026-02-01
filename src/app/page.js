@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { Loader2 } from 'lucide-react';
 import LoginScreen from '../components/LoginScreen';
 import LandingPage from '../components/LandingPage';
 import AppV30 from '../components/v30/AppV30';
@@ -11,58 +12,75 @@ import EditorTourPage from '../components/EditorTourPage';
 import VerificationPending from '../components/VerificationPending';
 import AdminDashboard from '../components/AdminDashboard';
 
-export default function Home() {
+import { useSearchParams } from 'next/navigation';
+
+function HomeContent() {
   const [user, setUser] = useState(null); // Firebase Auth User Object
-  const [userProfile, setUserProfile] = useState(null); // Firestore Data (subscription, etc.)
+  const [userProfile, setUserProfile] = useState(null); // Firestore Data
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('landing'); // 'landing' | 'login' | 'register' | 'feature-editor' | 'waiting-verification' | 'app' | 'plans'
+  const [view, setView] = useState('landing');
+  const [impersonatedUser, setImpersonatedUser] = useState(null); // For admin impersonation
+
+  const searchParams = useSearchParams();
+  const impersonateTarget = searchParams.get('impersonate');
+
+  const ALLOWED_ADMINS = ['demo@tupresulisto.com', 'admin@tupresulisto.com', 'tobartistrobot@gmail.com'];
+
+  // Global Scroll Reset
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view]);
 
   // Auth Listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        // Fetch user profile from Firestore to check subscription
-        let subscriptionStatus = 'inactive';
-        try {
-          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            subscriptionStatus = data.subscriptionStatus || 'inactive';
-            // Allow manual "isPro" override from Firebase profile
-            if (data.isPro === true) subscriptionStatus = 'active';
-          }
-        } catch (error) {
-          console.error("Error fetching user subscriptions:", error);
+        setUser(currentUser);
+
+        // CHECK IMPERSONATION
+        if (impersonateTarget && ALLOWED_ADMINS.includes(currentUser.email)) {
+          console.log(`ADMIN MODE: Impersonating ${impersonateTarget}`);
+          setImpersonatedUser({
+            uid: impersonateTarget,
+            email: 'impersonated@user.com',
+            emailVerified: true
+          });
+          // We skip normal profile sync for the ADMIN user, and instead rely on the impersonated user logic downstream
+          // BUT we still need to set 'view' to 'app'
+          setView('app');
+          setLoading(false);
+          return;
+        } else {
+          setImpersonatedUser(null);
         }
 
-        setUser(currentUser); // Keep the SDK object intact!
-        setUserProfile({
-          subscriptionStatus,
-          // Add other profile fields if needed
+        // Start listening to user profile changes (Real-time PRO status)
+        const unsubProfile = onSnapshot(doc(db, "users", currentUser.uid), (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            let status = data.subscriptionStatus || 'inactive';
+            // Normalize status: 'pro' (from coupon) or 'active' (stripe/lemon) -> 'active'
+            if (status === 'pro') status = 'active';
+            if (data.isPro === true) status = 'active'; // Manual override
+            setUserProfile({ subscriptionStatus: status });
+          } else {
+            setUserProfile({ subscriptionStatus: 'inactive' });
+          }
+        }, (error) => {
+          console.error("Profile sync error:", error);
         });
 
         // Determine Entrance Logic (Portero)
-        // Check verification first
-        // FIX: Do NOT auto-redirect from Landing Page. Only redirect from Login/Register/Waiting flows.
-        // If on Landing, stay on Landing even if logged in.
+        const isPublicView = ['landing', 'login', 'register'].includes(view);
+        const isVerified = currentUser.emailVerified || sessionStorage.getItem('dev_bypass');
 
-        if (view === 'login' || view === 'register') {
-          if (!currentUser.emailVerified) {
-            setView('waiting-verification');
-          } else {
-            setView('app');
-          }
-        } else if (view === 'waiting-verification') {
-          if (currentUser.emailVerified) {
-            setView('app');
-          }
-          // else stay in waiting-verification
-        } else if (view === 'app') {
-          if (!currentUser.emailVerified) {
-            setView('waiting-verification');
-          }
+        if (isPublicView) {
+          setView(isVerified ? 'app' : 'waiting-verification');
+        } else if (view === 'waiting-verification' && isVerified) {
+          setView('app');
+        } else if (view === 'app' && !isVerified) {
+          setView('waiting-verification');
         }
-        // If view is 'landing', 'feature-editor', 'plans' -> Do nothing, let user browse.
 
       } else {
         setUser(null);
@@ -71,11 +89,28 @@ export default function Home() {
       }
       setLoading(false);
     });
-    return () => unsubscribe();
-  }, [view]); // Added 'view' dependency so the listener sees the current view state
+
+    return () => unsubscribeAuth();
+  }, [view, impersonateTarget]); // Added impersonateTarget dependency
+
+  // Separate Effect for Profile Sync
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        let status = data.subscriptionStatus || 'inactive';
+        if (status === 'pro') status = 'active';
+        if (data.isPro === true) status = 'active';
+        setUserProfile({ subscriptionStatus: status });
+      }
+    });
+    return () => unsub();
+  }, [user]);
 
   const handleLogout = async () => {
     await signOut(auth);
+    sessionStorage.removeItem('dev_bypass');
     setUser(null);
     setUserProfile(null);
     setView('landing');
@@ -93,13 +128,20 @@ export default function Home() {
     setView('app');
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center bg-slate-50 text-slate-400 font-bold">Cargando...</div>;
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 text-slate-400">
+        <Loader2 className="animate-spin mb-4 text-blue-600" size={48} />
+        <p className="font-bold text-lg animate-pulse">Cargando aplicación...</p>
+      </div>
+    );
+  }
 
   // View Routing
   // Allow access to app if logged in (Freemium)
-  if (view === 'app' && user) {
-    // PASS isPro from userProfile
-    return <AppV30 onLogout={handleLogout} isPro={userProfile?.subscriptionStatus === 'active'} />;
+  if (view === 'app' && (user || impersonatedUser)) {
+    const appUser = impersonatedUser || user;
+    return <AppV30 user={appUser} onLogout={handleLogout} isPro={userProfile?.subscriptionStatus === 'active'} isImpersonating={!!impersonatedUser} />;
   }
 
   if (view === 'plans' && user) {
@@ -130,8 +172,9 @@ export default function Home() {
       user={user}
       onLogout={handleLogout}
       onVerified={() => {
-        // Force reload user state and enter app
-        window.location.reload(); // Simplest way to refresh auth state cleanly or we can just setUser
+        // Dev Bypass logic
+        sessionStorage.setItem('dev_bypass', 'true');
+        setView('app');
       }}
     />;
   }
@@ -144,6 +187,8 @@ export default function Home() {
       return (
         <div className="h-screen flex flex-col items-center justify-center p-4 bg-slate-50">
           <h1 className="text-xl font-bold text-slate-700">Acceso Denegado</h1>
+          <p className="text-sm text-slate-500 mt-2">Usuario actual: <span className="font-mono bg-slate-200 px-2 py-1 rounded">{user.email}</span></p>
+          <p className="text-xs text-red-400 mt-1">Este email no tiene permisos de administrador.</p>
           <button onClick={() => setView('app')} className="mt-4 text-blue-600 underline">Volver</button>
         </div>
       );
@@ -156,4 +201,12 @@ export default function Home() {
     onRegister={() => setView('register')}
     onShowTour={() => setView('feature-editor')}
   />;
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="h-screen w-full flex items-center justify-center"><Loader2 className="animate-spin" /></div>}>
+      <HomeContent />
+    </Suspense>
+  );
 }

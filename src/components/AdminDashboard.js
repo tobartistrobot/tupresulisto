@@ -4,6 +4,11 @@ import { collection, getCountFromServer, query, where } from 'firebase/firestore
 import { ShieldCheck, Users, Box, ArrowLeft } from 'lucide-react';
 
 const AdminDashboard = ({ user, onBack }) => {
+    const ALLOWED_EMAILS = ['demo@tupresulisto.com', 'admin@tupresulisto.com'];
+    if (!user || !ALLOWED_EMAILS.includes(user.email)) {
+        return <div className="p-8 text-center text-red-500 font-bold">Acceso No Autorizado</div>;
+    }
+
     const [stats, setStats] = useState({
         totalUsers: 0,
         verifiedUsers: 0,

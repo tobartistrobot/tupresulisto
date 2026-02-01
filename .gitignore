@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# backups
+backups/
+
+.firebase/
+
+# Logs de Firebase
+firebase-debug.log
+firebase-debug.*.log
+
+# Archivos gigantes a ignorar
+.firebase/
+.tmp.driveupload/
+node_modules/
+**/node_modules/

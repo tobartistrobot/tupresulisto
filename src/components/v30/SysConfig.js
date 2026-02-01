@@ -1,7 +1,9 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { useToast } from '../../context/ToastContext';
-import { Box, Save } from 'lucide-react';
+import { Box, Save, Crown, Ticket, Shield, AlertTriangle } from 'lucide-react';
+import { redeemCoupon } from '../../utils/couponSystem';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'; // Import auth methods
 
 const processImage = (file) => new Promise((resolve, reject) => {
     if (!file.type.match(/image.*/)) return reject(new Error("No es un archivo de imagen"));
@@ -22,9 +24,69 @@ const processImage = (file) => new Promise((resolve, reject) => {
     reader.readAsDataURL(file);
 });
 
-const SysConfig = ({ config, setConfig, className }) => {
+const SysConfig = ({ config, setConfig, className, user, isPro, products = [], setProducts, categories = [], setCategories }) => {
     const toast = useToast();
+    const [couponCode, setCouponCode] = useState('');
+    const [isRedeeming, setIsRedeeming] = useState(false);
+
+    // SECURITY STATE
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmNewPassword, setConfirmNewPassword] = useState('');
+    const [securityLoading, setSecurityLoading] = useState(false);
+
+    // Check provider (google.com vs password)
+    const isGoogleUser = user?.providerData?.some(p => p.providerId === 'google.com');
+
     const handleLogo = async (e) => { try { const b64 = await processImage(e.target.files[0]); setConfig({ ...config, logo: b64 }); } catch (err) { toast(err.message, "error"); } };
+
+    const handleRedeem = async () => {
+        setIsRedeeming(true);
+        const result = await redeemCoupon(user?.uid, couponCode);
+        setIsRedeeming(false);
+
+        if (result.success) {
+            toast(result.message, "success");
+            setCouponCode('');
+            // Force reload or just let sync engine handle it? 
+            // Sync engine listens to user doc, so it should auto-update "isPro" in AppV30 eventually.
+            // But immediate feedback is good.
+            setTimeout(() => window.location.reload(), 1500); // Simple hack to refresh PRO status for now
+        } else {
+            toast(result.message, "error");
+        }
+    };
+
+    const handleChangePassword = async () => {
+        if (!newPassword || newPassword.length < 6) return toast("La nueva contraseña debe tener al menos 6 caracteres", "error");
+        if (newPassword !== confirmNewPassword) return toast("Las contraseñas nuevas no coinciden", "error");
+        if (!currentPassword) return toast("Debes ingresar tu contraseña actual para confirmar", "error");
+
+        setSecurityLoading(true);
+        try {
+            // 1. Re-authenticate
+            const credential = EmailAuthProvider.credential(user.email, currentPassword);
+            await reauthenticateWithCredential(user, credential);
+
+            // 2. Update Password
+            await updatePassword(user, newPassword);
+
+            // 3. Success & Reset
+            toast("Contraseña actualizada correctamente", "success");
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmNewPassword('');
+        } catch (error) {
+            console.error("Change Password Error:", error);
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                toast("La contraseña actual es incorrecta", "error");
+            } else {
+                toast("Error al actualizar contraseña: " + error.code, "error");
+            }
+        } finally {
+            setSecurityLoading(false);
+        }
+    };
 
     return (
         <div className={`p-4 md:p-8 max-w-4xl mx-auto h-full overflow-y-auto animate-fade-in ${className}`}>
@@ -69,6 +131,187 @@ const SysConfig = ({ config, setConfig, className }) => {
                             <p className="text-[10px] text-slate-400 mt-1">Por defecto: 21%</p>
                         </div>
                     </div>
+                </div>
+
+                {/* Suscripción y Licencia */}
+                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm animate-fade-in">
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-700 border-b pb-2"><Crown className={isPro ? "text-yellow-500" : "text-slate-400"} /> Suscripción y Licencia</h3>
+                    <div className="flex flex-col md:flex-row gap-6 items-start">
+                        <div className="flex-1">
+                            <p className="text-sm font-bold text-slate-500 mb-1">Plan Actual</p>
+                            <div className={`text-xl font-black flex items-center gap-2 ${isPro ? 'text-blue-600' : 'text-slate-600'}`}>
+                                {isPro ? 'PLAN PRO 🚀' : 'GRATUITO'}
+                                {isPro && <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase tracking-wider">Activo</span>}
+                            </div>
+                            <p className="text-xs text-slate-400 mt-2">
+                                {isPro ? "Disfrutas de acceso ilimitado a todas las funciones." : "Limitado a 3 productos. Actualiza para eliminar límites."}
+                            </p>
+                        </div>
+
+                        {!isPro && (
+                            <div className="w-full md:w-1/2 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Canjear Código Promocional</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        placeholder="INTRODUCE TU CÓDIGO"
+                                        className="flex-1 p-2 border rounded-lg text-sm uppercase font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={couponCode}
+                                        onChange={e => setCouponCode(e.target.value)}
+                                        autoComplete="off"
+                                        name="couponCode"
+                                        type="text"
+                                    />
+                                    <button
+                                        onClick={handleRedeem}
+                                        disabled={isRedeeming || !couponCode}
+                                        className="px-4 py-2 bg-slate-800 text-white font-bold rounded-lg text-xs hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    >
+                                        {isRedeeming ? '...' : <><Ticket size={14} /> Canjear</>}
+                                    </button>
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-2">Si tienes un código de acceso anticipado, introdúcelo aquí.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* GESTIÓN DE CATÁLOGO (IMPORTAR / EXPORTAR) */}
+                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm animate-fade-in">
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-700 border-b pb-2"><Box className="text-purple-600" /> Gestión de Catálogo</h3>
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                            <h4 className="font-bold text-purple-900 mb-2">Exportar Catálogo</h4>
+                            <p className="text-xs text-purple-700 mb-4">Descarga un archivo con todos tus productos, imágenes y categorías para hacer una copia de seguridad o compartir.</p>
+                            <button
+                                onClick={() => {
+                                    const dataStr = JSON.stringify({ products, categories, exportedAt: new Date().toISOString() }, null, 2);
+                                    const blob = new Blob([dataStr], { type: "application/json" });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `catalogo-tupresulisto-${new Date().toISOString().slice(0, 10)}.json`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(url);
+                                    toast("Catálogo exportado correctamente", "success");
+                                }}
+                                className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg shadow-sm flex items-center justify-center gap-2 transition-colors"
+                            >
+                                <Save size={18} /> Descargar Copia (.json)
+                            </button>
+                        </div>
+                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                            <h4 className="font-bold text-blue-900 mb-2">Importar Catálogo</h4>
+                            <p className="text-xs text-blue-700 mb-4">Añade productos desde un archivo. <span className="font-bold">No borra lo actual</span>, solo añade lo nuevo.</p>
+                            <label className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-colors">
+                                <Box size={18} /> Seleccionar Archivo
+                                <input
+                                    type="file"
+                                    accept=".json"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (!file) return;
+                                        const reader = new FileReader();
+                                        reader.onload = (event) => {
+                                            try {
+                                                const json = JSON.parse(event.target.result);
+                                                if (Array.isArray(json.products) && Array.isArray(json.categories)) {
+                                                    // 1. Merge Categories
+                                                    const newCats = [...new Set([...categories, ...json.categories])];
+                                                    setCategories(newCats);
+
+                                                    // 2. Add Products with ID regeneration to avoid collision
+                                                    const importedProducts = json.products.map((p, idx) => ({
+                                                        ...p,
+                                                        id: `${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}` // Regenerate ID
+                                                    }));
+
+                                                    setProducts(prev => [...prev, ...importedProducts]);
+                                                    toast(`Se han importado ${importedProducts.length} productos y categorías.`, "success");
+                                                } else {
+                                                    toast("El archivo no tiene el formato correcto.", "error");
+                                                }
+                                            } catch (err) {
+                                                console.error(err);
+                                                toast("Error al leer el archivo JSON.", "error");
+                                            }
+                                        };
+                                        reader.readAsText(file);
+                                        e.target.value = null; // Reset input
+                                    }}
+                                />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                {/* SEGURIDAD / CAMBIAR CONTRASEÑA */}
+                <div className="bg-red-50/50 rounded-xl border border-red-100 p-6 shadow-sm animate-fade-in relative overflow-hidden">
+                    {/* Decorative accent */}
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-red-100/50 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-red-800 border-b border-red-100 pb-2 relative z-10">
+                        <Shield className="text-red-600" size={20} /> Seguridad
+                    </h3>
+
+                    {isGoogleUser ? (
+                        <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-red-100 text-slate-600 text-sm">
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5 shrink-0 mt-0.5" alt="Google" />
+                            <div>
+                                <p className="font-bold text-slate-800">Cuenta gestionada por Google</p>
+                                <p>Iniciaste sesión con Google, por lo que no tienes una contraseña independiente en esta aplicación. Para cambiar tu clave, debes hacerlo desde la configuración de tu cuenta de Google.</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4 relative z-10">
+                            <p className="text-xs text-red-600 font-bold uppercase mb-2 flex items-center gap-1">
+                                <AlertTriangle size={12} /> Zona de Cambio de Contraseña
+                            </p>
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div className="md:col-span-2">
+                                    <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Contraseña Actual (Requerido)</label>
+                                    <input
+                                        type="password"
+                                        className="w-full p-3 border border-red-200 rounded-lg bg-white focus:ring-2 focus:ring-red-200 outline-none"
+                                        placeholder="••••••••"
+                                        value={currentPassword}
+                                        onChange={e => setCurrentPassword(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Nueva Contraseña</label>
+                                    <input
+                                        type="password"
+                                        className="w-full p-3 border border-slate-200 rounded-lg bg-white outline-none"
+                                        placeholder="Mínimo 6 caracteres"
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Confirmar Nueva</label>
+                                    <input
+                                        type="password"
+                                        className="w-full p-3 border border-slate-200 rounded-lg bg-white outline-none"
+                                        placeholder="Repite la nueva contraseña"
+                                        value={confirmNewPassword}
+                                        onChange={e => setConfirmNewPassword(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end pt-2">
+                                <button
+                                    onClick={handleChangePassword}
+                                    disabled={securityLoading || !currentPassword || !newPassword || !confirmNewPassword || newPassword.length < 6}
+                                    className="px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:text-slate-500 text-white font-bold rounded-lg shadow-sm transition-colors text-sm flex items-center gap-2"
+                                >
+                                    {securityLoading ? 'Verificando...' : 'Actualizar Contraseña'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex justify-end pb-8">

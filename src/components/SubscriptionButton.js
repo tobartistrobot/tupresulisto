@@ -4,7 +4,8 @@ import { ShoppingCart } from 'lucide-react';
 export default function SubscriptionButton({ userId, variantId = 'YOUR_VARIANT_ID', className = '' }) {
 
     const handleCheckout = () => {
-        const checkoutUrl = `https://tupresulisto.lemonsqueezy.com/checkout/buy/${variantId}?checkout[custom][user_id]=${userId}`;
+        const finalVariantId = variantId === 'YOUR_VARIANT_ID' ? (process.env.NEXT_PUBLIC_LEMONSQUEEZY_VARIANT_ID || 'cb60ae4e-ad08-496f-8e56-46d803e43f19') : variantId;
+        const checkoutUrl = `https://tupresulisto.lemonsqueezy.com/checkout/buy/${finalVariantId}?checkout[custom][user_id]=${userId}`;
 
         // Open Lemon Squeezy Overlay
         if (window.LemonSqueezy) {

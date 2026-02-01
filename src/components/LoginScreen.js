@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useToast } from '../context/ToastContext';
 import { Lock, AlertCircle } from 'lucide-react';
 import { auth, db } from '../lib/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth'; // Import sendEmailVerification
-import { doc, setDoc } from 'firebase/firestore';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { getFriendlyErrorMessage } from '../utils/authErrors';
 
 const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwitchToLogin }) => {
@@ -54,9 +54,7 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
         try {
             if (mode === 'login') {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                // Check verification immediately
                 if (!userCredential.user.emailVerified) {
-                    // Logic handled by page.js listener but we log it
                     console.log("User not verified, waiting for redirect...");
                 } else {
                     console.log("User verified, entering dashboard...");
@@ -64,7 +62,6 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
                 }
             } else {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                // Create user profile
                 await setDoc(doc(db, "users", userCredential.user.uid), {
                     email: email,
                     createdAt: new Date().toISOString(),
@@ -72,13 +69,44 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
                     role: 'user'
                 });
 
-                // Send Verification Email
                 await sendEmailVerification(userCredential.user);
                 toast("Cuenta creada. ¡Verifica tu email!", "success");
             }
         } catch (err) {
             console.error("Firebase Auth Error:", err);
             setError(getFriendlyErrorMessage(err.code));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleLogin = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const provider = new GoogleAuthProvider();
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
+
+            if (!userSnap.exists()) {
+                await setDoc(userRef, {
+                    email: user.email,
+                    createdAt: new Date().toISOString(),
+                    subscriptionStatus: 'inactive',
+                    role: 'user',
+                    photoURL: user.photoURL,
+                    displayName: user.displayName
+                });
+            }
+
+            if (onLoginSuccess) onLoginSuccess(user);
+
+        } catch (err) {
+            console.error("Google Sign In Error:", err);
+            setError("Error al iniciar con Google. " + (err.message || ""));
         } finally {
             setLoading(false);
         }
@@ -99,68 +127,89 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
                         <span>{error}</span>
                     </div>
                 )}
-                <form onSubmit={handleAuth} className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">EMAIL</label>
-                        <input
-                            type="email"
-                            required
-                            className="w-full input-saas p-3 rounded-lg text-slate-900"
-                            placeholder="tu@email.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">CONTRASEÑA</label>
-                        <input
-                            type="password"
-                            required
-                            className="w-full input-saas p-3 rounded-lg text-slate-900"
-                            placeholder={mode === 'register' ? "Crea una clave segura" : "••••••••"}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
 
-                        />
-                        {mode === 'login' && (
-                            <div className="flex justify-end mt-1">
-                                <button
-                                    type="button"
-                                    onClick={handleForgotPassword}
-                                    className="text-xs text-slate-400 hover:text-sky-600 font-medium transition-colors"
-                                >
-                                    ¿Has olvidado tu contraseña?
-                                </button>
-                            </div>
-                        )}
+                {/* Google Button */}
+                <div className="space-y-4">
+                    <button
+                        onClick={handleGoogleLogin}
+                        disabled={loading}
+                        className="w-full py-3 flex items-center justify-center gap-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm text-slate-700 font-bold"
+                    >
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
+                        Continuar con Google
+                    </button>
+
+                    <div className="relative flex items-center justify-center my-4">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-slate-200"></div>
+                        </div>
+                        <span className="relative bg-white px-2 text-xs text-slate-400 font-bold uppercase">O usa tu email</span>
                     </div>
-                    {mode === 'register' && (
+
+                    <form onSubmit={handleAuth} className="space-y-4">
                         <div>
-                            <label className="block text-xs font-bold text-slate-700 mb-1">REPETIR CONTRASEÑA</label>
+                            <label className="block text-xs font-bold text-slate-700 mb-1">EMAIL</label>
+                            <input
+                                type="email"
+                                required
+                                className="w-full input-saas p-3 rounded-lg text-slate-900"
+                                placeholder="tu@email.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-700 mb-1">CONTRASEÑA</label>
                             <input
                                 type="password"
                                 required
-                                className={`w-full input-saas p-3 rounded-lg text-slate-900 ${password !== confirmPassword && confirmPassword ? 'border-red-300 ring-red-200' : ''}`}
-                                placeholder="Repite tu clave"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                className="w-full input-saas p-3 rounded-lg text-slate-900"
+                                placeholder={mode === 'register' ? "Crea una clave segura" : "••••••••"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+
                             />
+                            {mode === 'login' && (
+                                <div className="flex justify-end mt-1">
+                                    <button
+                                        type="button"
+                                        onClick={handleForgotPassword}
+                                        className="text-xs text-slate-400 hover:text-sky-600 font-medium transition-colors"
+                                    >
+                                        ¿Has olvidado tu contraseña?
+                                    </button>
+                                </div>
+                            )}
                         </div>
-                    )}
-                    <button
-                        disabled={loading || !isFormValid}
-                        className={`w-full py-3 flex items-center justify-center px-4 rounded-lg font-semibold transition-all duration-200 
-                            ${loading || !isFormValid
-                                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                : 'bg-sky-600 text-white hover:bg-sky-500 shadow-lg shadow-sky-500/30'}`}
-                    >
-                        {loading ? 'Procesando...' : (
-                            mode === 'register'
-                                ? 'Crear Cuenta Profesional'
-                                : <><Lock className="mr-2" size={18} /> Iniciar Sesión Segura</>
+                        {mode === 'register' && (
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">REPETIR CONTRASEÑA</label>
+                                <input
+                                    type="password"
+                                    required
+                                    className={`w-full input-saas p-3 rounded-lg text-slate-900 ${password !== confirmPassword && confirmPassword ? 'border-red-300 ring-red-200' : ''}`}
+                                    placeholder="Repite tu clave"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                />
+                            </div>
                         )}
-                    </button>
-                </form>
+                        <button
+                            disabled={loading}
+                            onClick={handleAuth}
+                            className={`w-full py-3 flex items-center justify-center px-4 rounded-lg font-semibold transition-all duration-200 
+                            ${loading
+                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                    : 'bg-sky-600 text-white hover:bg-sky-500 shadow-lg shadow-sky-500/30'}`}
+                        >
+                            {loading ? 'Procesando...' : (
+                                mode === 'register'
+                                    ? 'Crear Cuenta Profesional'
+                                    : <><Lock className="mr-2" size={18} /> Iniciar Sesión Segura</>
+                            )}
+                        </button>
+                    </form>
+                </div>
 
                 <div className="mt-6 text-center">
                     {mode === 'register' ? (
