@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useToast } from '../context/ToastContext';
-import { Lock, AlertCircle } from 'lucide-react';
+import { Lock, AlertCircle, Calculator } from 'lucide-react';
 import { auth, db } from '../lib/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
@@ -12,6 +12,7 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
     const [error, setError] = useState('');
 
     const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -21,15 +22,23 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
 
     const handleForgotPassword = async () => {
         if (!email) {
-            toast("Por favor, introduce tu email para enviarte el enlace", "info");
+            toast("Por favor, escribe tu email primero para poder recuperarla", "info");
             return;
         }
+
+        setIsResetting(true);
         try {
             await sendPasswordResetEmail(auth, email);
-            toast("¡Enlace de recuperación enviado! Revisa tu bandeja de entrada", "success");
+            toast("Correo de recuperación enviado. Revisa tu bandeja de entrada.", "success");
         } catch (error) {
             console.error("Error password reset:", error);
-            toast(getFriendlyErrorMessage(error.code), "error");
+            if (error.code === 'auth/user-not-found') {
+                toast("No encontramos ninguna cuenta con ese email", "error");
+            } else {
+                toast(getFriendlyErrorMessage(error.code), "error");
+            }
+        } finally {
+            setIsResetting(false);
         }
     };
 
@@ -115,11 +124,16 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
     return (
         <div className="h-screen w-full bg-slate-900 flex items-center justify-center p-4">
             <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl animate-fade-in">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">tupresulisto<span className="text-sky-600">.com</span></h1>
-                    <p className="text-slate-500 mt-2">
-                        {mode === 'register' ? 'Crea tu cuenta profesional' : 'Gestión profesional para carpintería'}
-                    </p>
+                <div className="flex flex-col items-center mb-8 gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-blue-900 rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-300">
+                            <Calculator className="text-white" size={24} />
+                        </div>
+                        <span className="font-bold text-3xl tracking-tight text-slate-900">
+                            tupresulisto<span className="text-blue-600">.com</span>
+                        </span>
+                    </div>
+
                 </div>
                 {error && (
                     <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 flex items-start gap-2 animate-fade-in">
@@ -174,9 +188,10 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
                                     <button
                                         type="button"
                                         onClick={handleForgotPassword}
-                                        className="text-xs text-slate-400 hover:text-sky-600 font-medium transition-colors"
+                                        disabled={isResetting}
+                                        className="text-xs text-slate-400 hover:text-sky-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        ¿Has olvidado tu contraseña?
+                                        {isResetting ? 'Enviando...' : '¿Has olvidado tu contraseña?'}
                                     </button>
                                 </div>
                             )}

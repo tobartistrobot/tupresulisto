@@ -4,8 +4,17 @@ import { ShoppingCart } from 'lucide-react';
 export default function SubscriptionButton({ userId, variantId = 'YOUR_VARIANT_ID', className = '' }) {
 
     const handleCheckout = () => {
-        const finalVariantId = variantId === 'YOUR_VARIANT_ID' ? (process.env.NEXT_PUBLIC_LEMONSQUEEZY_VARIANT_ID || 'cb60ae4e-ad08-496f-8e56-46d803e43f19') : variantId;
+        // Fallback to Env var or hardcoded monthly ID if 'YOUR_VARIANT_ID' is passed (default)
+        // But if a specific ID is passed (like yearly '1269638'), use that.
+        let finalVariantId = variantId;
+
+        if (finalVariantId === 'YOUR_VARIANT_ID') {
+            finalVariantId = process.env.NEXT_PUBLIC_LEMONSQUEEZY_VARIANT_ID || 'cb60ae4e-ad08-496f-8e56-46d803e43f19';
+        }
+
         const checkoutUrl = `https://tupresulisto.lemonsqueezy.com/checkout/buy/${finalVariantId}?checkout[custom][user_id]=${userId}`;
+
+        console.log("Opening Checkout for Variant:", finalVariantId); // Debug logging
 
         // Open Lemon Squeezy Overlay
         if (window.LemonSqueezy) {

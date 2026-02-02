@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { ToastProvider, useToast } from '../../context/ToastContext';
-import { LayoutDashboard, ShoppingCart, Archive, Settings, LogOut, Users, Cloud, CloudOff, RefreshCw, Loader2 } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Archive, Settings, LogOut, Users, Cloud, CloudOff, RefreshCw, Loader2, Calculator } from 'lucide-react';
 import { useSyncEngine } from '../../hooks/useSyncEngine';
 
 import Dashboard from './Dashboard';
@@ -169,12 +169,14 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
     // We need to pass the limit logic to ProductManager
     // or wrap the ProductManager's create action.
 
-    const handleUpgrade = () => {
+    const handleUpgrade = (targetVariantId) => {
         // Redirigir al checkout de Lemon Squeezy con el ID del usuario para el webhook
-        // Variant ID: 1268029 (Plan PRO)
-        // Variant ID: cb60ae4e-ad08-496f-8e56-46d803e43f19 (Plan PRO)
-        const variantId = process.env.NEXT_PUBLIC_LEMONSQUEEZY_VARIANT_ID || 'cb60ae4e-ad08-496f-8e56-46d803e43f19';
-        const checkoutUrl = `https://tupresulisto.lemonsqueezy.com/checkout/buy/${variantId}?checkout[custom][user_id]=${user.uid}`;
+        // Default Variant ID: 1268029/cb60ae4e... (Plan PRO Monthly)
+        // If targetVariantId is passed (e.g., Annual), use that instead.
+        const defaultMonthlyId = process.env.NEXT_PUBLIC_LEMONSQUEEZY_VARIANT_ID || 'cb60ae4e-ad08-496f-8e56-46d803e43f19';
+        const finalVariantId = targetVariantId || defaultMonthlyId;
+
+        const checkoutUrl = `https://tupresulisto.lemonsqueezy.com/checkout/buy/${finalVariantId}?checkout[custom][user_id]=${user.uid}`;
         window.open(checkoutUrl, '_blank');
         setShowUpgradeModal(false);
     };
@@ -212,8 +214,10 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
             {/* Mobile Header */}
             <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-slate-900 z-[60] flex items-center justify-between px-4 shadow-md">
                 <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded bg-blue-600"></div>
-                    <span className="font-black text-lg text-white tracking-tight">tupresulisto.com</span>
+                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg">
+                        <Calculator className="text-white" size={16} />
+                    </div>
+                    <span className="font-black text-lg text-white tracking-tight">tupresulisto<span className="text-blue-400">.com</span></span>
                 </div>
                 <button onClick={onLogout} className="p-2 text-slate-400 hover:text-white transition-colors">
                     <LogOut size={20} />
@@ -223,9 +227,11 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
             {/* Sidebar Desktop */}
             <aside className="hidden md:flex flex-col w-20 lg:w-64 bg-slate-900 text-slate-300 transition-all z-50 shadow-2xl shrink-0">
                 <div className="p-6 flex items-center justify-center lg:justify-start gap-3 border-b border-slate-800">
-                    <div className="w-8 h-8 rounded bg-blue-600 shrink-0"></div>
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 shrink-0 flex items-center justify-center shadow-lg shadow-blue-900/50">
+                        <Calculator className="text-white" size={20} />
+                    </div>
                     <div>
-                        <span className="font-black text-xl text-white hidden lg:block tracking-tight">tupresulisto.com</span>
+                        <span className="font-black text-xl text-white hidden lg:block tracking-tight">tupresulisto<span className="text-blue-500">.com</span></span>
                         {cloudStatus === 'error' && (
                             <div className="hidden lg:flex items-center gap-1.5 mt-1 animate-pulse">
                                 <CloudOff size={10} className="text-red-400" />
