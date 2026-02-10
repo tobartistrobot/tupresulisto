@@ -13,7 +13,7 @@ import { round2, sanitizeFloat } from '../../utils/mathUtils';
 const formatCurrency = (amount) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount || 0);
 
 const CartSummaryItem = React.memo(({ item, idx, onRemove, onUpdateQty, onMove }) => (
-    <div className="p-3 border border-slate-100 rounded-xl relative group bg-white shadow-sm hover:shadow-md transition-all mb-2 animate-fade-in">
+    <div className="p-4 border border-slate-200 rounded-2xl relative group bg-white shadow-sm hover:shadow-xl transition-all duration-300 mb-3 animate-fade-in">
         <div className="absolute top-2 right-2 flex gap-1">
             <div className="flex flex-col mr-2 bg-slate-50 rounded border border-slate-100">
                 <button onClick={() => onMove(idx, -1)} className="p-0.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-t"><ChevronUp size={12} /></button>
@@ -24,8 +24,8 @@ const CartSummaryItem = React.memo(({ item, idx, onRemove, onUpdateQty, onMove }
         <div className="flex gap-3">
             <div className="w-12 h-12 bg-slate-50 rounded-lg flex items-center justify-center shrink-0 border border-slate-100">{item.product.image ? <img src={item.product.image} className="w-full h-full object-cover rounded-lg" /> : <Box className="text-slate-300" />}</div>
             <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm text-slate-800 truncate pr-16">{item.product.name}</p>
-                <p className="text-xs text-slate-500">{item.width}x{item.height} {item.locationLabel && `· ${item.locationLabel}`}</p>
+                <p className="font-black text-base text-slate-900 truncate pr-16">{item.product.name}</p>
+                <p className="text-xs text-slate-500 font-medium">{item.width}x{item.height} {item.locationLabel && `· ${item.locationLabel}`}</p>
                 {item.selectedExtras?.length > 0 && <div className="mt-1 flex flex-wrap gap-1">{item.selectedExtras.map((e, i) => (<span key={i} className="inline-flex items-center text-[10px] bg-slate-50 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">{e.qty > 1 && <b className="text-blue-600 mr-1">{e.qty}x</b>}{e.name}</span>))}</div>}
                 <div className="flex justify-between items-center mt-2"><div className="flex items-center gap-1 bg-slate-50 rounded-lg p-0.5 border border-slate-200"><button onClick={() => onUpdateQty(item.id, -1)} className="w-12 h-12 flex items-center justify-center hover:bg-white rounded-md transition-colors text-slate-600 font-bold touch-target-48">-</button><span className="text-xs font-bold w-8 text-center text-slate-700">{item.quantity}</span><button onClick={() => onUpdateQty(item.id, 1)} className="w-12 h-12 flex items-center justify-center hover:bg-white rounded-md transition-colors text-slate-600 font-bold touch-target-48">+</button></div><b className="text-sm text-blue-900 font-mono">{formatCurrency(item.price)}</b></div>
             </div>
@@ -150,7 +150,6 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
 
     const handleSave = () => {
         if (!client.name) {
-
             toast("Falta nombre cliente", "error");
             return;
         }
@@ -160,7 +159,8 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
         }
 
         try {
-            console.log("Guardando presupuesto...");
+            setSaveStatus('saving');
+
             onSave({
                 id: initialData?.id || Date.now(),
                 number: quoteMeta.number,
@@ -172,18 +172,21 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                 grandTotal
             });
 
-            // Button Feedback
-            setSaveStatus('saved');
-            console.log("Estado guardado set to saved");
+            // Simular delay mínimo para mostrar estado "saving"
             setTimeout(() => {
                 if (isMounted.current) {
-                    setSaveStatus('idle');
-                    console.log("Estado guardado set to idle");
+                    setSaveStatus('saved');
+                    setTimeout(() => {
+                        if (isMounted.current) {
+                            setSaveStatus('idle');
+                        }
+                    }, 2500);
                 }
-            }, 3000);
+            }, 300);
         } catch (error) {
             console.error("Error saving quote:", error);
             toast(`Error: ${error.message}`, "error");
+            setSaveStatus('idle');
         }
     };
     const downloadWord = () => { try { const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'><title>Presupuesto</title></head><body style="font-family:Arial;font-size:12px"><h1 style="color:${config.color}">${config.name}</h1><p>Cliente: ${client.name}</p><table>${cart.map(i => `<tr><td>${i.product.name}</td><td>${i.width}x${i.height}</td><td>${i.quantity}</td><td>${formatCurrency(i.price)}</td></tr>`).join('')}</table><h3>Total: ${formatCurrency(grandTotal)}</h3></body></html>`; const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob(['\ufeff', html], { type: 'application/msword' })); link.download = `Presupuesto_${client.name}.doc`; document.body.appendChild(link); link.click(); document.body.removeChild(link); } catch (e) { console.error("Error downloadWord", e); toast("Error al descargar Word", "error"); } };
@@ -226,26 +229,26 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
             <div className="md:hidden flex bg-white border-b shadow-sm z-30 shrink-0"><button onClick={() => setMobileTab('products')} className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${mobileTab === 'products' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500'}`}>Catálogo</button><button onClick={() => setMobileTab('cart')} className={`flex-1 py-3 text-sm font-bold border-b-2 flex items-center justify-center gap-2 transition-colors ${mobileTab === 'cart' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500'}`}>Presupuesto <span className="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-black">{cart.length}</span></button></div>
             <div className={`${mobileTab === 'products' ? 'block' : 'hidden'} md:block w-full md:w-2/3 p-4 md:p-6 overflow-y-auto bg-slate-50/50`}>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4"><div><h2 className="text-2xl font-black text-slate-800">Confeccionar</h2><div className="flex gap-2 mt-2"><div className="flex items-center gap-2 bg-white px-2 py-1 rounded border shadow-sm"><span className="text-[10px] font-bold text-slate-400 uppercase">REF</span><input className="bg-transparent text-sm font-bold w-20 outline-none" value={quoteMeta.number} onChange={e => setQuoteMeta({ ...quoteMeta, number: e.target.value })} /></div><div className="flex items-center gap-2 bg-white px-2 py-1 rounded border shadow-sm"><span className="text-[10px] font-bold text-slate-400 uppercase">FECHA</span><input className="bg-transparent text-sm font-bold w-20 outline-none" value={quoteMeta.date} onChange={e => setQuoteMeta({ ...quoteMeta, date: e.target.value })} /></div></div></div><button onClick={handleLocalReset} className="text-xs flex items-center gap-2 px-3 py-2 rounded-lg shadow-sm bg-white hover:bg-red-50 text-red-600 border border-red-100 font-bold"><RefreshCw size={14} /> Limpiar Todo</button></div>
-                <div className="bg-white rounded-xl border shadow-sm p-0 mb-6 overflow-visible relative z-20">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-0 mb-8 overflow-visible relative z-20">
                     <div className="bg-slate-50 p-3 border-b rounded-t-xl flex justify-between items-center"><span className="text-xs font-bold uppercase text-slate-500 tracking-wider ml-2">Datos del Cliente</span><button onClick={() => setShowClientSearch(!showClientSearch)} className="py-1 px-3 text-xs h-8 flex items-center gap-2 bg-white border rounded hover:bg-slate-50 text-slate-600"><Search size={14} /> Buscar</button></div>
-                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="relative group"><label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-bold text-blue-500">Nombre</label><input className="input-saas" value={client.name} onChange={e => setClient({ ...client, name: e.target.value })} /></div>
                         <div className="relative group"><label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-bold text-slate-400">Teléfono</label><input className="input-saas" value={client.phone} onChange={e => setClient({ ...client, phone: e.target.value })} /></div>
                         <div className="relative group"><label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-bold text-slate-400">Email</label><input className="input-saas" value={client.email} onChange={e => setClient({ ...client, email: e.target.value })} /></div>
                         <div className="relative group"><label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-bold text-slate-400">Origen</label><select className="input-saas bg-white" value={client.source} onChange={e => setClient({ ...client, source: e.target.value })}><option value="">¿Cómo nos conoció?</option><option value="Recomendación">Recomendación</option><option value="Web">Web / Buscador</option><option value="Google">Google Maps</option><option value="Publicidad">Publicidad / Redes</option><option value="Tienda">Pasaba por tienda</option><option value="Otro">Otro</option></select></div>
                         <div className="relative group md:col-span-2"><label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-bold text-slate-400">Dirección</label><input className="input-saas" value={client.address} onChange={e => setClient({ ...client, address: e.target.value })} /></div>
                     </div>
-                    {showClientSearch && <div className="absolute top-12 left-2 right-2 bg-white border shadow-2xl z-30 rounded-xl max-h-60 overflow-hidden flex flex-col animate-fade-in"><div className="p-2 border-b bg-slate-50"><input autoFocus placeholder="Filtrar por nombre o teléfono..." className="input-saas text-xs !p-2" value={clientSearchTerm} onChange={e => setClientSearchTerm(e.target.value)} /></div><div className="overflow-y-auto">{filteredClients.length === 0 && <p className="text-xs p-4 text-center text-slate-400">No hay clientes recientes.</p>}{filteredClients.map((c, i) => (<div key={i} onClick={() => { setClient({ ...c }); setShowClientSearch(false); setClientSearchTerm(''); }} className="p-3 hover:bg-brand-50 cursor-pointer border-b last:border-0 text-sm flex justify-between group"><span className="font-bold group-hover:text-brand-700">{c.name}</span><span className="text-slate-500">{c.phone}</span></div>))}</div></div>}
+                    {showClientSearch && <div className="absolute top-12 left-2 right-2 bg-white border shadow-2xl z-30 rounded-xl max-h-60 overflow-hidden flex flex-col animate-fade-in"><div className="p-2 border-b bg-slate-50"><input autoFocus placeholder="Filtrar por nombre o teléfono..." className="input-saas text-xs !p-2" value={clientSearchTerm} onChange={e => setClientSearchTerm(e.target.value)} /></div><div className="overflow-y-auto">{filteredClients.length === 0 && <p className="text-xs p-4 text-center text-slate-400">No hay clientes recientes.</p>}{filteredClients.map((c, i) => (<div key={i} onClick={() => { setClient({ ...c }); setShowClientSearch(false); setClientSearchTerm(''); }} className="p-3 hover:bg-blue-50 cursor-pointer border-b last:border-0 text-sm flex justify-between group"><span className="font-bold group-hover:text-blue-700">{c.name}</span><span className="text-slate-500">{c.phone}</span></div>))}</div></div>}
                 </div>
                 {!selectedProduct ? (
                     <div className="animate-fade-in">
-                        <div className="mb-6 flex flex-col md:flex-row gap-4"><div className="relative flex-1 group"><Search className="absolute left-3 top-3 text-gray-400 group-focus-within:text-brand-500 transition-colors" size={18} /><input className="input-saas pl-10" placeholder="Buscar producto..." value={filterTerm} onChange={e => setFilterTerm(e.target.value)} /></div><div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar md:flex-wrap">{['Todas', ...categories].map(c => <button key={c} onClick={() => setFilterCategory(c)} className={`px-4 py-2 rounded-lg whitespace-nowrap text-xs font-bold transition-all ${filterCategory === c ? 'bg-slate-800 text-white shadow-lg' : 'bg-white text-slate-600 border hover:bg-slate-50 hover:text-brand-600'}`}>{c}</button>)}</div></div>
+                        <div className="mb-6 flex flex-col md:flex-row gap-4"><div className="relative flex-1 group"><Search className="absolute left-3 top-3 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} /><input className="input-saas pl-10" placeholder="Buscar producto..." value={filterTerm} onChange={e => setFilterTerm(e.target.value)} /></div><div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar md:flex-wrap">{['Todas', ...categories].map(c => <button key={c} onClick={() => setFilterCategory(c)} className={`px-4 py-2 rounded-lg whitespace-nowrap text-xs font-bold transition-all ${filterCategory === c ? 'bg-slate-800 text-white shadow-lg' : 'bg-white text-slate-600 border hover:bg-slate-50 hover:text-blue-600'}`}>{c}</button>)}</div></div>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{products.filter(p => (filterCategory === 'Todas' || p.category === filterCategory) && p.name.toLowerCase().includes(filterTerm.toLowerCase())).map((p) => {
                             const originalIndex = products.findIndex(prod => prod.id === p.id);
                             const isLocked = !isPro && originalIndex >= 3;
 
                             return (
-                                <div key={p.id} onClick={() => isLocked ? onUpgrade("Este producto es parte de tu historial PRO. Reactiva tu suscripción para desbloquearlo y usarlo.") : setSelectedProduct(p)} className={`group bg-white rounded-2xl border ${isLocked ? 'border-slate-200 opacity-50 cursor-pointer grayscale' : 'border-slate-100 hover:shadow-xl hover:-translate-y-1 cursor-pointer'} overflow-hidden transition-all relative`}>
+                                <div key={p.id} onClick={() => isLocked ? onUpgrade("Este producto es parte de tu historial PRO. Reactiva tu suscripción para desbloquearlo y usarlo.") : setSelectedProduct(p)} className={`group bg-white rounded-2xl border ${isLocked ? 'border-slate-200 opacity-50 cursor-pointer grayscale' : 'border-slate-100 hover:border-blue-200 hover:shadow-2xl hover:-translate-y-2 cursor-pointer'} overflow-hidden transition-all duration-300 relative`}>
                                     <div className="aspect-square bg-slate-50 relative w-full overflow-hidden">
                                         {p.image ? <img src={p.image} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" /> : <div className="flex h-full items-center justify-center text-slate-300"><Box size={40} /></div>}
                                         {isLocked ? (
@@ -261,9 +264,9 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                                         )}
                                     </div>
                                     <div className="p-4">
-                                        <h3 className="font-bold text-sm text-slate-800 leading-tight mb-1">{p.name}</h3>
+                                        <h3 className="font-black text-base text-slate-900 leading-tight mb-2">{p.name}</h3>
                                         <div className="flex justify-between items-center">
-                                            <p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold bg-slate-100 w-fit px-2 py-0.5 rounded">{p.category}</p>
+                                            <p className="text-[11px] text-slate-600 uppercase tracking-wider font-extrabold bg-gradient-to-r from-slate-100 to-slate-50 w-fit px-2.5 py-1 rounded-lg border border-slate-200">{p.category}</p>
                                             {isLocked && <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">PRO</span>}
                                         </div>
                                     </div>
@@ -278,8 +281,8 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                             <div className="w-full md:w-1/3 bg-slate-100 p-6 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-200">{selectedProduct.image ? <img src={selectedProduct.image} className="max-h-48 rounded-lg shadow-lg rotate-1 hover:rotate-0 transition-transform" /> : <Box size={64} className="text-slate-300" />}</div>
                             <div className="flex-1 p-6 space-y-6">
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">{['matrix', 'simple_area', 'simple_linear'].includes(selectedProduct.priceType) && <><div className="flex flex-col"><label className="text-[10px] font-bold text-slate-500 mb-1">ANCHO (mm)</label><input type="number" className="input-saas text-right font-bold" value={dims.w} onChange={e => setDims({ ...dims, w: parseInt(e.target.value) || 0 })} /></div><div className="flex flex-col"><label className="text-[10px] font-bold text-slate-500 mb-1">ALTO (mm)</label><input type="number" className="input-saas text-right font-bold" value={dims.h} onChange={e => setDims({ ...dims, h: parseInt(e.target.value) || 0 })} /></div></>}<div className="flex flex-col"><label className="text-[10px] font-bold text-slate-500 mb-1">CANTIDAD</label><input type="number" className="input-saas text-right font-bold" value={dims.q} onChange={e => setDims({ ...dims, q: parseInt(e.target.value) || 1 })} /></div><div className="col-span-2 md:col-span-3"><label className="text-[10px] font-bold text-slate-500 mb-1">UBICACIÓN</label><input placeholder="Ej: Salón principal..." className="input-saas" value={locationLabel} onChange={e => setLocationLabel(e.target.value)} /></div></div>
-                                <div className="space-y-3 pt-4 border-t"><h4 className="text-xs font-black uppercase text-slate-400">Personalización</h4>{selectedProduct.extras.map(e => e.type === 'selection' ? (<select key={e.id} className="input-saas bg-white" onChange={ev => setDropdownSelections({ ...dropdownSelections, [e.id]: ev.target.value })}><option>Seleccionar {e.name}</option>{e.optionsList.map((o, i) => <option key={i} value={i}>{o.name} (+{o.value}{o.type === 'percent' ? '%' : (o.type === 'linear' ? '€/ml' : (o.type === 'area' ? '€/m²' : '€'))})</option>)}</select>) : (<div key={e.id} onClick={() => toggleExtra(e)} className={`w-full p-3 border rounded-xl flex justify-between items-center cursor-pointer transition-all ${selectedExtras.find(x => x.id === e.id) ? 'bg-brand-50 border-brand-500 shadow-inner' : 'hover:bg-slate-50'}`}><div className="flex-1"><span className={`font-bold ${selectedExtras.find(x => x.id === e.id) ? 'text-brand-800' : 'text-slate-700'}`}>{e.name}</span><span className="text-xs ml-2 text-slate-500 bg-white px-1.5 py-0.5 rounded border">+{e.value}{e.type === 'percent' ? '%' : (e.type === 'linear' ? '€/ml' : (e.type === 'area' ? '€/m²' : '€'))}</span></div>{selectedExtras.find(x => x.id === e.id) ? <div onClick={e => e.stopPropagation()} className="flex items-center gap-1 ml-2 bg-white rounded-lg border shadow-sm p-0.5"><button onClick={() => updateExtraQty(e.id, -1)} className="px-2 hover:bg-slate-100 font-bold">-</button><span className="text-xs w-4 text-center font-bold">{selectedExtras.find(x => x.id === e.id).qty}</span><button onClick={() => updateExtraQty(e.id, 1)} className="px-2 hover:bg-slate-100 font-bold">+</button></div> : <div className="w-5 h-5 rounded-full border-2 border-slate-300"></div>}</div>))}</div>
-                                <div className="flex justify-between items-center pt-4 border-t"><div className="flex flex-col"><span className="text-xs text-slate-400 font-bold uppercase">Precio Final</span><span className="text-3xl font-black text-slate-800 tracking-tight">{calculatedPrice !== null ? formatCurrency(calculatedPrice) : '--'}</span></div><button onClick={addToQuote} disabled={!calculatedPrice} style={{ backgroundColor: config.color }} className="btn-primary shadow-xl shadow-brand-500/20 px-8 py-3 text-lg"><Plus size={18} /> AÑADIR</button></div>
+                                <div className="space-y-3 pt-4 border-t"><h4 className="text-xs font-black uppercase text-slate-400">Personalización</h4>{selectedProduct.extras.map(e => e.type === 'selection' ? (<select key={e.id} className="input-saas bg-white" onChange={ev => setDropdownSelections({ ...dropdownSelections, [e.id]: ev.target.value })}><option>Seleccionar {e.name}</option>{e.optionsList.map((o, i) => <option key={i} value={i}>{o.name} (+{o.value}{o.type === 'percent' ? '%' : (o.type === 'linear' ? '€/ml' : (o.type === 'area' ? '€/m²' : '€'))})</option>)}</select>) : (<div key={e.id} onClick={() => toggleExtra(e)} className={`w-full p-3 border rounded-xl flex justify-between items-center cursor-pointer transition-all ${selectedExtras.find(x => x.id === e.id) ? 'bg-blue-50 border-blue-500 shadow-inner' : 'hover:bg-slate-50'}`}><div className="flex-1"><span className={`font-bold ${selectedExtras.find(x => x.id === e.id) ? 'text-blue-800' : 'text-slate-700'}`}>{e.name}</span><span className="text-xs ml-2 text-slate-500 bg-white px-1.5 py-0.5 rounded border">+{e.value}{e.type === 'percent' ? '%' : (e.type === 'linear' ? '€/ml' : (e.type === 'area' ? '€/m²' : '€'))}</span></div>{selectedExtras.find(x => x.id === e.id) ? <div onClick={e => e.stopPropagation()} className="flex items-center gap-1 ml-2 bg-white rounded-lg border shadow-sm p-0.5"><button onClick={() => updateExtraQty(e.id, -1)} className="px-2 hover:bg-slate-100 font-bold">-</button><span className="text-xs w-4 text-center font-bold">{selectedExtras.find(x => x.id === e.id).qty}</span><button onClick={() => updateExtraQty(e.id, 1)} className="px-2 hover:bg-slate-100 font-bold">+</button></div> : <div className="w-5 h-5 rounded-full border-2 border-slate-300"></div>}</div>))}</div>
+                                <div className="flex justify-between items-center pt-4 border-t"><div className="flex flex-col"><span className="text-xs text-slate-400 font-bold uppercase">Precio Final</span><span className="text-3xl font-black text-slate-800 tracking-tight">{calculatedPrice !== null ? formatCurrency(calculatedPrice) : '--'}</span></div><button onClick={addToQuote} disabled={!calculatedPrice} className="relative overflow-hidden px-8 py-3.5 text-lg font-black uppercase tracking-wide rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 group"><span className="relative z-10 flex items-center justify-center gap-2"><Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />AÑADIR</span><div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div></button></div>
                             </div>
                         </div>
                     </div>
@@ -299,14 +302,37 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                 <div className="bg-white border-t p-6 space-y-4 shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-30"><div className="grid grid-cols-2 gap-4 text-xs"><div><label className="text-slate-400 font-bold block mb-1">Descuento %</label><input type="number" className="input-saas text-right font-bold" value={financials.discountPercent} onChange={e => setFinancials({ ...financials, discountPercent: parseFloat(e.target.value) || 0 })} /></div><div><label className="text-slate-400 font-bold block mb-1">Entrega €</label><input type="number" className="input-saas text-right font-bold" value={financials.deposit} onChange={e => setFinancials({ ...financials, deposit: parseFloat(e.target.value) || 0 })} /></div></div><div className="space-y-1 py-2 border-t border-dashed"><div className="flex justify-between text-sm text-slate-500"><span>Subtotal</span><span>{formatCurrency(grossTotal)}</span></div>{discountAmount > 0 && <div className="flex justify-between text-sm text-emerald-600"><span>Ahorro</span><span>-{formatCurrency(discountAmount)}</span></div>}<div className="flex justify-between text-3xl font-black text-slate-800 tracking-tight"><span>TOTAL</span><span>{formatCurrency(grandTotal)}</span></div>{financials.deposit > 0 && <div className="flex justify-between text-sm font-bold text-slate-400 pt-1"><span>Restante</span><span>{formatCurrency(remainingBalance)}</span></div>}</div>                <div className="grid grid-cols-2 gap-3">
                     <button
                         onClick={handleSave}
-                        className={`btn-secondary flex-1 h-12 shadow-sm transition-all duration-300 ${saveStatus === 'saved'
-                            ? 'bg-emerald-600 !text-white !border-emerald-600 shadow-lg scale-105'
-                            : ''
-                            }`}
+                        disabled={saveStatus === 'saving'}
+                        className={`
+                            flex-1 h-14 rounded-xl font-bold text-base
+                            flex items-center justify-center gap-2
+                            transition-all duration-500 ease-out
+                            ${saveStatus === 'idle' ? 'bg-white border-2 border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-600 hover:shadow-md' : ''}
+                            ${saveStatus === 'saving' ? 'bg-blue-50 border-2 border-blue-300 text-blue-600 cursor-wait' : ''}
+                            ${saveStatus === 'saved' ? 'bg-gradient-to-r from-emerald-500 to-green-500 border-2 border-emerald-600 text-white shadow-2xl shadow-emerald-500/50 scale-105' : ''}
+                            active:scale-95
+                        `}
                     >
-                        {saveStatus === 'saved' ? <><Check size={20} /> ¡GUARDADO!</> : <><Save size={18} /> Guardar</>}
+                        {saveStatus === 'saving' && (
+                            <>
+                                <Loader2 size={20} className="animate-spin" />
+                                Guardando...
+                            </>
+                        )}
+                        {saveStatus === 'saved' && (
+                            <>
+                                <Check size={22} className="animate-bounce" />
+                                <span className="font-black">¡GUARDADO!</span>
+                            </>
+                        )}
+                        {saveStatus === 'idle' && (
+                            <>
+                                <Save size={20} />
+                                Guardar
+                            </>
+                        )}
                     </button>
-                    <button onClick={() => setViewMode('print')} style={{ backgroundColor: config.color }} className="btn-primary flex-1 h-12 shadow-lg"><Printer size={18} /> Finalizar</button>
+                    <button onClick={() => setViewMode('print')} className="relative overflow-hidden flex-1 h-14 rounded-xl font-black text-base flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white shadow-2xl shadow-purple-500/40 hover:shadow-[0_10px_40px_rgba(168,85,247,0.6)] active:scale-95 transition-all duration-300 group"><span className="relative z-10 flex items-center gap-2"><Printer size={20} className="group-hover:scale-110 transition-transform" /><span className="tracking-wide">Finalizar</span></span><div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div></button>
                 </div></div>
             </div>
         </div>
