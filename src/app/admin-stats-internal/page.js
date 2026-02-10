@@ -2,10 +2,10 @@
 import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { auth, db } from '../../lib/firebase';
+import { auth } from '../../lib/firebase'; // Removed db import
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, getDocs, doc, updateDoc, getCountFromServer } from 'firebase/firestore';
-import { ShieldCheck, Users, Box, Lock, Search } from 'lucide-react';
+// Removed firestore imports
+import { ShieldCheck, Users, Box, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -30,7 +30,7 @@ export default function AdminStats() {
             if (u) {
                 if (ALLOWED_EMAILS.includes(u.email)) {
                     setUser(u);
-                    fetchStats();
+                    fetchStats(u);
                 } else {
                     setUser(null);
                     setLoading(false);
@@ -43,50 +43,46 @@ export default function AdminStats() {
         return () => unsubscribe();
     }, [router]);
 
-    const fetchStats = async () => {
+    const fetchStats = async (currentUser) => {
         try {
             setLoading(true);
-            const usersColl = collection(db, "users");
-            const snapshot = await getDocs(usersColl);
+            const token = await currentUser.getIdToken();
 
-            const users = [];
-            let verifiedCount = 0;
-            let activeSubsCount = 0;
-
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                const isPro = data.subscriptionStatus === 'active' || data.subscriptionStatus === 'pro' || data.isPro === true;
-                if (data.emailVerified) verifiedCount++;
-                if (isPro) activeSubsCount++;
-
-                users.push({
-                    id: doc.id,
-                    ...data
-                });
+            const response = await fetch('/api/admin/stats', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             });
 
-            // Sort by creation time (handle both Firestore Timestamp and ISO String)
+            if (!response.ok) {
+                throw new Error('Error fetching admin stats');
+            }
+
+            const data = await response.json();
+
+            // Process users from API response
+            const users = data.users || [];
+            let activeSubsCount = 0;
+
+            users.forEach(u => {
+                const isPro = u.subscriptionStatus === 'active' || u.subscriptionStatus === 'pro' || u.isPro === true;
+                if (isPro) activeSubsCount++;
+            });
+
+            // Sort by creation time
             users.sort((a, b) => {
-                const dateA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
-                const dateB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+                const dateA = new Date(a.createdAt || 0).getTime();
+                const dateB = new Date(b.createdAt || 0).getTime();
                 return dateB - dateA;
             });
 
             setUsersList(users);
 
-            // Total Products (Optional, keep if needed)
-            const productsColl = collection(db, "products");
-            let productCount = 0;
-            try {
-                const snapP = await getCountFromServer(productsColl);
-                productCount = snapP.data().count;
-            } catch (e) { }
-
             setStats({
-                totalUsers: users.length,
-                verifiedUsers: verifiedCount,
+                totalUsers: data.totalUsers,
+                verifiedUsers: data.verifiedUsers,
                 activeSubs: activeSubsCount,
-                totalProducts: users.reduce((acc, u) => acc + (u.products?.length || 0), 0)
+                totalProducts: data.totalProducts || 0
             });
 
         } catch (err) {
@@ -98,33 +94,8 @@ export default function AdminStats() {
     };
 
     const toggleProStatus = async (userId, currentStatus) => {
-        if (!confirm(`¿Estás seguro de que quieres ${currentStatus ? 'DESACTIVAR' : 'ACTIVAR'} el Plan PRO para este usuario?`)) return;
-
-        try {
-            const userRef = doc(db, "users", userId);
-            // We update both fields to be sure
-            await updateDoc(userRef, {
-                isPro: !currentStatus,
-                subscriptionStatus: !currentStatus ? 'active' : 'inactive'
-            });
-
-            // Refresh local state to reflect change immediately
-            setUsersList(prev => prev.map(u => {
-                if (u.id === userId) {
-                    return { ...u, isPro: !currentStatus, subscriptionStatus: !currentStatus ? 'active' : 'inactive' };
-                }
-                return u;
-            }));
-
-            // Re-calc stats locally
-            setStats(prev => ({
-                ...prev,
-                activeSubs: !currentStatus ? prev.activeSubs + 1 : prev.activeSubs - 1
-            }));
-
-        } catch (err) {
-            alert("Error al actualizar estado: " + err.message);
-        }
+        // This functionality needs a new API route to be secure
+        alert("Esta funcionalidad requiere una nueva API segura. Por ahora usa la consola de Firebase o implementa /api/admin/update-user");
     };
 
     const filteredUsers = usersList.filter(u =>
@@ -235,11 +206,8 @@ export default function AdminStats() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
-                                                    <span className="font-medium text-slate-300" title={new Date(u.createdAt?.seconds ? u.createdAt.seconds * 1000 : u.createdAt).toLocaleString()}>
-                                                        {u.createdAt ? formatDistanceToNow(u.createdAt?.seconds ? u.createdAt.seconds * 1000 : new Date(u.createdAt), { addSuffix: true, locale: es }) : '-'}
-                                                    </span>
-                                                    <span className="text-[10px] text-slate-500">
-                                                        {u.createdAt ? new Date(u.createdAt?.seconds ? u.createdAt.seconds * 1000 : u.createdAt).toLocaleDateString() : ''}
+                                                    <span className="font-medium text-slate-300">
+                                                        {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
                                                     </span>
                                                 </div>
                                             </td>
@@ -252,17 +220,12 @@ export default function AdminStats() {
                                                     )}
                                                 </div>
                                             </td>
-                                            {/* Nuevo: Items Column (Logic was requested but not column header yet? Added column header in my head, need to add it to code) */}
-                                            {/* Wait, I need to add the TD for Items, but also the TH in the header row above. I will do 2 separate chunks for that. */}
-                                            {/* This chunk is just replacing the TDs. I will add the Items TD here properly */}
-
                                             <td className="px-6 py-4 text-center">
-                                                <span className={`font-mono font-bold ${(!isPro && (u.products?.length || 0) > 3) ? 'text-red-400' : 'text-slate-400'}`}>
-                                                    {u.products?.length || 0}
-                                                    {!isPro && (u.products?.length || 0) > 3 && <span className="ml-1 text-xs">⚠️</span>}
+                                                <span className={`font-mono font-bold ${(!isPro && (u.productsCount || 0) > 3) ? 'text-red-400' : 'text-slate-400'}`}>
+                                                    {u.productsCount || 0}
+                                                    {!isPro && (u.productsCount || 0) > 3 && <span className="ml-1 text-xs">⚠️</span>}
                                                 </span>
                                             </td>
-
                                             <td className="px-6 py-4 text-center">
                                                 {isPro ? (
                                                     <div className="flex flex-col items-center gap-1">
@@ -280,18 +243,11 @@ export default function AdminStats() {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    <Link
-                                                        href={`/?impersonate=${u.id}`}
-                                                        target="_blank"
-                                                        className="bg-slate-700 text-slate-300 hover:text-white hover:bg-slate-600 p-1.5 rounded"
-                                                        title="Ver como este usuario"
-                                                    >
-                                                        <Box size={16} />
-                                                    </Link>
                                                     <button
                                                         onClick={() => toggleProStatus(u.id, isPro)}
-                                                        className={`text-xs font-bold px-3 py-1.5 rounded transition-colors ${isPro ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50' : 'bg-green-900/30 text-green-400 hover:bg-green-900/50'
-                                                            }`}
+                                                        className={`text-xs font-bold px-3 py-1.5 rounded transition-colors bg-slate-800 text-slate-500 cursor-not-allowed`}
+                                                        disabled
+                                                        title="Edición deshabilitada temporalmente en nueva versión segura"
                                                     >
                                                         {isPro ? 'Desactivar PRO' : 'Activar PRO'}
                                                     </button>
