@@ -1,8 +1,61 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Helper function: Check if request tries to modify protected fields
+    function hasProtectedFields() {
+      return request.resource.data.diff(resource.data)
+        .affectedKeys()
+        .hasAny([
+          'subscriptionStatus', 
+          'isPro', 
+          'plan', 
+          'redeemCode', 
+          'redeemedAt',
+          'planExpiry',
+          'planLabel',
+          'lemonCustomerId',
+          'lemonSubscriptionId',
+          'lemonVariantId',
+          'lemonRenewsAt',
+          'lemonCancelled',
+          'lemonCustomerPortalUrl'
+        ]);
+    }
+    
+    match /users/{userId} {
+      // Read: User can read their own data
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Create: User can create their profile (during registration)
+      // Protected fields should not be set during creation by user
+      allow create: if request.auth != null 
+        && request.auth.uid == userId
+        && !hasProtectedFields();
+      
+      // Update: User can update ONLY if NOT touching protected fields
+      // Protected fields can only be modified by server (Admin SDK) or webhooks
+      allow update: if request.auth != null 
+        && request.auth.uid == userId 
+        && !hasProtectedFields();
+      
+      // Delete: Users cannot delete their own profile
+      // Only admin/server can delete
+      allow delete: if false;
+    }
+    
+    // Subcollections under users (products, history, quotes, etc.)
+    // Users have full control over their own subcollections
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Global products collection (if you have one for catalog templates)
+    // Read-only for all authenticated users
+    // Only server can write
+    match /products/{productId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only server can modify
     }
   }
 }

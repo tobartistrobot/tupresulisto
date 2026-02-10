@@ -147,7 +147,7 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
                     <button
                         onClick={handleGoogleLogin}
                         disabled={loading}
-                        className="w-full py-3 flex items-center justify-center gap-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm text-slate-700 font-bold"
+                        className="btn-secondary w-full !font-bold shadow-sm"
                     >
                         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
                         Continuar con Google
@@ -166,7 +166,7 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
                             <input
                                 type="email"
                                 required
-                                className="w-full input-saas p-3 rounded-lg text-slate-900"
+                                className="input-saas"
                                 placeholder="tu@email.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -177,7 +177,7 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
                             <input
                                 type="password"
                                 required
-                                className="w-full input-saas p-3 rounded-lg text-slate-900"
+                                className="input-saas"
                                 placeholder={mode === 'register' ? "Crea una clave segura" : "••••••••"}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -202,7 +202,7 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
                                 <input
                                     type="password"
                                     required
-                                    className={`w-full input-saas p-3 rounded-lg text-slate-900 ${password !== confirmPassword && confirmPassword ? 'border-red-300 ring-red-200' : ''}`}
+                                    className={`input-saas ${password !== confirmPassword && confirmPassword ? 'border-red-300 ring-red-200' : ''}`}
                                     placeholder="Repite tu clave"
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -212,10 +212,7 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
                         <button
                             disabled={loading}
                             onClick={handleAuth}
-                            className={`w-full py-3 flex items-center justify-center px-4 rounded-lg font-semibold transition-all duration-200 
-                            ${loading
-                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                    : 'bg-sky-600 text-white hover:bg-sky-500 shadow-lg shadow-sky-500/30'}`}
+                            className={`btn-primary w-full shadow-lg shadow-brand-500/30 ${loading ? 'bg-slate-200 text-slate-400 cursor-not-allowed hover:bg-slate-200' : ''}`}
                         >
                             {loading ? 'Procesando...' : (
                                 mode === 'register'

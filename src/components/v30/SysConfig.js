@@ -1,8 +1,8 @@
 'use client';
 import React, { useState } from 'react';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import { Box, Save, Crown, Ticket, Shield, AlertTriangle } from 'lucide-react';
-import { redeemCoupon } from '../../utils/couponSystem';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'; // Import auth methods
 
 const processImage = (file) => new Promise((resolve, reject) => {
@@ -26,6 +26,7 @@ const processImage = (file) => new Promise((resolve, reject) => {
 
 const SysConfig = ({ config, setConfig, className, user, isPro, products = [], setProducts, categories = [], setCategories }) => {
     const toast = useToast();
+    const { userProfile } = useAuth(); // Access Firestore profile with Lemon Squeezy data
     const [couponCode, setCouponCode] = useState('');
     const [isRedeeming, setIsRedeeming] = useState(false);
 
@@ -42,18 +43,31 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
 
     const handleRedeem = async () => {
         setIsRedeeming(true);
-        const result = await redeemCoupon(user?.uid, couponCode);
-        setIsRedeeming(false);
 
-        if (result.success) {
-            toast(result.message, "success");
-            setCouponCode('');
-            // Force reload or just let sync engine handle it? 
-            // Sync engine listens to user doc, so it should auto-update "isPro" in AppV30 eventually.
-            // But immediate feedback is good.
-            setTimeout(() => window.location.reload(), 1500); // Simple hack to refresh PRO status for now
-        } else {
-            toast(result.message, "error");
+        try {
+            const response = await fetch('/api/redeem-coupon', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user?.uid,
+                    code: couponCode
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                toast(result.message, "success");
+                setCouponCode('');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                toast(result.message, "error");
+            }
+        } catch (error) {
+            console.error('Coupon error:', error);
+            toast("Error al canjear el código. Inténtalo de nuevo.", "error");
+        } finally {
+            setIsRedeeming(false);
         }
     };
 
@@ -146,6 +160,43 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                             <p className="text-xs text-slate-400 mt-2">
                                 {isPro ? "Disfrutas de acceso ilimitado a todas las funciones." : "Limitado a 3 productos. Actualiza para eliminar límites."}
                             </p>
+
+                            {/* Subscription Details for PRO users */}
+                            {isPro && userProfile?.lemonRenewsAt && (
+                                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <span className="text-blue-600 font-bold">📅 Próxima renovación:</span>
+                                        <span className="text-slate-700 font-medium">
+                                            {new Date(userProfile.lemonRenewsAt).toLocaleDateString('es-ES', {
+                                                day: 'numeric',
+                                                month: 'long',
+                                                year: 'numeric'
+                                            })}
+                                        </span>
+                                    </div>
+                                    {userProfile.lemonCancelled && (
+                                        <p className="text-xs text-orange-600 mt-1 font-medium">
+                                            ⚠️ Renovación automática desactivada. Tu acceso termina en la fecha indicada.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Manage Subscription Button */}
+                            {isPro && userProfile?.lemonCustomerPortalUrl && (
+                                <button
+                                    onClick={() => window.open(userProfile.lemonCustomerPortalUrl, '_blank')}
+                                    className="mt-4 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-sm flex items-center gap-2 transition-colors border border-slate-200"
+                                >
+                                    <Crown size={16} className="text-yellow-500" />
+                                    Gestionar Suscripción
+                                </button>
+                            )}
+                            {isPro && !userProfile?.lemonCustomerPortalUrl && (
+                                <p className="mt-4 text-xs text-slate-400">
+                                    Para gestionar tu suscripción, contacta con soporte.
+                                </p>
+                            )}
                         </div>
 
                         {!isPro && (

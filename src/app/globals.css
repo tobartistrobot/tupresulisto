@@ -1,6 +1,24 @@
 @import "tailwindcss";
 
+@theme {
+    --color-brand-50: #eff6ff;
+    --color-brand-100: #dbeafe;
+    --color-brand-200: #bfdbfe;
+    --color-brand-300: #93c5fd;
+    --color-brand-400: #60a5fa;
+    --color-brand-500: #3b82f6;
+    --color-brand-600: #2563eb;
+    --color-brand-700: #1d4ed8;
+    --color-brand-800: #1e40af;
+    --color-brand-900: #1e3a8a;
+    --color-brand-950: #172554;
 
+    --color-surface: #f8fafc;
+    --color-surface-dark: #f1f5f9;
+
+    --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Roboto Mono, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+}
 
 @layer utilities {
     .h-safe-screen {
@@ -18,67 +36,37 @@
     }
 
     .glass-sidebar {
-        background: rgba(15, 23, 42, 0.7);
-        backdrop-filter: blur(12px);
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        @apply bg-slate-900/90 backdrop-blur-md border-r border-slate-800;
     }
 
+    /* Standardized Input */
     .input-saas {
-        background: rgba(255, 255, 255, 0.9);
-        border: 1px solid #e2e8f0;
-        transition: all 0.2s ease;
+        @apply w-full bg-white border border-slate-200 rounded-lg p-3 transition-all duration-200 text-slate-900 font-medium;
     }
 
     .input-saas:focus {
-        background: #ffffff;
-        border-color: #0ea5e9;
-        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
-        outline: none;
+        @apply outline-none border-brand-500 ring-4 ring-brand-500/10;
+    }
+
+    .input-saas::placeholder {
+        @apply text-slate-400 font-normal;
+    }
+
+    /* Standardized Buttons */
+    .btn-primary {
+        @apply bg-brand-600 text-white font-bold py-3 px-6 rounded-lg transition-all hover:bg-brand-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2;
+    }
+
+    .btn-secondary {
+        @apply bg-white text-slate-700 border border-slate-200 font-bold py-3 px-6 rounded-lg transition-all hover:bg-slate-50 hover:text-brand-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2;
     }
 
     .glass-panel {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
+        @apply bg-white/95 backdrop-blur-sm border border-slate-100 shadow-sm;
     }
 
-    .smooth-scroll {
-        -webkit-overflow-scrolling: touch;
-    }
 
-    .sticky-col-header {
-        position: sticky;
-        left: 0;
-        z-index: 20;
-    }
-
-    .sticky-col {
-        position: sticky;
-        left: 0;
-        z-index: 10;
-    }
-
-    .sticky-row-header {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-    }
-
-    .sticky-corner {
-        position: sticky;
-        left: 0;
-        top: 0;
-        z-index: 30;
-    }
-
-    /* Animations */
-    .animate-fade-in {
-        animation: fadeIn 0.3s ease-out;
-    }
-
-    .animate-slide-up {
-        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
+    /* Animation Keyframes defined in Tailwind Config or here for complex ones */
     @keyframes fadeIn {
         from {
             opacity: 0;
@@ -101,39 +89,25 @@
         }
     }
 
+    .animate-fade-in {
+        animation: fadeIn 0.3s ease-out forwards;
+    }
+
+    .animate-slide-up {
+        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
     .animate-pulse-slow {
-        animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-
-    .animation-delay-100 {
-        animation-delay: 100ms;
-    }
-
-    .animation-delay-200 {
-        animation-delay: 200ms;
-    }
-
-    .animation-delay-300 {
-        animation-delay: 300ms;
-    }
-
-    .animation-delay-500 {
-        animation-delay: 500ms;
-    }
-
-    .animation-delay-1000 {
-        animation-delay: 1000ms;
-    }
-
-    .touch-target-48 {
-        min-height: 48px;
-        min-width: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
 }
 
+/* Base Resets */
 html {
     touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    @apply antialiased text-slate-800 bg-surface;
 }

@@ -29,14 +29,21 @@ export const viewport = {
 
 import Script from "next/script";
 
+import { AuthProvider } from '../context/AuthContext';
+import { ToastProvider } from '../context/ToastContext';
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
-        <Script src="https://assets.lemonsqueezy.com/lemon.js" strategy="lazyOnload" />
+        <AuthProvider>
+          <ToastProvider>
+            {children}
+            <Script src="https://assets.lemonsqueezy.com/lemon.js" strategy="lazyOnload" />
+          </ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

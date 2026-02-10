@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/firebase';
-import { collection, getCountFromServer, query, where } from 'firebase/firestore';
 import { ShieldCheck, Users, Box, ArrowLeft } from 'lucide-react';
 
 const AdminDashboard = ({ user, onBack }) => {
@@ -19,31 +17,33 @@ const AdminDashboard = ({ user, onBack }) => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const usersColl = collection(db, "users");
-                const snapshotTotal = await getCountFromServer(usersColl);
+                // Get Firebase ID token for authentication
+                const token = await user.getIdToken();
 
-                const qVerified = query(usersColl, where("emailVerified", "==", true));
-                const snapshotVerified = await getCountFromServer(qVerified);
-
-                const productsColl = collection(db, "products");
-                let snapshotProducts = { data: () => ({ count: 0 }) };
-                try {
-                    snapshotProducts = await getCountFromServer(productsColl);
-                } catch (e) { console.log("Products collection issue", e); }
-
-                setStats({
-                    totalUsers: snapshotTotal.data().count,
-                    verifiedUsers: snapshotVerified.data().count,
-                    totalProducts: snapshotProducts.data().count
+                const response = await fetch('/api/admin/stats', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
                 });
+
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        throw new Error('No tienes permisos de administrador');
+                    }
+                    throw new Error('Error al cargar estadísticas');
+                }
+
+                const data = await response.json();
+                setStats(data);
             } catch (err) {
-                console.error(err);
+                console.error('Admin stats error:', err);
+                // Stats will remain at default values
             } finally {
                 setLoading(false);
             }
         };
         fetchStats();
-    }, []);
+    }, [user]);
 
     if (loading) return <div className="h-screen flex items-center justify-center font-bold text-slate-400">Cargando Panel...</div>;
 

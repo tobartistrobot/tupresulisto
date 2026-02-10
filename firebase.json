@@ -1,12 +1,35 @@
 {
     "hosting": {
-        "source": ".",
+        "public": "out",
+        "cleanUrls": true,
+        "trailingSlash": false,
         "ignore": [
             "firebase.json",
             "**/.*",
             "**/node_modules/**"
+        ],
+        "rewrites": [
+            {
+                "source": "/api/webhooks/lemon",
+                "function": {
+                    "functionId": "lemonWebhook",
+                    "region": "europe-west1"
+                }
+            }
         ]
     },
+    "functions": [
+        {
+            "source": "functions",
+            "codebase": "default",
+            "ignore": [
+                "node_modules",
+                ".git",
+                "firebase-debug.log",
+                "firebase-debug.*.log"
+            ]
+        }
+    ],
     "firestore": {
         "rules": "firestore.rules",
         "indexes": "firestore.indexes.json"

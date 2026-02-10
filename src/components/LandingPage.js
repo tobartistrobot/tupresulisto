@@ -416,6 +416,24 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
                     <p className="text-blue-300/60 text-sm mt-8 font-mono uppercase tracking-widest">Sin tarjeta de crédito</p>
                 </div>
             </section>
+            {/* Footer */}
+            <footer className="bg-slate-900 border-t border-slate-800 py-12">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                        {/* Copyright */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-slate-400 text-sm">© 2024 TuPresuListo. Todos los derechos reservados.</span>
+                        </div>
+
+                        {/* Legal Links */}
+                        <div className="flex flex-wrap justify-center gap-6">
+                            <a href="/privacy" className="text-sm text-slate-400 hover:text-white transition-colors">Política de Privacidad</a>
+                            <a href="/terms" className="text-sm text-slate-400 hover:text-white transition-colors">Términos y Condiciones</a>
+                            <a href="/contact" className="text-sm text-slate-400 hover:text-white transition-colors">Contacto</a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
         </div>
     );
 };
