@@ -55,10 +55,40 @@ export async function GET(request) {
         const usersSnapshot = await db.collection('users').get();
         const totalUsers = usersSnapshot.size;
 
+        const usersList = [];
         let verifiedUsers = 0;
+
         usersSnapshot.forEach(doc => {
             const data = doc.data();
             if (data.emailVerified) verifiedUsers++;
+
+            // Add user to list with minimal required fields for the table
+            usersList.push({
+                id: doc.id,
+                email: data.email,
+                createdAt: data.createdAt ? (data.createdAt.toDate ? data.createdAt.toDate().toISOString() : data.createdAt) : null,
+                emailVerified: data.emailVerified,
+                subscriptionStatus: data.subscriptionStatus,
+                isPro: data.isPro,
+                redeemCode: data.redeemCode,
+                productsCount: data.products?.length || 0
+            });
+        });
+
+        // Products count (if you have a products collection)
+        let totalProducts = 0;
+        try {
+            const productsSnapshot = await db.collection('products').get();
+            totalProducts = productsSnapshot.size;
+        } catch (e) {
+            console.log('Products collection not found or empty');
+        }
+
+        return NextResponse.json({
+            totalUsers,
+            verifiedUsers,
+            totalProducts,
+            users: usersList // Return the list
         });
 
         // Products count (if you have a products collection)
