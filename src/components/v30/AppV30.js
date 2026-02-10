@@ -182,7 +182,7 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
     };
 
     return (
-        <div className="flex h-[100dvh] w-full bg-slate-100 font-sans text-slate-800 overflow-hidden relative">
+        <div className="flex h-[100dvh] w-full bg-slate-100 font-sans text-slate-800 overflow-hidden relative isolate">
             {showUpgradeModal && (
                 <UpgradeModal
                     onClose={() => { setShowUpgradeModal(false); setUpgradeMessage(null); }}
@@ -201,7 +201,7 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
 
             {/* Global Connection Error Alert */}
             {cloudStatus === 'error' && (
-                <div className="fixed bottom-4 right-4 z-[100] bg-red-600 text-white px-6 py-4 rounded-xl shadow-2xl animate-bounce-in flex flex-col items-start max-w-sm">
+                <div className="fixed bottom-20 md:bottom-4 right-4 z-[100] bg-red-600 text-white px-6 py-4 rounded-xl shadow-2xl animate-bounce-in flex flex-col items-start max-w-sm">
                     <div className="flex items-center gap-2 font-bold mb-1">
                         <CloudOff size={20} />
                         <span>Problemas de Conexión</span>
@@ -211,8 +211,8 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
                 </div>
             )}
 
-            {/* Mobile Header */}
-            <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-slate-900 z-[60] flex items-center justify-between px-4 shadow-md">
+            {/* Mobile Header - Fixed at top with z-70 to ensure it's above content */}
+            <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-slate-900 z-[70] flex items-center justify-between px-4 shadow-md">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg">
                         <Calculator className="text-white" size={16} />
@@ -245,7 +245,7 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
                     <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'dashboard' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'hover:bg-slate-800 hover:text-white'}`}>
                         <LayoutDashboard size={20} /> <span className="hidden lg:block font-bold text-sm">Panel Control</span>
                     </button>
-                    <button onClick={() => { setEditQuoteData(null); setCart([]); setView('quote') }} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'quote' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'hover:bg-slate-800 hover:text-white'}`}>
+                    <button onClick={() => setView('quote')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'quote' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'hover:bg-slate-800 hover:text-white'}`}>
                         <ShoppingCart size={20} /> <span className="hidden lg:block font-bold text-sm">Presupuestador</span>
                     </button>
                     <button onClick={() => setView('prods')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'prods' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'hover:bg-slate-800 hover:text-white'}`}>
@@ -269,20 +269,20 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
                 </div>
             </aside>
 
-            {/* Mobile Nav */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-[60] flex justify-around p-2 pb-6 shadow-2xl safe-area-bottom">
+            {/* Mobile Nav - Fixed at bottom with z-70, uses pb-6 for safe area */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-[70] flex justify-around p-2 pb-6 shadow-2xl">
                 <button onClick={() => setView('dashboard')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'dashboard' ? 'text-blue-600' : 'text-slate-400'}`}><LayoutDashboard size={20} /><span className="text-[10px] font-bold mt-1">Panel</span></button>
-                <button onClick={() => { setEditQuoteData(null); setCart([]); setView('quote') }} className={`p-2 rounded-lg flex flex-col items-center ${view === 'quote' ? 'text-blue-600' : 'text-slate-400'}`}><ShoppingCart size={20} /><span className="text-[10px] font-bold mt-1">Nuevo</span></button>
+                <button onClick={() => setView('quote')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'quote' ? 'text-blue-600' : 'text-slate-400'}`}><ShoppingCart size={20} /><span className="text-[10px] font-bold mt-1">Nuevo</span></button>
                 <button onClick={() => setView('clients')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'clients' ? 'text-blue-600' : 'text-slate-400'}`}><Users size={20} /><span className="text-[10px] font-bold mt-1">Clientes</span></button>
                 <button onClick={() => setView('prods')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'prods' ? 'text-blue-600' : 'text-slate-400'}`}><Archive size={20} /><span className="text-[10px] font-bold mt-1">Items</span></button>
                 <button onClick={() => setView('config')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'config' ? 'text-blue-600' : 'text-slate-400'}`}><Settings size={20} /><span className="text-[10px] font-bold mt-1">Config</span></button>
             </div>
 
-            {/* Main Content Area */}
-            <main className="flex-1 overflow-y-auto relative flex flex-col h-full bg-slate-100 pb-32 pt-14 md:pb-0 md:pt-0">
-                {view === 'dashboard' && <Dashboard history={history} products={products} clients={clients} onNavigate={handleNavigate} config={config} />}
-                {view === 'quote' && <QuoteConfigurator products={products} categories={categories} config={config} cart={cart} setCart={setCart} onSave={handleSaveQuote} onReset={() => { setCart([]); setEditQuoteData(null) }} initialData={editQuoteData} clientsDb={clients} className="h-full" isPro={isPro} onUpgrade={(msg) => { setUpgradeMessage(msg); setShowUpgradeModal(true); }} />}
-                {view === 'prods' && (
+            {/* Main Content Area - Uses margins instead of padding to create proper scroll area between fixed header/nav */}
+            <main className="flex-1 overflow-y-auto relative flex flex-col bg-slate-100 mt-14 mb-[72px] md:mt-0 md:mb-0">
+                <div className={view === 'dashboard' ? 'h-full' : 'hidden h-full'}><Dashboard history={history} products={products} clients={clients} onNavigate={handleNavigate} config={config} /></div>
+                <div className={view === 'quote' ? 'h-full' : 'hidden h-full'}><QuoteConfigurator products={products} categories={categories} config={config} cart={cart} setCart={setCart} onSave={handleSaveQuote} onReset={() => { setCart([]); setEditQuoteData(null) }} initialData={editQuoteData} clientsDb={clients} className="h-full" isPro={isPro} onUpgrade={(msg) => { setUpgradeMessage(msg); setShowUpgradeModal(true); }} /></div>
+                <div className={view === 'prods' ? 'h-full' : 'hidden h-full'}>
                     <ProductManager
                         products={products}
                         setProducts={setProducts}
@@ -292,9 +292,9 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
                         canCreate={isPro || products.length < 3}
                         onLimitReached={() => { setUpgradeMessage(null); setShowUpgradeModal(true); }}
                     />
-                )}
-                {view === 'clients' && <ClientManager quotesHistory={history} deletedHistory={deletedHistory} onLoadQuote={(q) => handleNavigate(q)} onDeleteClient={handleDeleteClient} onDeleteQuote={handleDeleteQuote} onRestoreItem={handleRestore} onNewQuoteForClient={(c) => { handleImportClient(c) }} onPermanentDelete={(it) => setDeletedHistory(d => d.filter(x => x.deletedAt !== it.deletedAt))} onUpdateStatus={(id, st) => setHistory(h => h.map(x => x.id === id ? { ...x, status: st } : x))} onImportClient={handleImportClient} className="h-full" />}
-                {view === 'config' && <SysConfig config={config} setConfig={setConfig} className="h-full" user={user} isPro={isPro} products={products} setProducts={setProducts} categories={categories} setCategories={setCategories} />}
+                </div>
+                <div className={view === 'clients' ? 'h-full' : 'hidden h-full'}><ClientManager quotesHistory={history} deletedHistory={deletedHistory} onLoadQuote={(q) => handleNavigate(q)} onDeleteClient={handleDeleteClient} onDeleteQuote={handleDeleteQuote} onRestoreItem={handleRestore} onNewQuoteForClient={(c) => { handleImportClient(c) }} onPermanentDelete={(it) => setDeletedHistory(d => d.filter(x => x.deletedAt !== it.deletedAt))} onUpdateStatus={(id, st) => setHistory(h => h.map(x => x.id === id ? { ...x, status: st } : x))} onImportClient={handleImportClient} className="h-full" /></div>
+                <div className={view === 'config' ? 'h-full' : 'hidden h-full'}><SysConfig config={config} setConfig={setConfig} className="h-full" user={user} isPro={isPro} products={products} setProducts={setProducts} categories={categories} setCategories={setCategories} /></div>
             </main>
         </div>
     );
@@ -302,10 +302,8 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
 
 export default function AppV30({ onLogout, isPro, user, isImpersonating }) {
     return (
-        <ToastProvider>
-            <ErrorBoundary>
-                <AppContent onLogout={onLogout} isPro={isPro} user={user} isImpersonating={isImpersonating} />
-            </ErrorBoundary>
-        </ToastProvider>
+        <ErrorBoundary>
+            <AppContent onLogout={onLogout} isPro={isPro} user={user} isImpersonating={isImpersonating} />
+        </ErrorBoundary>
     );
 }
