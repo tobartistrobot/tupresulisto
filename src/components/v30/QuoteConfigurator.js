@@ -4,7 +4,7 @@ import { useToast } from '../../context/ToastContext';
 import {
     Calculator, Users, Box, Settings, Trash, Plus, Save, Edit, Printer, FileText, Search, RefreshCw,
     ChevronUp, ChevronDown, Download, Upload, X, Ban, List, Undo, ArrowLeft, ArrowRight, ZoomIn, ZoomOut,
-    Wand, Sparkles, Home, Check, BarChart2, Share2, Target, Database, Percent, Lock
+    Wand, Sparkles, Home, Check, BarChart2, Share2, Target, Database, Percent, Lock, Loader2
 } from 'lucide-react';
 import MatrixEditor from './MatrixEditor';
 import StatusSelector from './StatusSelector';
@@ -294,7 +294,7 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                             <div className="flex-1 p-6 space-y-6">
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">{['matrix', 'simple_area', 'simple_linear'].includes(selectedProduct.priceType) && <><div className="flex flex-col"><label className="text-[10px] font-bold text-slate-500 mb-1">ANCHO (mm)</label><input type="number" className="input-saas text-right font-bold" value={dims.w} onChange={e => setDims({ ...dims, w: parseInt(e.target.value) || 0 })} /></div><div className="flex flex-col"><label className="text-[10px] font-bold text-slate-500 mb-1">ALTO (mm)</label><input type="number" className="input-saas text-right font-bold" value={dims.h} onChange={e => setDims({ ...dims, h: parseInt(e.target.value) || 0 })} /></div></>}<div className="flex flex-col"><label className="text-[10px] font-bold text-slate-500 mb-1">CANTIDAD</label><input type="number" className="input-saas text-right font-bold" value={dims.q} onChange={e => setDims({ ...dims, q: parseInt(e.target.value) || 1 })} /></div><div className="col-span-2 md:col-span-3"><label className="text-[10px] font-bold text-slate-500 mb-1">UBICACIÓN</label><input placeholder="Ej: Salón principal..." className="input-saas" value={locationLabel} onChange={e => setLocationLabel(e.target.value)} /></div></div>
                                 <div className="space-y-3 pt-4 border-t"><h4 className="text-xs font-black uppercase text-slate-400">Personalización</h4>{selectedProduct.extras.map(e => e.type === 'selection' ? (<select key={e.id} className="input-saas bg-white" onChange={ev => setDropdownSelections({ ...dropdownSelections, [e.id]: ev.target.value })}><option>Seleccionar {e.name}</option>{e.optionsList.map((o, i) => <option key={i} value={i}>{o.name} (+{o.value}{o.type === 'percent' ? '%' : (o.type === 'linear' ? '€/ml' : (o.type === 'area' ? '€/m²' : '€'))})</option>)}</select>) : (<div key={e.id} onClick={() => toggleExtra(e)} className={`w-full p-3 border rounded-xl flex justify-between items-center cursor-pointer transition-all ${selectedExtras.find(x => x.id === e.id) ? 'bg-blue-50 border-blue-500 shadow-inner' : 'hover:bg-slate-50'}`}><div className="flex-1"><span className={`font-bold ${selectedExtras.find(x => x.id === e.id) ? 'text-blue-800' : 'text-slate-700'}`}>{e.name}</span><span className="text-xs ml-2 text-slate-500 bg-white px-1.5 py-0.5 rounded border">+{e.value}{e.type === 'percent' ? '%' : (e.type === 'linear' ? '€/ml' : (e.type === 'area' ? '€/m²' : '€'))}</span></div>{selectedExtras.find(x => x.id === e.id) ? <div onClick={e => e.stopPropagation()} className="flex items-center gap-1 ml-2 bg-white rounded-lg border shadow-sm p-0.5"><button onClick={() => updateExtraQty(e.id, -1)} className="px-2 hover:bg-slate-100 font-bold">-</button><span className="text-xs w-4 text-center font-bold">{selectedExtras.find(x => x.id === e.id).qty}</span><button onClick={() => updateExtraQty(e.id, 1)} className="px-2 hover:bg-slate-100 font-bold">+</button></div> : <div className="w-5 h-5 rounded-full border-2 border-slate-300"></div>}</div>))}</div>
-                                <div className="flex justify-between items-center pt-4 border-t"><div className="flex flex-col"><span className="text-xs text-slate-400 font-bold uppercase">Precio Final</span><span className="text-3xl font-black text-slate-800 tracking-tight">{calculatedPrice !== null ? formatCurrency(calculatedPrice) : '--'}</span></div><button onClick={addToQuote} disabled={!calculatedPrice} className="relative overflow-hidden px-8 py-3.5 text-lg font-black uppercase tracking-wide rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 group"><span className="relative z-10 flex items-center justify-center gap-2"><Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />AÑADIR</span><div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div></button></div>
+                                <div className="flex justify-between items-center pt-4 border-t"><div className="flex flex-col"><span className="text-xs text-slate-400 font-bold uppercase">Precio Final</span><span className="text-3xl font-black text-slate-800 tracking-tight">{calculatedPrice !== null ? formatCurrency(calculatedPrice) : '--'}</span></div><button onClick={addToQuote} disabled={!calculatedPrice} style={{ background: 'linear-gradient(to right, #2563eb, #0891b2)', boxShadow: '0 10px 25px -5px rgba(37,99,235,0.3)' }} className="relative overflow-hidden px-8 py-3.5 text-lg font-black uppercase tracking-wide rounded-2xl text-white active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"><span className="relative z-10 flex items-center justify-center gap-2"><Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />AÑADIR</span></button></div>
                             </div>
                         </div>
                     </div>
@@ -315,29 +315,20 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                     <button
                         onClick={handleSave}
                         disabled={saveStatus === 'saving'}
-                        className={`
-                            flex-1 h-14 rounded-xl font-bold text-base
-                            flex items-center justify-center gap-2
-                            transition-all duration-500 ease-out
-                            ${saveStatus === 'idle' ? 'bg-white border-2 border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-600 hover:shadow-md' : ''}
-                            ${saveStatus === 'saving' ? 'bg-blue-50 border-2 border-blue-300 text-blue-600 cursor-wait' : ''}
-                            ${saveStatus === 'saved' ? 'bg-gradient-to-r from-emerald-500 to-green-500 border-2 border-emerald-600 text-white shadow-2xl shadow-emerald-500/50 scale-105' : ''}
-                            active:scale-95
-                        `}
+                        style={saveStatus === 'saved' ? { background: 'linear-gradient(to right, #10b981, #22c55e)', borderColor: '#059669', color: '#fff', boxShadow: '0 10px 25px -5px rgba(16,185,129,0.5)', transform: 'scale(1.05)' } : saveStatus === 'saving' ? { background: '#eff6ff', borderColor: '#93c5fd', color: '#2563eb' } : {}}
+                        className="flex-1 h-14 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all duration-500 ease-out bg-white border-2 border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-600 hover:shadow-md active:scale-95"
                     >
-                        {saveStatus === 'saving' && (
+                        {saveStatus === 'saving' ? (
                             <React.Fragment key="saving">
                                 <Loader2 size={20} className="animate-spin" />
                                 Guardando...
                             </React.Fragment>
-                        )}
-                        {saveStatus === 'saved' && (
+                        ) : saveStatus === 'saved' ? (
                             <React.Fragment key="saved">
-                                <Check size={22} className="animate-bounce" />
+                                <Check size={22} />
                                 <span className="font-black">¡GUARDADO!</span>
                             </React.Fragment>
-                        )}
-                        {saveStatus === 'idle' && (
+                        ) : (
                             <React.Fragment key="idle">
                                 <Save size={20} />
                                 Guardar
@@ -345,14 +336,11 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                         )}
                     </button>
                     <button onClick={() => {
-                        // Reset save status to prevent orphaned state updates
                         setSaveStatus('idle');
-                        // Clear any pending timeouts
                         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
                         if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
-                        // Change view
                         setViewMode('print');
-                    }} className="relative overflow-hidden flex-1 h-14 rounded-xl font-black text-base flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white shadow-2xl shadow-purple-500/40 hover:shadow-[0_10px_40px_rgba(168,85,247,0.6)] active:scale-95 transition-all duration-300 group"><span className="relative z-10 flex items-center gap-2"><Printer size={20} className="group-hover:scale-110 transition-transform" /><span className="tracking-wide">Finalizar</span></span><div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div></button>
+                    }} style={{ background: 'linear-gradient(to right, #4f46e5, #9333ea, #db2777)', boxShadow: '0 10px 30px -5px rgba(147,51,234,0.5)' }} className="relative overflow-hidden flex-1 h-14 rounded-xl font-black text-base flex items-center justify-center gap-2 text-white active:scale-95 transition-all duration-300 group"><span className="relative z-10 flex items-center gap-2"><Printer size={20} /><span className="tracking-wide">Finalizar</span></span></button>
                 </div></div>
             </div>
         </div>
