@@ -142,10 +142,18 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
     const grandTotal = netTotal * (1 + vatRate / 100);
     const remainingBalance = grandTotal - financials.deposit;
 
-    // Safety check for unmount
+    // Safety check for unmount - cleanup all timeouts
     const isMounted = React.useRef(true);
+    const saveTimeoutRef = React.useRef(null);
+    const idleTimeoutRef = React.useRef(null);
+
     useEffect(() => {
-        return () => { isMounted.current = false; };
+        return () => {
+            isMounted.current = false;
+            // Clear any pending timeouts on unmount
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+            if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+        };
     }, []);
 
     const handleSave = () => {
@@ -159,6 +167,10 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
         }
 
         try {
+            // Clear any existing timeouts before starting new ones
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+            if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+
             setSaveStatus('saving');
 
             onSave({
@@ -173,10 +185,10 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
             });
 
             // Simular delay mínimo para mostrar estado "saving"
-            setTimeout(() => {
+            saveTimeoutRef.current = setTimeout(() => {
                 if (isMounted.current) {
                     setSaveStatus('saved');
-                    setTimeout(() => {
+                    idleTimeoutRef.current = setTimeout(() => {
                         if (isMounted.current) {
                             setSaveStatus('idle');
                         }
@@ -314,25 +326,33 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                         `}
                     >
                         {saveStatus === 'saving' && (
-                            <>
+                            <React.Fragment key="saving">
                                 <Loader2 size={20} className="animate-spin" />
                                 Guardando...
-                            </>
+                            </React.Fragment>
                         )}
                         {saveStatus === 'saved' && (
-                            <>
+                            <React.Fragment key="saved">
                                 <Check size={22} className="animate-bounce" />
                                 <span className="font-black">¡GUARDADO!</span>
-                            </>
+                            </React.Fragment>
                         )}
                         {saveStatus === 'idle' && (
-                            <>
+                            <React.Fragment key="idle">
                                 <Save size={20} />
                                 Guardar
-                            </>
+                            </React.Fragment>
                         )}
                     </button>
-                    <button onClick={() => setViewMode('print')} className="relative overflow-hidden flex-1 h-14 rounded-xl font-black text-base flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white shadow-2xl shadow-purple-500/40 hover:shadow-[0_10px_40px_rgba(168,85,247,0.6)] active:scale-95 transition-all duration-300 group"><span className="relative z-10 flex items-center gap-2"><Printer size={20} className="group-hover:scale-110 transition-transform" /><span className="tracking-wide">Finalizar</span></span><div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div></button>
+                    <button onClick={() => {
+                        // Reset save status to prevent orphaned state updates
+                        setSaveStatus('idle');
+                        // Clear any pending timeouts
+                        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+                        if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+                        // Change view
+                        setViewMode('print');
+                    }} className="relative overflow-hidden flex-1 h-14 rounded-xl font-black text-base flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white shadow-2xl shadow-purple-500/40 hover:shadow-[0_10px_40px_rgba(168,85,247,0.6)] active:scale-95 transition-all duration-300 group"><span className="relative z-10 flex items-center gap-2"><Printer size={20} className="group-hover:scale-110 transition-transform" /><span className="tracking-wide">Finalizar</span></span><div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div></button>
                 </div></div>
             </div>
         </div>
