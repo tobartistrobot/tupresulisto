@@ -184,7 +184,7 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                 grandTotal
             });
 
-            // Simular delay mínimo para mostrar estado "saving"
+            // Show saving state for 800ms so user clearly sees it
             saveTimeoutRef.current = setTimeout(() => {
                 if (isMounted.current) {
                     setSaveStatus('saved');
@@ -192,9 +192,9 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                         if (isMounted.current) {
                             setSaveStatus('idle');
                         }
-                    }, 2500);
+                    }, 2000);
                 }
-            }, 300);
+            }, 800);
         } catch (error) {
             console.error("Error saving quote:", error);
             toast(`Error: ${error.message}`, "error");
@@ -294,7 +294,7 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                             <div className="flex-1 p-6 space-y-6">
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">{['matrix', 'simple_area', 'simple_linear'].includes(selectedProduct.priceType) && <><div className="flex flex-col"><label className="text-[10px] font-bold text-slate-500 mb-1">ANCHO (mm)</label><input type="number" className="input-saas text-right font-bold" value={dims.w} onChange={e => setDims({ ...dims, w: parseInt(e.target.value) || 0 })} /></div><div className="flex flex-col"><label className="text-[10px] font-bold text-slate-500 mb-1">ALTO (mm)</label><input type="number" className="input-saas text-right font-bold" value={dims.h} onChange={e => setDims({ ...dims, h: parseInt(e.target.value) || 0 })} /></div></>}<div className="flex flex-col"><label className="text-[10px] font-bold text-slate-500 mb-1">CANTIDAD</label><input type="number" className="input-saas text-right font-bold" value={dims.q} onChange={e => setDims({ ...dims, q: parseInt(e.target.value) || 1 })} /></div><div className="col-span-2 md:col-span-3"><label className="text-[10px] font-bold text-slate-500 mb-1">UBICACIÓN</label><input placeholder="Ej: Salón principal..." className="input-saas" value={locationLabel} onChange={e => setLocationLabel(e.target.value)} /></div></div>
                                 <div className="space-y-3 pt-4 border-t"><h4 className="text-xs font-black uppercase text-slate-400">Personalización</h4>{selectedProduct.extras.map(e => e.type === 'selection' ? (<select key={e.id} className="input-saas bg-white" onChange={ev => setDropdownSelections({ ...dropdownSelections, [e.id]: ev.target.value })}><option>Seleccionar {e.name}</option>{e.optionsList.map((o, i) => <option key={i} value={i}>{o.name} (+{o.value}{o.type === 'percent' ? '%' : (o.type === 'linear' ? '€/ml' : (o.type === 'area' ? '€/m²' : '€'))})</option>)}</select>) : (<div key={e.id} onClick={() => toggleExtra(e)} className={`w-full p-3 border rounded-xl flex justify-between items-center cursor-pointer transition-all ${selectedExtras.find(x => x.id === e.id) ? 'bg-blue-50 border-blue-500 shadow-inner' : 'hover:bg-slate-50'}`}><div className="flex-1"><span className={`font-bold ${selectedExtras.find(x => x.id === e.id) ? 'text-blue-800' : 'text-slate-700'}`}>{e.name}</span><span className="text-xs ml-2 text-slate-500 bg-white px-1.5 py-0.5 rounded border">+{e.value}{e.type === 'percent' ? '%' : (e.type === 'linear' ? '€/ml' : (e.type === 'area' ? '€/m²' : '€'))}</span></div>{selectedExtras.find(x => x.id === e.id) ? <div onClick={e => e.stopPropagation()} className="flex items-center gap-1 ml-2 bg-white rounded-lg border shadow-sm p-0.5"><button onClick={() => updateExtraQty(e.id, -1)} className="px-2 hover:bg-slate-100 font-bold">-</button><span className="text-xs w-4 text-center font-bold">{selectedExtras.find(x => x.id === e.id).qty}</span><button onClick={() => updateExtraQty(e.id, 1)} className="px-2 hover:bg-slate-100 font-bold">+</button></div> : <div className="w-5 h-5 rounded-full border-2 border-slate-300"></div>}</div>))}</div>
-                                <div className="flex justify-between items-center pt-4 border-t"><div className="flex flex-col"><span className="text-xs text-slate-400 font-bold uppercase">Precio Final</span><span className="text-3xl font-black text-slate-800 tracking-tight">{calculatedPrice !== null ? formatCurrency(calculatedPrice) : '--'}</span></div><button onClick={addToQuote} disabled={!calculatedPrice} style={{ background: 'linear-gradient(to right, #2563eb, #0891b2)', boxShadow: '0 10px 25px -5px rgba(37,99,235,0.3)' }} className="relative overflow-hidden px-8 py-3.5 text-lg font-black uppercase tracking-wide rounded-2xl text-white active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"><span className="relative z-10 flex items-center justify-center gap-2"><Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />AÑADIR</span></button></div>
+                                <div className="flex justify-between items-center pt-4 border-t"><div className="flex flex-col"><span className="text-xs text-slate-400 font-bold uppercase">Precio Final</span><span className="text-3xl font-black text-slate-800 tracking-tight">{calculatedPrice !== null ? formatCurrency(calculatedPrice) : '--'}</span></div><button onClick={addToQuote} disabled={!calculatedPrice} style={{ background: 'linear-gradient(135deg, #2563eb 0%, #0891b2 100%)', boxShadow: '0 8px 24px -4px rgba(37,99,235,0.4)', border: 'none', cursor: calculatedPrice ? 'pointer' : 'not-allowed', opacity: calculatedPrice ? 1 : 0.5 }} className="px-8 py-3.5 text-lg font-black uppercase tracking-wide rounded-2xl text-white transition-all duration-300"><span className="flex items-center justify-center gap-2"><Plus size={20} />AÑADIR</span></button></div>
                             </div>
                         </div>
                     </div>
@@ -315,23 +315,29 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                     <button
                         onClick={handleSave}
                         disabled={saveStatus === 'saving'}
-                        style={saveStatus === 'saved' ? { background: 'linear-gradient(to right, #10b981, #22c55e)', borderColor: '#059669', color: '#fff', boxShadow: '0 10px 25px -5px rgba(16,185,129,0.5)', transform: 'scale(1.05)' } : saveStatus === 'saving' ? { background: '#eff6ff', borderColor: '#93c5fd', color: '#2563eb' } : {}}
-                        className="flex-1 h-14 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all duration-500 ease-out bg-white border-2 border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-600 hover:shadow-md active:scale-95"
+                        style={
+                            saveStatus === 'saved'
+                                ? { background: 'linear-gradient(135deg, #10b981 0%, #22c55e 100%)', borderColor: '#059669', color: '#ffffff', boxShadow: '0 8px 24px -4px rgba(16,185,129,0.5)', transform: 'scale(1.03)' }
+                                : saveStatus === 'saving'
+                                    ? { background: '#eff6ff', borderColor: '#60a5fa', color: '#2563eb' }
+                                    : { background: '#ffffff', borderColor: '#cbd5e1', color: '#334155' }
+                        }
+                        className="flex-1 h-14 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all duration-500 ease-out border-2"
                     >
                         {saveStatus === 'saving' ? (
-                            <React.Fragment key="saving">
+                            <React.Fragment key="btn-saving">
                                 <Loader2 size={20} className="animate-spin" />
-                                Guardando...
+                                <span>Guardando...</span>
                             </React.Fragment>
                         ) : saveStatus === 'saved' ? (
-                            <React.Fragment key="saved">
-                                <Check size={22} />
-                                <span className="font-black">¡GUARDADO!</span>
+                            <React.Fragment key="btn-saved">
+                                <Check size={22} strokeWidth={3} />
+                                <span className="font-black tracking-wide">¡GUARDADO!</span>
                             </React.Fragment>
                         ) : (
-                            <React.Fragment key="idle">
+                            <React.Fragment key="btn-idle">
                                 <Save size={20} />
-                                Guardar
+                                <span>Guardar</span>
                             </React.Fragment>
                         )}
                     </button>
@@ -340,7 +346,7 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
                         if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
                         setViewMode('print');
-                    }} style={{ background: 'linear-gradient(to right, #4f46e5, #9333ea, #db2777)', boxShadow: '0 10px 30px -5px rgba(147,51,234,0.5)' }} className="relative overflow-hidden flex-1 h-14 rounded-xl font-black text-base flex items-center justify-center gap-2 text-white active:scale-95 transition-all duration-300 group"><span className="relative z-10 flex items-center gap-2"><Printer size={20} /><span className="tracking-wide">Finalizar</span></span></button>
+                    }} style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%)', boxShadow: '0 8px 24px -4px rgba(124,58,237,0.5)', border: 'none' }} className="flex-1 h-14 rounded-xl font-black text-base flex items-center justify-center gap-2 text-white transition-all duration-300"><Printer size={20} /><span className="tracking-wide">Finalizar</span></button>
                 </div></div>
             </div>
         </div>
