@@ -91,20 +91,6 @@ export async function GET(request) {
             users: usersList // Return the list
         });
 
-        // Products count (if you have a products collection)
-        let totalProducts = 0;
-        try {
-            const productsSnapshot = await db.collection('products').get();
-            totalProducts = productsSnapshot.size;
-        } catch (e) {
-            console.log('Products collection not found or empty');
-        }
-
-        return NextResponse.json({
-            totalUsers,
-            verifiedUsers,
-            totalProducts
-        });
 
     } catch (error) {
         console.error('Admin stats error:', error);
