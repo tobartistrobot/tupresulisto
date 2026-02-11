@@ -225,13 +225,13 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
             </header>
 
             {/* Sidebar Desktop */}
-            <aside className="hidden md:flex flex-col w-20 lg:w-64 bg-slate-900 text-slate-300 transition-all z-50 shadow-2xl shrink-0">
-                <div className="p-6 flex items-center justify-center lg:justify-start gap-3 border-b border-slate-800">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600 shrink-0 flex items-center justify-center shadow-lg shadow-blue-900/50">
+            <aside className="hidden md:flex flex-col w-20 lg:w-64 bg-white text-slate-700 transition-all z-50 shadow-2xl shrink-0 border-r border-slate-200">
+                <div className="p-6 flex items-center justify-center lg:justify-start gap-3 border-b border-slate-200">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 shrink-0 flex items-center justify-center shadow-lg shadow-blue-500/30">
                         <Calculator className="text-white" size={20} />
                     </div>
                     <div>
-                        <span className="font-black text-xl text-white hidden lg:block tracking-tight">tupresulisto<span className="text-blue-500">.com</span></span>
+                        <span className="font-black text-xl text-slate-800 hidden lg:block tracking-tight">tupresulisto<span className="text-blue-500">.com</span></span>
                         {cloudStatus === 'error' && (
                             <div className="hidden lg:flex items-center gap-1.5 mt-1 animate-pulse">
                                 <CloudOff size={10} className="text-red-400" />
@@ -242,25 +242,25 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
                 </div>
 
                 <nav className="flex-1 py-6 space-y-2 px-3">
-                    <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'dashboard' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'hover:bg-slate-800 hover:text-white'}`}>
+                    <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'dashboard' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}>
                         <LayoutDashboard size={20} /> <span className="hidden lg:block font-bold text-sm">Panel Control</span>
                     </button>
-                    <button onClick={() => setView('quote')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'quote' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'hover:bg-slate-800 hover:text-white'}`}>
+                    <button onClick={() => setView('quote')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'quote' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}>
                         <ShoppingCart size={20} /> <span className="hidden lg:block font-bold text-sm">Presupuestador</span>
                     </button>
-                    <button onClick={() => setView('prods')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'prods' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'hover:bg-slate-800 hover:text-white'}`}>
+                    <button onClick={() => setView('prods')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'prods' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}>
                         <Archive size={20} /> <span className="hidden lg:block font-bold text-sm">Productos</span>
                     </button>
-                    <button onClick={() => setView('clients')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'clients' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'hover:bg-slate-800 hover:text-white'}`}>
+                    <button onClick={() => setView('clients')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'clients' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}>
                         <Users size={20} /> <span className="hidden lg:block font-bold text-sm">Clientes</span>
                     </button>
                 </nav>
 
-                <div className="p-3 border-t border-slate-800 space-y-2">
-                    <button onClick={() => setView('config')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'config' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800 hover:text-white'}`}>
+                <div className="p-3 border-t border-slate-200 space-y-2">
+                    <button onClick={() => setView('config')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'config' ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}>
                         <Settings size={20} /> <span className="hidden lg:block font-bold text-sm">Configuración</span>
                     </button>
-                    <button onClick={onLogout} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-900/30 hover:text-red-400 transition-all text-slate-400">
+                    <button onClick={onLogout} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all text-slate-500">
                         <LogOut size={20} /> <span className="hidden lg:block font-bold text-sm">Cerrar Sesión</span>
                     </button>
 

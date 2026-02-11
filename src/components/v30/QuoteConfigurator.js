@@ -317,12 +317,12 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                         disabled={saveStatus === 'saving'}
                         style={
                             saveStatus === 'saved'
-                                ? { background: 'linear-gradient(135deg, #10b981 0%, #22c55e 100%)', borderColor: '#059669', color: '#ffffff', boxShadow: '0 8px 24px -4px rgba(16,185,129,0.5)', transform: 'scale(1.03)' }
+                                ? { backgroundColor: '#10b981', color: '#ffffff' }
                                 : saveStatus === 'saving'
-                                    ? { background: '#eff6ff', borderColor: '#60a5fa', color: '#2563eb' }
-                                    : { background: '#ffffff', borderColor: '#cbd5e1', color: '#334155' }
+                                    ? { backgroundColor: '#93c5fd', color: '#1e40af' }
+                                    : { backgroundColor: '#ffffff', color: '#1f2937', border: '2px solid #e5e7eb' }
                         }
-                        className="flex-1 h-14 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all duration-500 ease-out border-2"
+                        className="flex-1 h-14 rounded-lg font-bold text-base flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-md"
                     >
                         {saveStatus === 'saving' ? (
                             <React.Fragment key="btn-saving">
@@ -346,7 +346,7 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
                         if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
                         setViewMode('print');
-                    }} style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%)', boxShadow: '0 8px 24px -4px rgba(124,58,237,0.5)', border: 'none' }} className="flex-1 h-14 rounded-xl font-black text-base flex items-center justify-center gap-2 text-white transition-all duration-300"><Printer size={20} /><span className="tracking-wide">Finalizar</span></button>
+                    }} style={{ backgroundColor: '#3b82f6', color: '#ffffff' }} className="flex-1 h-14 rounded-lg font-bold text-base flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-md"><Printer size={20} /> <span>Finalizar</span></button>
                 </div></div>
             </div>
         </div>
