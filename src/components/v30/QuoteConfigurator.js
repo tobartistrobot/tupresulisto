@@ -1,6 +1,7 @@
 'use client';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useToast } from '../../context/ToastContext';
+import { useReactToPrint } from 'react-to-print';
 import {
     Calculator, Users, Box, Settings, Trash, Plus, Save, Edit, Printer, FileText, Search, RefreshCw,
     ChevronUp, ChevronDown, Download, Upload, X, Ban, List, Undo, ArrowLeft, ArrowRight, ZoomIn, ZoomOut,
@@ -50,6 +51,9 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
     const [docType, setDocType] = useState('quote');
     const [saveStatus, setSaveStatus] = useState('idle');
     const toast = useToast();
+
+    // Ref for printable document
+    const printableDocRef = useRef(null);
 
     // Configurable VAT
     const vatRate = config.iva !== undefined && config.iva !== "" ? parseFloat(config.iva) : 21;
@@ -201,7 +205,18 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
             setSaveStatus('idle');
         }
     };
-    const downloadWord = () => { try { const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'><title>Presupuesto</title></head><body style="font-family:Arial;font-size:12px"><h1 style="color:${config.color}">${config.name}</h1><p>Cliente: ${client.name}</p><table>${cart.map(i => `<tr><td>${i.product.name}</td><td>${i.width}x${i.height}</td><td>${i.quantity}</td><td>${formatCurrency(i.price)}</td></tr>`).join('')}</table><h3>Total: ${formatCurrency(grandTotal)}</h3></body></html>`; const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob(['\ufeff', html], { type: 'application/msword' })); link.download = `Presupuesto_${client.name}.doc`; document.body.appendChild(link); link.click(); document.body.removeChild(link); } catch (e) { console.error("Error downloadWord", e); toast("Error al descargar Word", "error"); } };
+
+    // Configure react-to-print with dynamic filename
+    const reactToPrintFn = useReactToPrint({
+        contentRef: printableDocRef,
+        documentTitle: `${client.name?.replace(/\s+/g, '') || 'Cliente'}_${quoteMeta.number}`,
+    });
+
+    const handlePrintPDF = () => {
+        if (reactToPrintFn) {
+            reactToPrintFn();
+        }
+    };
     const filteredClients = clientsDb.filter(c => (c.name || '').toLowerCase().includes(clientSearchTerm.toLowerCase()) || (c.phone || '').includes(clientSearchTerm));
 
     if (viewMode === 'print') return (
@@ -210,7 +225,7 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
             <div className="zoom-controls absolute top-4 right-4 z-50 bg-white shadow-xl rounded-full p-2 flex gap-4 items-center border border-slate-200"><button onClick={() => setZoomLevel(Math.max(0.3, zoomLevel - 0.1))} className="p-2 text-slate-600 hover:text-blue-600"><ZoomOut size={20} /></button><span className="text-xs font-bold w-8 text-center">{Math.round(zoomLevel * 100)}%</span><button onClick={() => setZoomLevel(Math.min(1.5, zoomLevel + 0.1))} className="p-2 text-slate-600 hover:text-blue-600"><ZoomIn size={20} /></button></div>
             <div className="flex-1 overflow-x-auto overflow-y-auto p-4 md:p-8 flex justify-center items-start print:p-0 print:block">
                 <div className="print-scale-wrapper origin-top transition-transform duration-200 md:scale-100 scale-75" style={{ transform: `scale(${zoomLevel})` }}>
-                    <div className="w-[210mm] min-w-[210mm] min-h-[297mm] bg-white print-container shadow-2xl p-[15mm] mx-auto text-sm relative">
+                    <div ref={printableDocRef} className="w-[210mm] min-w-[210mm] min-h-[297mm] bg-white print-container shadow-2xl p-[15mm] mx-auto text-sm relative">
                         <div className="flex justify-between items-start border-b-2 pb-6 mb-8" style={{ borderColor: config.color }}><div>{config.logo ? <img src={config.logo} className="h-16 mb-4 object-contain" /> : <h1 className="text-4xl font-black mb-2" style={{ color: config.color }}>{config.name}</h1>}<div className="text-xs text-slate-500 space-y-1"><p>{config.address}</p>{config.cif && <p>CIF/NIF: {config.cif}</p>}<p>{config.phone} • {config.email}</p><p>{config.website}</p></div></div><div className="text-right"><h2 className="text-4xl font-black tracking-tight text-slate-800 mb-2">{docType === 'invoice' ? 'FACTURA' : 'PRESUPUESTO'}</h2><div className="flex flex-col items-end my-2"><span className="text-lg font-bold text-slate-600">#{quoteMeta.number}</span><span className="text-sm text-slate-400">{quoteMeta.date}</span></div><div className="mt-4 text-left bg-slate-50 p-4 rounded-lg border border-slate-100 min-w-[250px]"><p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1">Facturar a</p><p className="font-bold text-slate-800 text-lg leading-none mb-1">{client.name}</p><p className="text-sm text-slate-600">{client.phone}</p><p className="text-sm text-slate-600">{client.address}</p></div></div></div>
                         <table className="w-full mb-8"><thead><tr className="border-b-2 text-xs uppercase text-slate-500 font-bold tracking-wider"><th className="text-left py-3 pl-2">Concepto</th><th className="text-center py-3">Medidas</th><th className="text-center py-3">Cant.</th><th className="text-right py-3 pr-2">Total</th></tr></thead><tbody>{cart.map(i => (<tr key={i.id} className="avoid-break border-b border-slate-100 last:border-0"><td className="py-4 pl-2"><div className="flex items-start gap-4">{i.product.image && <img src={i.product.image} className="w-16 h-16 object-cover rounded-lg border border-slate-200 print-visible" />}<div><p className="font-bold text-slate-800 text-base">{i.product.name}</p><p className="text-xs text-slate-500 mt-1">{i.product.category} {i.locationLabel && <span className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 ml-1">{i.locationLabel}</span>}</p>{i.selectedExtras?.length > 0 && <div className="text-[10px] text-slate-500 mt-2 flex flex-wrap gap-1">{i.selectedExtras.map(e => <span className="bg-slate-50 px-1 border border-slate-200 rounded">+{e.qty > 1 ? e.qty + 'x ' : ''}{e.name}</span>)}</div>}</div></div></td><td className="text-center text-sm py-4 text-slate-600 font-medium">{i.width} x {i.height}</td><td className="text-center font-bold text-slate-800 py-4">{i.quantity}</td><td className="text-right font-bold text-slate-800 py-4 pr-2">{formatCurrency(i.price)}</td></tr>))}</tbody></table>
                         <div className="flex justify-end avoid-break"><div className="w-80 space-y-3"><div className="flex justify-between text-sm text-slate-600"><span>Subtotal</span><span>{formatCurrency(grossTotal)}</span></div>{financials.discountPercent > 0 && <div className="flex justify-between text-sm font-bold text-emerald-600"><span>Descuento ({financials.discountPercent}%)</span><span>-{formatCurrency(discountAmount)}</span></div>}<div className="flex justify-between text-sm text-slate-600 pb-3 border-b"><span>IVA ({vatRate}%)</span><span>{formatCurrency(netTotal * (vatRate / 100))}</span></div><div className="flex justify-between text-3xl font-black bg-slate-50 p-2 rounded-lg -mx-2" style={{ color: config.color }}><span>TOTAL</span><span>{formatCurrency(grandTotal)}</span></div>{financials.deposit > 0 && <div className="flex justify-between text-sm font-bold text-slate-500 pt-2"><span>Pagado a cuenta</span><span>-{formatCurrency(financials.deposit)}</span></div>}{financials.deposit > 0 && <div className="flex justify-between font-black text-lg border-t pt-2"><span>PENDIENTE</span><span>{formatCurrency(remainingBalance)}</span></div>}</div></div>
@@ -218,7 +233,7 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                     </div>
                 </div>
             </div>
-            <div className="shrink-0 bg-white border-t flex gap-4 justify-center no-print z-50 p-4 shadow-2xl"><button onClick={() => setViewMode('edit')} className="px-4 py-2 rounded-lg border bg-white shadow-sm hover:bg-slate-50 font-bold text-slate-600"><span>Seguir Editando</span></button><button onClick={() => window.print()} style={{ backgroundColor: config.color }} className="px-8 py-2 rounded-lg text-white font-bold shadow-xl flex items-center gap-2"><Printer size={18} /> <span>Imprimir PDF</span></button><button onClick={downloadWord} className="px-4 py-2 rounded-lg border bg-white shadow-sm hover:bg-slate-50 font-bold text-slate-600 flex items-center gap-2"><FileText size={18} /> <span>Word</span></button></div>
+            <div className="shrink-0 bg-white border-t flex gap-4 justify-center no-print z-50 p-4 shadow-2xl"><button onClick={() => setViewMode('edit')} className="px-4 py-2 rounded-lg border bg-white shadow-sm hover:bg-slate-50 font-bold text-slate-600"><span>Seguir Editando</span></button><button onClick={handlePrintPDF} style={{ backgroundColor: config.color }} className="px-8 py-2 rounded-lg text-white font-bold shadow-xl flex items-center gap-2"><Printer size={18} /> <span>Imprimir PDF</span></button></div>
         </div>
     );
 
