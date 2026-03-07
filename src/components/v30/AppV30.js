@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ToastProvider, useToast } from '../../context/ToastContext';
 import { LayoutDashboard, ShoppingCart, Archive, Settings, LogOut, Users, Cloud, CloudOff, RefreshCw, Loader2, Calculator } from 'lucide-react';
+import ThemeToggle from '../ThemeToggle';
 import { useSyncEngine } from '../../hooks/useSyncEngine';
 
 import Dashboard from './Dashboard';
@@ -182,7 +183,7 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
     };
 
     return (
-        <div className="flex h-[100dvh] w-full bg-slate-100 font-sans text-slate-800 overflow-hidden relative isolate">
+        <div className="flex h-[100dvh] w-full bg-slate-100 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-100 overflow-hidden relative isolate">
             {showUpgradeModal && (
                 <UpgradeModal
                     onClose={() => { setShowUpgradeModal(false); setUpgradeMessage(null); }}
@@ -212,26 +213,29 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
             )}
 
             {/* Mobile Header - Fixed at top with z-70 to ensure it's above content */}
-            <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-slate-900 z-[70] flex items-center justify-between px-4 shadow-md">
+            <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-slate-900 dark:bg-slate-950 z-[70] flex items-center justify-between px-4 shadow-md border-b border-slate-800">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg">
                         <Calculator className="text-white" size={16} />
                     </div>
                     <span className="font-black text-lg text-white tracking-tight">tupresulisto<span className="text-blue-400">.com</span></span>
                 </div>
-                <button onClick={onLogout} className="p-2 text-slate-400 hover:text-white transition-colors">
-                    <LogOut size={20} />
-                </button>
+                <div className="flex items-center gap-1">
+                    <ThemeToggle className="dark:hover:bg-slate-800" />
+                    <button onClick={onLogout} className="p-2 text-slate-400 hover:text-white transition-colors">
+                        <LogOut size={20} />
+                    </button>
+                </div>
             </header>
 
             {/* Sidebar Desktop */}
-            <aside className="hidden md:flex flex-col w-20 lg:w-64 bg-white text-slate-700 transition-all z-50 shadow-2xl shrink-0 border-r border-slate-200">
-                <div className="p-6 flex items-center justify-center lg:justify-start gap-3 border-b border-slate-200">
+            <aside className="hidden md:flex flex-col w-20 lg:w-64 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 transition-all z-50 shadow-2xl dark:shadow-black/40 shrink-0 border-r border-slate-200 dark:border-slate-800">
+                <div className="p-6 flex items-center justify-center lg:justify-start gap-3 border-b border-slate-200 dark:border-slate-800">
                     <div className="w-10 h-10 rounded-xl bg-blue-600 shrink-0 flex items-center justify-center shadow-lg shadow-blue-500/30">
                         <Calculator className="text-white" size={20} />
                     </div>
                     <div>
-                        <span className="font-black text-xl text-slate-800 hidden lg:block tracking-tight">tupresulisto<span className="text-blue-500">.com</span></span>
+                        <span className="font-black text-xl text-slate-800 dark:text-slate-100 hidden lg:block tracking-tight">tupresulisto<span className="text-blue-500">.com</span></span>
                         {cloudStatus === 'error' && (
                             <div className="hidden lg:flex items-center gap-1.5 mt-1 animate-pulse">
                                 <CloudOff size={10} className="text-red-400" />
@@ -242,44 +246,45 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
                 </div>
 
                 <nav className="flex-1 py-6 space-y-2 px-3">
-                    <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'dashboard' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}>
+                    <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'dashboard' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'}`}>
                         <LayoutDashboard size={20} /> <span className="hidden lg:block font-bold text-sm">Panel Control</span>
                     </button>
-                    <button onClick={() => setView('quote')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'quote' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}>
+                    <button onClick={() => setView('quote')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'quote' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'}`}>
                         <ShoppingCart size={20} /> <span className="hidden lg:block font-bold text-sm">Presupuestador</span>
                     </button>
-                    <button onClick={() => setView('prods')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'prods' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}>
+                    <button onClick={() => setView('prods')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'prods' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'}`}>
                         <Archive size={20} /> <span className="hidden lg:block font-bold text-sm">Productos</span>
                     </button>
-                    <button onClick={() => setView('clients')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'clients' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}>
+                    <button onClick={() => setView('clients')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'clients' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'}`}>
                         <Users size={20} /> <span className="hidden lg:block font-bold text-sm">Clientes</span>
                     </button>
                 </nav>
 
-                <div className="p-3 border-t border-slate-200 space-y-2">
-                    <button onClick={() => setView('config')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'config' ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}>
+                <div className="p-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                    <button onClick={() => setView('config')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'config' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'}`}>
                         <Settings size={20} /> <span className="hidden lg:block font-bold text-sm">Configuración</span>
                     </button>
-                    <button onClick={onLogout} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all text-slate-500">
+                    <div className="flex items-center justify-center lg:justify-between px-3 py-1">
+                        <span className="hidden lg:block text-xs text-slate-400 dark:text-slate-500 font-medium">Tema</span>
+                        <ThemeToggle />
+                    </div>
+                    <button onClick={onLogout} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 transition-all text-slate-500 dark:text-slate-500">
                         <LogOut size={20} /> <span className="hidden lg:block font-bold text-sm">Cerrar Sesión</span>
                     </button>
-
-                    {/* Version & Sync Status - REMOVED as per user request */}
-                    {/* Only showing error toast if needed (handled by ToastContext normally, but we can add a persistent alert in main view) */}
                 </div>
             </aside>
 
             {/* Mobile Nav - Fixed at bottom with z-70, uses pb-6 for safe area */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-[70] flex justify-around p-2 pb-6 shadow-2xl">
-                <button onClick={() => setView('dashboard')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'dashboard' ? 'text-blue-600' : 'text-slate-400'}`}><LayoutDashboard size={20} /><span className="text-[10px] font-bold mt-1">Panel</span></button>
-                <button onClick={() => setView('quote')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'quote' ? 'text-blue-600' : 'text-slate-400'}`}><ShoppingCart size={20} /><span className="text-[10px] font-bold mt-1">Nuevo</span></button>
-                <button onClick={() => setView('clients')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'clients' ? 'text-blue-600' : 'text-slate-400'}`}><Users size={20} /><span className="text-[10px] font-bold mt-1">Clientes</span></button>
-                <button onClick={() => setView('prods')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'prods' ? 'text-blue-600' : 'text-slate-400'}`}><Archive size={20} /><span className="text-[10px] font-bold mt-1">Items</span></button>
-                <button onClick={() => setView('config')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'config' ? 'text-blue-600' : 'text-slate-400'}`}><Settings size={20} /><span className="text-[10px] font-bold mt-1">Config</span></button>
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-[70] flex justify-around p-2 pb-6 shadow-2xl dark:shadow-black/50">
+                <button onClick={() => setView('dashboard')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'dashboard' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}><LayoutDashboard size={20} /><span className="text-[10px] font-bold mt-1">Panel</span></button>
+                <button onClick={() => setView('quote')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'quote' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}><ShoppingCart size={20} /><span className="text-[10px] font-bold mt-1">Nuevo</span></button>
+                <button onClick={() => setView('clients')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'clients' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}><Users size={20} /><span className="text-[10px] font-bold mt-1">Clientes</span></button>
+                <button onClick={() => setView('prods')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'prods' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}><Archive size={20} /><span className="text-[10px] font-bold mt-1">Items</span></button>
+                <button onClick={() => setView('config')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'config' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}><Settings size={20} /><span className="text-[10px] font-bold mt-1">Config</span></button>
             </div>
 
             {/* Main Content Area - Uses margins instead of padding to create proper scroll area between fixed header/nav */}
-            <main className="flex-1 overflow-y-auto relative flex flex-col bg-slate-100 mt-14 mb-[72px] md:mt-0 md:mb-0">
+            <main className="flex-1 overflow-y-auto relative flex flex-col bg-slate-100 dark:bg-slate-900 mt-14 mb-[72px] md:mt-0 md:mb-0">
                 <div className={view === 'dashboard' ? 'h-full' : 'hidden h-full'}><Dashboard history={history} products={products} clients={clients} onNavigate={handleNavigate} config={config} /></div>
                 <div className={view === 'quote' ? 'h-full' : 'hidden h-full'}><QuoteConfigurator products={products} categories={categories} config={config} cart={cart} setCart={setCart} onSave={handleSaveQuote} onReset={() => { setCart([]); setEditQuoteData(null) }} initialData={editQuoteData} clientsDb={clients} className="h-full" isPro={isPro} onUpgrade={(msg) => { setUpgradeMessage(msg); setShowUpgradeModal(true); }} /></div>
                 <div className={view === 'prods' ? 'h-full' : 'hidden h-full'}>

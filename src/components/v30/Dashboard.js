@@ -87,8 +87,8 @@ const Dashboard = ({ history, products, clients, onNavigate, config }) => {
     // Modal Component
     const ModalList = ({ title, onClose, children, maxWidth = 'max-w-2xl' }) => (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm modal-overlay animate-fade-in" onClick={onClose}>
-            <div className={`bg-white rounded-2xl w-full ${maxWidth} max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-pop`} onClick={e => e.stopPropagation()}>
-                <div className="p-4 border-b flex justify-between items-center bg-slate-50"><h3 className="font-bold text-lg">{title}</h3><button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full"><X /></button></div>
+            <div className={`bg-white dark:bg-slate-800 rounded-2xl w-full ${maxWidth} max-h-[85vh] flex flex-col shadow-2xl dark:shadow-black/50 overflow-hidden animate-pop`} onClick={e => e.stopPropagation()}>
+                <div className="p-4 border-b dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50"><h3 className="font-bold text-lg dark:text-slate-100">{title}</h3><button onClick={onClose} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full dark:text-slate-300"><X /></button></div>
                 <div className="overflow-y-auto p-0">{children}</div>
             </div>
         </div>
@@ -97,8 +97,8 @@ const Dashboard = ({ history, products, clients, onNavigate, config }) => {
     return (
         <div className="p-4 md:p-8 h-full overflow-y-auto animate-fade-in">
             <div className="flex justify-between items-center mb-8">
-                <div><h1 className="text-3xl font-black text-slate-800">Hola, {config.name}</h1><p className="text-slate-500 text-sm mt-1">Resumen de actividad.</p></div>
-                <div className="hidden md:block text-right"><p className="text-sm font-bold text-slate-400 uppercase">{new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p></div>
+                <div><h1 className="text-3xl font-black text-slate-800 dark:text-slate-100">Hola, {config.name}</h1><p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Resumen de actividad.</p></div>
+                <div className="hidden md:block text-right"><p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase">{new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p></div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -115,46 +115,46 @@ const Dashboard = ({ history, products, clients, onNavigate, config }) => {
                 </div>
 
                 {/* Pendiente */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between h-36 cursor-pointer hover:border-orange-300 transition-colors" onClick={() => setActiveModal('pending')}>
-                    <div className="flex justify-between items-start"><span className="text-slate-400 font-bold text-xs uppercase">Pendiente</span><div className="p-1 bg-orange-100 rounded text-orange-600"><List size={14} /></div></div>
-                    <div><span className="text-3xl font-black text-slate-800">{formatCurrency(stats.pendingAmount)}</span><p className="text-xs text-slate-400 mt-1">{pendingQuotes.length} presupuestos</p></div>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 flex flex-col justify-between h-36 cursor-pointer hover:border-orange-300 dark:hover:border-orange-600 transition-colors" onClick={() => setActiveModal('pending')}>
+                    <div className="flex justify-between items-start"><span className="text-slate-400 dark:text-slate-500 font-bold text-xs uppercase">Pendiente</span><div className="p-1 bg-orange-100 dark:bg-orange-900/30 rounded text-orange-600 dark:text-orange-400"><List size={14} /></div></div>
+                    <div><span className="text-3xl font-black text-slate-800 dark:text-slate-100">{formatCurrency(stats.pendingAmount)}</span><p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{pendingQuotes.length} presupuestos</p></div>
                 </div>
 
                 {/* Presupuestos Totales / Graficas */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between h-36 cursor-pointer hover:border-purple-300 transition-colors" onClick={() => setActiveModal('charts')}>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 flex flex-col justify-between h-36 cursor-pointer hover:border-purple-300 dark:hover:border-purple-600 transition-colors" onClick={() => setActiveModal('charts')}>
                     <div className="flex justify-between items-start">
-                        <span className="text-slate-400 font-bold text-xs uppercase">Presupuestos</span>
-                        <div className="p-1 bg-purple-100 rounded text-purple-600"><BarChart2 size={14} /></div>
+                        <span className="text-slate-400 dark:text-slate-500 font-bold text-xs uppercase">Presupuestos</span>
+                        <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded text-purple-600 dark:text-purple-400"><BarChart2 size={14} /></div>
                     </div>
-                    <div><span className="text-3xl font-black text-slate-800">{stats.totalQuotes}</span><p className="text-xs text-slate-400 mt-1">Ver Análisis Gráfico</p></div>
+                    <div><span className="text-3xl font-black text-slate-800 dark:text-slate-100">{stats.totalQuotes}</span><p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Ver Análisis Gráfico</p></div>
                 </div>
 
                 {/* Top Producto */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between h-36 cursor-pointer hover:border-green-300 transition-colors" onClick={() => setActiveModal('ranking')}>
-                    <div className="flex justify-between items-start"><span className="text-slate-400 font-bold text-xs uppercase">Top Producto</span><div className="p-1 bg-green-100 rounded text-green-600"><Box size={14} /></div></div>
-                    <div className="truncate"><span className="text-lg font-bold text-slate-800 leading-tight block truncate">{stats.bestSeller ? stats.bestSeller[0] : '---'}</span><span className="text-xs text-slate-400">{stats.bestSeller ? `${stats.bestSeller[1]} uds vendidas` : 'Sin datos'}</span></div>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 flex flex-col justify-between h-36 cursor-pointer hover:border-green-300 dark:hover:border-green-600 transition-colors" onClick={() => setActiveModal('ranking')}>
+                    <div className="flex justify-between items-start"><span className="text-slate-400 dark:text-slate-500 font-bold text-xs uppercase">Top Producto</span><div className="p-1 bg-green-100 dark:bg-green-900/30 rounded text-green-600 dark:text-green-400"><Box size={14} /></div></div>
+                    <div className="truncate"><span className="text-lg font-bold text-slate-800 dark:text-slate-100 leading-tight block truncate">{stats.bestSeller ? stats.bestSeller[0] : '---'}</span><span className="text-xs text-slate-400 dark:text-slate-500">{stats.bestSeller ? `${stats.bestSeller[1]} uds vendidas` : 'Sin datos'}</span></div>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="md:col-span-2 space-y-4">
-                    <h3 className="font-bold text-lg text-slate-700">Recientes</h3>
-                    {history.length === 0 ? <div className="text-center py-10 text-slate-400 border-2 border-dashed rounded-xl">No hay actividad reciente.</div> : history.slice(0, recentLimit).map(q => (
-                        <div key={q.id} onClick={() => onNavigate(q)} className="bg-white p-4 rounded-xl border hover:shadow-md cursor-pointer transition-all flex justify-between items-center group">
+                    <h3 className="font-bold text-lg text-slate-700 dark:text-slate-200">Recientes</h3>
+                    {history.length === 0 ? <div className="text-center py-10 text-slate-400 dark:text-slate-500 border-2 border-dashed dark:border-slate-700 rounded-xl">No hay actividad reciente.</div> : history.slice(0, recentLimit).map(q => (
+                        <div key={q.id} onClick={() => onNavigate(q)} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-md dark:hover:shadow-black/30 cursor-pointer transition-all flex justify-between items-center group">
                             <div className="flex items-center gap-4">
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${q.status === 'accepted' ? 'bg-emerald-500' : q.status === 'rejected' ? 'bg-red-400' : 'bg-slate-400'}`}>{q.client.name.charAt(0)}</div>
-                                <div><p className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{q.client.name}</p><p className="text-xs text-slate-500">#{q.number} · {q.date}</p></div>
+                                <div><p className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{q.client.name}</p><p className="text-xs text-slate-500 dark:text-slate-400">#{q.number} · {q.date}</p></div>
                             </div>
-                            <div className="text-right"><p className="font-bold text-slate-700">{formatCurrency(q.grandTotal)}</p><span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${getStatusConfig(q.status).className}`}>{getStatusConfig(q.status).label}</span></div>
+                            <div className="text-right"><p className="font-bold text-slate-700 dark:text-slate-200">{formatCurrency(q.grandTotal)}</p><span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${getStatusConfig(q.status).className}`}>{getStatusConfig(q.status).label}</span></div>
                         </div>
                     ))}
-                    {history.length > recentLimit && <button onClick={() => setRecentLimit(prev => prev + 5)} className="w-full py-2 text-center text-xs font-bold text-blue-600 hover:bg-blue-50 rounded border border-blue-100 dashed">VER MÁS ANTIGUOS</button>}
+                    {history.length > recentLimit && <button onClick={() => setRecentLimit(prev => prev + 5)} className="w-full py-2 text-center text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded border border-blue-100 dark:border-blue-800/50 dashed">VER MÁS ANTIGUOS</button>}
                 </div>
                 <div className="space-y-4">
-                    <h3 className="font-bold text-lg text-slate-700">Acciones</h3>
-                    <button onClick={() => onNavigate(null, 'quote')} className="w-full p-4 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-xl flex items-center gap-3 text-blue-800 transition-colors"><div className="bg-white p-2 rounded-full shadow-sm text-blue-600"><div style={{ fontSize: 18, fontWeight: 'bold' }}>+</div></div><div className="text-left"><span className="block font-bold">Nuevo Presupuesto</span></div></button>
-                    <button onClick={() => onNavigate(null, 'prods')} className="w-full p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center gap-3 text-slate-700 transition-colors"><div className="bg-white p-2 rounded-full shadow-sm text-slate-500"><Box size={18} /></div><div className="text-left"><span className="block font-bold">Gestionar Productos</span></div></button>
-                    <button onClick={() => onNavigate(null, 'clients')} className="w-full p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center gap-3 text-slate-700 transition-colors"><div className="bg-white p-2 rounded-full shadow-sm text-slate-500"><Users size={18} /></div><div className="text-left"><span className="block font-bold">Base de Clientes</span></div></button>
+                    <h3 className="font-bold text-lg text-slate-700 dark:text-slate-200">Acciones</h3>
+                    <button onClick={() => onNavigate(null, 'quote')} className="w-full p-4 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 rounded-xl flex items-center gap-3 text-blue-800 dark:text-blue-300 transition-colors"><div className="bg-white dark:bg-slate-800 p-2 rounded-full shadow-sm text-blue-600"><div style={{ fontSize: 18, fontWeight: 'bold' }}>+</div></div><div className="text-left"><span className="block font-bold">Nuevo Presupuesto</span></div></button>
+                    <button onClick={() => onNavigate(null, 'prods')} className="w-full p-4 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3 text-slate-700 dark:text-slate-300 transition-colors"><div className="bg-white dark:bg-slate-700 p-2 rounded-full shadow-sm text-slate-500 dark:text-slate-400"><Box size={18} /></div><div className="text-left"><span className="block font-bold">Gestionar Productos</span></div></button>
+                    <button onClick={() => onNavigate(null, 'clients')} className="w-full p-4 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3 text-slate-700 dark:text-slate-300 transition-colors"><div className="bg-white dark:bg-slate-700 p-2 rounded-full shadow-sm text-slate-500 dark:text-slate-400"><Users size={18} /></div><div className="text-left"><span className="block font-bold">Base de Clientes</span></div></button>
                 </div>
             </div>
 

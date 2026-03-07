@@ -104,69 +104,69 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
 
     return (
         <div className={`p-4 md:p-8 max-w-4xl mx-auto h-full overflow-y-auto animate-fade-in ${className}`}>
-            <h2 className="text-3xl font-black text-slate-800 mb-6">Configuración de Negocio</h2>
+            <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 mb-6">Configuración de Negocio</h2>
             <div className="space-y-6">
-                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                    <h3 className="font-bold text-lg mb-4 text-slate-700 border-b pb-2">Identidad Corporativa</h3>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                    <h3 className="font-bold text-lg mb-4 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">Identidad Corporativa</h3>
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-4">
-                            <div><label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Nombre Comercial</label><input className="w-full p-3 border rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none font-bold" value={config.name} onChange={e => setConfig({ ...config, name: e.target.value })} /></div>
-                            <div><label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">CIF / NIF</label><input className="w-full p-3 border rounded-lg bg-slate-50 focus:bg-white outline-none" value={config.cif} onChange={e => setConfig({ ...config, cif: e.target.value })} /></div>
-                            <div><label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Color de Marca</label><div className="flex gap-2"><input type="color" className="h-12 w-20 rounded cursor-pointer border-none" value={config.color} onChange={e => setConfig({ ...config, color: e.target.value })} /><input className="flex-1 p-3 border rounded-lg bg-slate-50" value={config.color} onChange={e => setConfig({ ...config, color: e.target.value })} /></div></div>
+                            <div><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Nombre Comercial</label><input className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-100 outline-none font-bold" value={config.name} onChange={e => setConfig({ ...config, name: e.target.value })} /></div>
+                            <div><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">CIF / NIF</label><input className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 outline-none" value={config.cif} onChange={e => setConfig({ ...config, cif: e.target.value })} /></div>
+                            <div><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Color de Marca</label><div className="flex gap-2"><input type="color" className="h-12 w-20 rounded cursor-pointer border-none" value={config.color} onChange={e => setConfig({ ...config, color: e.target.value })} /><input className="flex-1 p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100" value={config.color} onChange={e => setConfig({ ...config, color: e.target.value })} /></div></div>
                         </div>
                         <div>
-                            <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Logotipo (Fondo Blanco/Transparente)</label>
-                            <div className="p-4 border-2 border-dashed rounded-xl bg-slate-50 hover:bg-white transition-colors text-center cursor-pointer relative group h-48 flex items-center justify-center">
+                            <label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Logotipo (Fondo Blanco/Transparente)</label>
+                            <div className="p-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 hover:bg-white dark:hover:bg-slate-800 transition-colors text-center cursor-pointer relative group h-48 flex items-center justify-center">
                                 <input type="file" accept="image/*" onChange={handleLogo} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                                {config.logo ? <img src={config.logo} className="max-h-full max-w-full object-contain" /> : <div className="text-slate-400"><Box size={32} className="mx-auto mb-2" /><p className="text-xs">Subir Logo</p></div>}
+                                {config.logo ? <img src={config.logo} className="max-h-full max-w-full object-contain" /> : <div className="text-slate-400 dark:text-slate-500"><Box size={32} className="mx-auto mb-2" /><p className="text-xs">Subir Logo</p></div>}
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                    <h3 className="font-bold text-lg mb-4 text-slate-700 border-b pb-2">Contacto y Legal</h3>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                    <h3 className="font-bold text-lg mb-4 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">Contacto y Legal</h3>
                     <div className="grid md:grid-cols-2 gap-4 mb-4">
-                        <div><label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Teléfono</label><input className="w-full p-3 border rounded-lg bg-slate-50 outline-none" value={config.phone} onChange={e => setConfig({ ...config, phone: e.target.value })} /></div>
-                        <div><label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Email</label><input className="w-full p-3 border rounded-lg bg-slate-50 outline-none" value={config.email} onChange={e => setConfig({ ...config, email: e.target.value })} /></div>
-                        <div className="md:col-span-2"><label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Dirección Completa</label><input className="w-full p-3 border rounded-lg bg-slate-50 outline-none" value={config.address} onChange={e => setConfig({ ...config, address: e.target.value })} /></div>
-                        <div className="md:col-span-2"><label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Web</label><input className="w-full p-3 border rounded-lg bg-slate-50 outline-none" value={config.website} onChange={e => setConfig({ ...config, website: e.target.value })} /></div>
+                        <div><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Teléfono</label><input className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none" value={config.phone} onChange={e => setConfig({ ...config, phone: e.target.value })} /></div>
+                        <div><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Email</label><input className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none" value={config.email} onChange={e => setConfig({ ...config, email: e.target.value })} /></div>
+                        <div className="md:col-span-2"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Dirección Completa</label><input className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none" value={config.address} onChange={e => setConfig({ ...config, address: e.target.value })} /></div>
+                        <div className="md:col-span-2"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Web</label><input className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none" value={config.website} onChange={e => setConfig({ ...config, website: e.target.value })} /></div>
                     </div>
-                    <div><label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Cuenta Bancaria (para Presupuestos)</label><textarea className="w-full p-3 border rounded-lg bg-slate-50 outline-none h-20 text-sm" value={config.bankAccount} onChange={e => setConfig({ ...config, bankAccount: e.target.value })} /></div>
-                    <div className="mt-4"><label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Términos Legales (Pie de página)</label><textarea className="w-full p-3 border rounded-lg bg-slate-50 outline-none h-32 text-xs" value={config.legalText} onChange={e => setConfig({ ...config, legalText: e.target.value })} /></div>
+                    <div><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Cuenta Bancaria (para Presupuestos)</label><textarea className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none h-20 text-sm" value={config.bankAccount} onChange={e => setConfig({ ...config, bankAccount: e.target.value })} /></div>
+                    <div className="mt-4"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Términos Legales (Pie de página)</label><textarea className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none h-32 text-xs" value={config.legalText} onChange={e => setConfig({ ...config, legalText: e.target.value })} /></div>
                 </div>
 
-                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                    <h3 className="font-bold text-lg mb-4 text-slate-700 border-b pb-2">Fiscalidad</h3>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                    <h3 className="font-bold text-lg mb-4 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">Fiscalidad</h3>
                     <div className="grid md:grid-cols-2 gap-6">
                         <div>
-                            <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">IVA Global (%)</label>
-                            <input type="number" className="w-full p-3 border rounded-lg bg-slate-50 outline-none font-bold" value={config.iva !== undefined ? config.iva : 21} onChange={e => setConfig({ ...config, iva: e.target.value })} />
-                            <p className="text-[10px] text-slate-400 mt-1">Por defecto: 21%</p>
+                            <label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">IVA Global (%)</label>
+                            <input type="number" className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none font-bold" value={config.iva !== undefined ? config.iva : 21} onChange={e => setConfig({ ...config, iva: e.target.value })} />
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Por defecto: 21%</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Suscripción y Licencia */}
-                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm animate-fade-in">
-                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-700 border-b pb-2"><Crown className={isPro ? "text-yellow-500" : "text-slate-400"} /> Suscripción y Licencia</h3>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm animate-fade-in">
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2"><Crown className={isPro ? "text-yellow-500" : "text-slate-400"} /> Suscripción y Licencia</h3>
                     <div className="flex flex-col md:flex-row gap-6 items-start">
                         <div className="flex-1">
-                            <p className="text-sm font-bold text-slate-500 mb-1">Plan Actual</p>
-                            <div className={`text-xl font-black flex items-center gap-2 ${isPro ? 'text-blue-600' : 'text-slate-600'}`}>
+                            <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-1">Plan Actual</p>
+                            <div className={`text-xl font-black flex items-center gap-2 ${isPro ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'}`}>
                                 {isPro ? 'PLAN PRO 🚀' : 'GRATUITO'}
-                                {isPro && <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase tracking-wider">Activo</span>}
+                                {isPro && <span className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full uppercase tracking-wider">Activo</span>}
                             </div>
-                            <p className="text-xs text-slate-400 mt-2">
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
                                 {isPro ? "Disfrutas de acceso ilimitado a todas las funciones." : "Limitado a 3 productos. Actualiza para eliminar límites."}
                             </p>
 
                             {/* Subscription Details for PRO users */}
                             {isPro && userProfile?.lemonRenewsAt && (
-                                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/50">
                                     <div className="flex items-center gap-2 text-sm">
-                                        <span className="text-blue-600 font-bold">📅 Próxima renovación:</span>
-                                        <span className="text-slate-700 font-medium">
+                                        <span className="text-blue-600 dark:text-blue-400 font-bold">📅 Próxima renovación:</span>
+                                        <span className="text-slate-700 dark:text-slate-300 font-medium">
                                             {new Date(userProfile.lemonRenewsAt).toLocaleDateString('es-ES', {
                                                 day: 'numeric',
                                                 month: 'long',
@@ -186,7 +186,7 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                             {isPro && userProfile?.lemonCustomerPortalUrl && (
                                 <button
                                     onClick={() => window.open(userProfile.lemonCustomerPortalUrl, '_blank')}
-                                    className="mt-4 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-sm flex items-center gap-2 transition-colors border border-slate-200"
+                                    className="mt-4 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-lg text-sm flex items-center gap-2 transition-colors border border-slate-200 dark:border-slate-600"
                                 >
                                     <Crown size={16} className="text-yellow-500" />
                                     Gestionar Suscripción
@@ -200,12 +200,12 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                         </div>
 
                         {!isPro && (
-                            <div className="w-full md:w-1/2 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Canjear Código Promocional</label>
+                            <div className="w-full md:w-1/2 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Canjear Código Promocional</label>
                                 <div className="flex gap-2">
                                     <input
                                         placeholder="INTRODUCE TU CÓDIGO"
-                                        className="flex-1 p-2 border rounded-lg text-sm uppercase font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="flex-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm uppercase font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                                         value={couponCode}
                                         onChange={e => setCouponCode(e.target.value)}
                                         autoComplete="off"
@@ -220,19 +220,19 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                                         {isRedeeming ? '...' : <><Ticket size={14} /> Canjear</>}
                                     </button>
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-2">Si tienes un código de acceso anticipado, introdúcelo aquí.</p>
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2">Si tienes un código de acceso anticipado, introdúcelo aquí.</p>
                             </div>
                         )}
                     </div>
                 </div>
 
                 {/* GESTIÓN DE CATÁLOGO (IMPORTAR / EXPORTAR) */}
-                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm animate-fade-in">
-                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-700 border-b pb-2"><Box className="text-purple-600" /> Gestión de Catálogo</h3>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm animate-fade-in">
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2"><Box className="text-purple-600" /> Gestión de Catálogo</h3>
                     <div className="grid md:grid-cols-2 gap-6">
-                        <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
-                            <h4 className="font-bold text-purple-900 mb-2">Exportar Catálogo</h4>
-                            <p className="text-xs text-purple-700 mb-4">Descarga un archivo con todos tus productos, imágenes y categorías para hacer una copia de seguridad o compartir.</p>
+                        <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl border border-purple-100 dark:border-purple-800/40">
+                            <h4 className="font-bold text-purple-900 dark:text-purple-200 mb-2">Exportar Catálogo</h4>
+                            <p className="text-xs text-purple-700 dark:text-purple-300 mb-4">Descarga un archivo con todos tus productos, imágenes y categorías para hacer una copia de seguridad o compartir.</p>
                             <button
                                 onClick={() => {
                                     const dataStr = JSON.stringify({ products, categories, exportedAt: new Date().toISOString() }, null, 2);
@@ -252,9 +252,9 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                                 <Save size={18} /> Descargar Copia (.json)
                             </button>
                         </div>
-                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                            <h4 className="font-bold text-blue-900 mb-2">Importar Catálogo</h4>
-                            <p className="text-xs text-blue-700 mb-4">Añade productos desde un archivo. <span className="font-bold">No borra lo actual</span>, solo añade lo nuevo.</p>
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/40">
+                            <h4 className="font-bold text-blue-900 dark:text-blue-200 mb-2">Importar Catálogo</h4>
+                            <p className="text-xs text-blue-700 dark:text-blue-300 mb-4">Añade productos desde un archivo. <span className="font-bold">No borra lo actual</span>, solo añade lo nuevo.</p>
                             <label className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-colors">
                                 <Box size={18} /> Seleccionar Archivo
                                 <input
@@ -299,19 +299,19 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                 </div>
 
                 {/* SEGURIDAD / CAMBIAR CONTRASEÑA */}
-                <div className="bg-red-50/50 rounded-xl border border-red-100 p-6 shadow-sm animate-fade-in relative overflow-hidden">
+                <div className="bg-red-50/50 dark:bg-red-950/20 rounded-xl border border-red-100 dark:border-red-900/40 p-6 shadow-sm animate-fade-in relative overflow-hidden">
                     {/* Decorative accent */}
                     <div className="absolute top-0 right-0 w-20 h-20 bg-red-100/50 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
 
-                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-red-800 border-b border-red-100 pb-2 relative z-10">
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-red-800 dark:text-red-300 border-b border-red-100 dark:border-red-900/50 pb-2 relative z-10">
                         <Shield className="text-red-600" size={20} /> Seguridad
                     </h3>
 
                     {isGoogleUser ? (
-                        <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-red-100 text-slate-600 text-sm">
+                        <div className="flex items-start gap-3 p-4 bg-white dark:bg-slate-800 rounded-lg border border-red-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm">
                             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5 shrink-0 mt-0.5" alt="Google" />
                             <div>
-                                <p className="font-bold text-slate-800">Cuenta gestionada por Google</p>
+                                <p className="font-bold text-slate-800 dark:text-slate-100">Cuenta gestionada por Google</p>
                                 <p>Iniciaste sesión con Google, por lo que no tienes una contraseña independiente en esta aplicación. Para cambiar tu clave, debes hacerlo desde la configuración de tu cuenta de Google.</p>
                             </div>
                         </div>
@@ -325,7 +325,7 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                                     <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Contraseña Actual (Requerido)</label>
                                     <input
                                         type="password"
-                                        className="w-full p-3 border border-red-200 rounded-lg bg-white focus:ring-2 focus:ring-red-200 outline-none"
+                                        className="w-full p-3 border border-red-200 dark:border-red-800/50 rounded-lg bg-white dark:bg-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-red-200 outline-none"
                                         placeholder="••••••••"
                                         value={currentPassword}
                                         onChange={e => setCurrentPassword(e.target.value)}
@@ -335,17 +335,17 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                                     <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Nueva Contraseña</label>
                                     <input
                                         type="password"
-                                        className="w-full p-3 border border-slate-200 rounded-lg bg-white outline-none"
+                                        className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 dark:text-slate-100 outline-none"
                                         placeholder="Mínimo 6 caracteres"
                                         value={newPassword}
                                         onChange={e => setNewPassword(e.target.value)}
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Confirmar Nueva</label>
+                                    <label className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block mb-1">Confirmar Nueva</label>
                                     <input
                                         type="password"
-                                        className="w-full p-3 border border-slate-200 rounded-lg bg-white outline-none"
+                                        className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 dark:text-slate-100 outline-none"
                                         placeholder="Repite la nueva contraseña"
                                         value={confirmNewPassword}
                                         onChange={e => setConfirmNewPassword(e.target.value)}
@@ -366,7 +366,7 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                 </div>
 
                 <div className="flex justify-end pb-8">
-                    <button onClick={() => toast("Configuración guardada", "success")} className="px-8 py-3 bg-slate-800 text-white font-bold rounded-xl shadow-lg flex items-center gap-2 hover:bg-slate-900 transition-colors"><Save size={18} /> Guardar Configuración</button>
+                    <button onClick={() => toast("Configuración guardada", "success")} className="px-8 py-3 bg-slate-800 dark:bg-slate-700 text-white font-bold rounded-xl shadow-lg flex items-center gap-2 hover:bg-slate-900 dark:hover:bg-slate-600 transition-colors"><Save size={18} /> Guardar Configuración</button>
                 </div>
             </div>
         </div>

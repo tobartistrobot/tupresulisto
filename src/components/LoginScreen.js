@@ -122,122 +122,137 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
     };
 
     return (
-        <div className="h-screen w-full bg-slate-900 flex items-center justify-center p-4">
-            <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl animate-fade-in">
+        <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden font-sans transition-colors duration-500">
+            {/* Ambient Animated Gradient Orbs */}
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-400/30 rounded-full blur-[100px] mix-blend-multiply dark:mix-blend-screen opacity-70 animate-pulse-slow"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-sky-400/30 rounded-full blur-[100px] mix-blend-multiply dark:mix-blend-screen opacity-70 animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+            <div className="absolute top-[20%] right-[20%] w-[20%] h-[20%] bg-indigo-400/20 rounded-full blur-[80px] mix-blend-multiply dark:mix-blend-screen opacity-50 animate-pulse-slow" style={{ animationDelay: '4s' }}></div>
+
+            <div className="w-full max-w-md relative z-10 animate-slide-up">
+
+                {/* Logo and Branding Header */}
                 <div className="flex flex-col items-center mb-8 gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-blue-900 rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-300">
-                            <Calculator className="text-white" size={24} />
+                    <div className="relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-brand-600 to-sky-500 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                        <div className="relative w-16 h-16 bg-gradient-to-br from-brand-700 to-brand-900 rounded-2xl flex items-center justify-center shadow-2xl transform group-hover:scale-105 transition-all duration-300 border border-brand-500/30">
+                            <Calculator className="text-white drop-shadow-md" size={32} />
                         </div>
-                        <span className="font-bold text-3xl tracking-tight text-slate-900">
-                            tupresulisto<span className="text-blue-600">.com</span>
-                        </span>
                     </div>
-
+                    <div className="text-center">
+                        <h1 className="font-extrabold text-3xl tracking-tight text-slate-900 dark:text-white flex items-center justify-center gap-1">
+                            tupresulisto<span className="text-brand-600 dark:text-brand-400">.com</span>
+                        </h1>
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
+                            {mode === 'login' ? 'Bienvenido de nuevo, profesional' : 'Comienza a presupuestar como un experto'}
+                        </p>
+                    </div>
                 </div>
-                {error && (
-                    <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 flex items-start gap-2 animate-fade-in">
-                        <AlertCircle className="shrink-0 mt-0.5" size={16} />
-                        <span>{error}</span>
-                    </div>
-                )}
 
-                {/* Google Button */}
-                <div className="space-y-4">
-                    <button
-                        onClick={handleGoogleLogin}
-                        disabled={loading}
-                        className="btn-secondary w-full !font-bold shadow-sm"
-                    >
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
-                        Continuar con Google
-                    </button>
-
-                    <div className="relative flex items-center justify-center my-4">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-slate-200"></div>
+                {/* Glassmorphism Auth Card */}
+                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/50 dark:border-slate-700/50 rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)]">
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50/80 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-xl border border-red-100 dark:border-red-900/50 flex items-start gap-3 animate-fade-in backdrop-blur-sm">
+                            <AlertCircle className="shrink-0 mt-0.5" size={18} />
+                            <span className="font-medium">{error}</span>
                         </div>
-                        <span className="relative bg-white px-2 text-xs text-slate-400 font-bold uppercase">O usa tu email</span>
-                    </div>
+                    )}
 
-                    <form onSubmit={handleAuth} className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-700 mb-1">EMAIL</label>
-                            <input
-                                type="email"
-                                required
-                                className="input-saas"
-                                placeholder="tu@email.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-700 mb-1">CONTRASEÑA</label>
-                            <input
-                                type="password"
-                                required
-                                className="input-saas"
-                                placeholder={mode === 'register' ? "Crea una clave segura" : "••••••••"}
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                    <div className="space-y-5">
+                        <button
+                            onClick={handleGoogleLogin}
+                            disabled={loading}
+                            className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold py-3.5 px-6 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/80 hover:shadow-md hover:-translate-y-0.5 active:scale-95 transition-all duration-200 disabled:opacity-50"
+                        >
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
+                            Continuar con Google
+                        </button>
 
-                            />
-                            {mode === 'login' && (
-                                <div className="flex justify-end mt-1">
-                                    <button
-                                        type="button"
-                                        onClick={handleForgotPassword}
-                                        disabled={isResetting}
-                                        className="text-xs text-slate-400 hover:text-sky-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {isResetting ? 'Enviando...' : '¿Has olvidado tu contraseña?'}
-                                    </button>
-                                </div>
-                            )}
+                        <div className="relative flex items-center justify-center my-6">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-slate-200 dark:border-slate-700/50"></div>
+                            </div>
+                            <span className="relative bg-white dark:bg-slate-900 px-3 text-[10px] text-slate-400 font-bold uppercase tracking-widest rounded-full">O usa tu email</span>
                         </div>
-                        {mode === 'register' && (
-                            <div>
-                                <label className="block text-xs font-bold text-slate-700 mb-1">REPETIR CONTRASEÑA</label>
+
+                        <form onSubmit={handleAuth} className="space-y-4">
+                            <div className="group">
+                                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wide">Dirección Email</label>
+                                <input
+                                    type="email"
+                                    required
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-slate-900 dark:text-white font-medium focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all duration-300 placeholder:text-slate-400"
+                                    placeholder="tu@email.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                            </div>
+                            <div className="group">
+                                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wide">Contraseña</label>
                                 <input
                                     type="password"
                                     required
-                                    className={`input-saas ${password !== confirmPassword && confirmPassword ? 'border-red-300 ring-red-200' : ''}`}
-                                    placeholder="Repite tu clave"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-slate-900 dark:text-white font-medium focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all duration-300 placeholder:text-slate-400"
+                                    placeholder={mode === 'register' ? "Crea una clave segura" : "••••••••"}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                 />
+                                {mode === 'login' && (
+                                    <div className="flex justify-end mt-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleForgotPassword}
+                                            disabled={isResetting}
+                                            className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {isResetting ? 'Enviando...' : '¿Has olvidado tu contraseña?'}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                        )}
-                        <button
-                            disabled={loading}
-                            onClick={handleAuth}
-                            className={`btn-primary w-full shadow-lg shadow-brand-500/30 ${loading ? 'bg-slate-200 text-slate-400 cursor-not-allowed hover:bg-slate-200' : ''}`}
-                        >
-                            {loading ? 'Procesando...' : (
-                                mode === 'register'
-                                    ? 'Crear Cuenta Profesional'
-                                    : <><Lock className="mr-2" size={18} /> Iniciar Sesión Segura</>
+                            {mode === 'register' && (
+                                <div className="group">
+                                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wide">Repetir Contraseña</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        className={`w-full bg-slate-50 dark:bg-slate-800 border ${password !== confirmPassword && confirmPassword ? 'border-red-400 focus:ring-red-500/20' : 'border-slate-200 dark:border-slate-700 focus:border-brand-500 focus:ring-brand-500/20'} rounded-xl p-3.5 text-slate-900 dark:text-white font-medium focus:bg-white dark:focus:bg-slate-900 focus:ring-4 outline-none transition-all duration-300 placeholder:text-slate-400`}
+                                        placeholder="Repite tu clave"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                    />
+                                </div>
                             )}
-                        </button>
-                    </form>
+                            <div className="pt-2">
+                                <button
+                                    disabled={loading}
+                                    onClick={handleAuth}
+                                    className={`w-full bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-500 hover:to-brand-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 transform active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                >
+                                    {loading ? 'Procesando...' : (
+                                        mode === 'register'
+                                            ? 'Crear Cuenta Profesional'
+                                            : <><Lock className="mr-2" size={18} /> Iniciar Sesión Segura</>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
-                <div className="mt-6 text-center">
+                <div className="mt-8 text-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm rounded-full py-2 px-6 border border-white/20 inline-block mx-auto">
                     {mode === 'register' ? (
-                        <button onClick={onSwitchToLogin} className="text-sm text-slate-500 hover:text-sky-600 font-medium">
-                            ¿Ya tienes cuenta? <span className="font-bold underline">Inicia sesión</span>
+                        <button onClick={onSwitchToLogin} className="text-sm text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 font-medium transition-colors">
+                            ¿Ya tienes cuenta? <span className="font-extrabold ml-1">Inicia sesión</span>
                         </button>
                     ) : (
-                        <button onClick={onSwitchToRegister} className="text-sm text-slate-500 hover:text-sky-600 font-medium">
-                            ¿No tienes cuenta? <span className="font-bold underline">Regístrate gratis</span>
+                        <button onClick={onSwitchToRegister} className="text-sm text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 font-medium transition-colors">
+                            ¿No tienes cuenta? <span className="font-extrabold ml-1">Regístrate gratis</span>
                         </button>
                     )}
                 </div>
-
             </div>
         </div>
-    )
+    );
 };
 
 export default LoginScreen;
