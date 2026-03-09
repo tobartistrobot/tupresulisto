@@ -64,21 +64,21 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
             <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center relative z-10">
 
 
-                <h1 className="text-5xl md:text-7xl font-black text-slate-900 leading-tight tracking-tight mb-8 mt-6 animate-fade-in-up">
+                <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 leading-tight tracking-tight mb-8 mt-6 animate-fade-in-up">
                     Si se puede medir,<br />
                     <span className="text-blue-900">se puede presupuestar.</span>
                 </h1>
 
-                <p className="text-xl md:text-2xl text-slate-500 max-w-4xl mx-auto mb-12 leading-relaxed font-medium animate-fade-in-up animation-delay-100">
+                <p className="text-base sm:text-xl md:text-2xl text-slate-500 max-w-4xl mx-auto mb-12 leading-relaxed font-medium animate-fade-in-up animation-delay-100">
                     La herramienta definitiva para carpintería y reformas.
                     <span className="block mt-2 text-slate-700">Ventanas, puertas, toldos, mamparas, mosquiteras y cualquier producto que imagines.</span>
                 </p>
 
-                <div className="flex flex-col sm:flex-row justify-center gap-5 mb-24 animate-fade-in-up animation-delay-200">
-                    <button onClick={onRegister} className="px-10 py-5 bg-blue-900 text-white text-lg font-bold rounded-xl hover:bg-blue-800 transition-all shadow-xl shadow-blue-900/20 hover:scale-105 flex items-center justify-center gap-3 group">
+                <div className="flex flex-col sm:flex-row justify-center gap-4 mb-16 sm:mb-24 animate-fade-in-up animation-delay-200 px-2 sm:px-0">
+                    <button onClick={onRegister} className="px-8 sm:px-10 py-4 sm:py-5 bg-blue-900 text-white text-base sm:text-lg font-bold rounded-xl hover:bg-blue-800 active:scale-95 transition-all shadow-xl shadow-blue-900/20 hover:scale-105 flex items-center justify-center gap-3 group">
                         Probar Gratis Ahora <ArrowRight className="group-hover:translate-x-1 transition-transform" />
                     </button>
-                    <button onClick={onLogin} className="px-10 py-5 bg-white border-2 border-slate-200 text-slate-700 text-lg font-bold rounded-xl hover:border-slate-400 hover:text-slate-900 transition-all flex items-center justify-center gap-3">
+                    <button onClick={onLogin} className="px-8 sm:px-10 py-4 sm:py-5 bg-white border-2 border-slate-200 text-slate-700 text-base sm:text-lg font-bold rounded-xl hover:border-slate-400 hover:text-slate-900 active:scale-95 transition-all flex items-center justify-center gap-3">
                         Acceso Clientes
                     </button>
                 </div>
@@ -149,7 +149,7 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
                     <div className="grid lg:grid-cols-2 gap-16 items-center">
                         <div>
                             <span className="text-blue-600 font-black tracking-widest uppercase text-sm border-l-4 border-blue-600 pl-4 mb-6 block">Libertad Creativa</span>
-                            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6 leading-tight">
+                            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 mb-6 leading-tight">
                                 Tu catálogo,<br />
                                 <span className="text-slate-400">tus reglas.</span>
                             </h2>
@@ -277,9 +277,9 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
                         </p>
                     </div>
 
-                    <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-10 max-w-6xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 max-w-6xl mx-auto">
                         {/* Tabla Matriz */}
-                        <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-2xl flex flex-col group relative overflow-hidden transition-all duration-500 hover:scale-110 hover:shadow-blue-900/40 z-10 hover:z-20">
+                        <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 border border-slate-100 shadow-2xl flex flex-col group relative overflow-hidden transition-all duration-500 hover:scale-105 md:hover:scale-110 active:scale-[1.02] hover:shadow-blue-900/40 z-10 hover:z-20">
                             <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-blue-600 to-blue-900"></div>
 
                             <div className="mb-8 flex items-center justify-between">
@@ -309,7 +309,7 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
                         </div>
 
                         {/* Metro Cuadrado */}
-                        <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-2xl flex flex-col group relative overflow-hidden transition-all duration-500 hover:scale-110 hover:shadow-blue-900/40 z-10 hover:z-20">
+                        <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 border border-slate-100 shadow-2xl flex flex-col group relative overflow-hidden transition-all duration-500 hover:scale-105 md:hover:scale-110 active:scale-[1.02] hover:shadow-blue-900/40 z-10 hover:z-20">
                             <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-emerald-600 to-emerald-900"></div>
 
                             <div className="mb-8 flex items-center justify-between">
@@ -339,7 +339,7 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
                         </div>
 
                         {/* Metro Lineal */}
-                        <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-2xl flex flex-col group relative overflow-hidden transition-all duration-500 hover:scale-110 hover:shadow-blue-900/40 z-10 hover:z-20">
+                        <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 border border-slate-100 shadow-2xl flex flex-col group relative overflow-hidden transition-all duration-500 hover:scale-105 md:hover:scale-110 active:scale-[1.02] hover:shadow-blue-900/40 z-10 hover:z-20">
                             <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-purple-600 to-purple-900"></div>
 
                             <div className="mb-8 flex items-center justify-between">
@@ -369,7 +369,7 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
                         </div>
 
                         {/* Unidad */}
-                        <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-2xl flex flex-col group relative overflow-hidden transition-all duration-500 hover:scale-110 hover:shadow-blue-900/40 z-10 hover:z-20">
+                        <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 border border-slate-100 shadow-2xl flex flex-col group relative overflow-hidden transition-all duration-500 hover:scale-105 md:hover:scale-110 active:scale-[1.02] hover:shadow-blue-900/40 z-10 hover:z-20">
                             <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-amber-600 to-amber-900"></div>
 
                             <div className="mb-8 flex items-center justify-between">
@@ -406,11 +406,11 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
 
                 <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
-                    <h2 className="text-4xl md:text-5xl font-black mb-8 tracking-tight">Rompe los límites de tu catálogo.</h2>
-                    <p className="text-xl md:text-2xl text-blue-200 mb-12 max-w-2xl mx-auto font-light">
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-6 sm:mb-8 tracking-tight">Rompe los límites de tu catálogo.</h2>
+                    <p className="text-lg sm:text-xl md:text-2xl text-blue-200 mb-10 sm:mb-12 max-w-2xl mx-auto font-light">
                         Una herramienta que crece contigo. Empieza hoy mismo.
                     </p>
-                    <button onClick={onRegister} className="px-12 py-6 bg-white text-blue-900 text-xl font-bold rounded-lg shadow-xl shadow-blue-950/50 hover:bg-blue-50 hover:scale-105 transition-all">
+                    <button onClick={onRegister} className="w-full sm:w-auto px-10 sm:px-12 py-5 sm:py-6 bg-white text-blue-900 text-lg sm:text-xl font-bold rounded-lg shadow-xl shadow-blue-950/50 hover:bg-blue-50 hover:scale-105 active:scale-95 transition-all">
                         Crear Cuenta Profesional
                     </button>
                     <p className="text-blue-300/60 text-sm mt-8 font-mono uppercase tracking-widest">Sin tarjeta de crédito</p>

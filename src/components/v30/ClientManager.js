@@ -103,7 +103,37 @@ const ClientManager = ({ quotesHistory, deletedHistory, onLoadQuote, onDeleteCli
                             </div>
                             <div className="mt-6"><button onClick={() => onNewQuoteForClient(activeClient)} className="w-full py-3 shadow-lg bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2"><Plus size={18} /> Crear Nuevo Presupuesto</button></div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 bg-slate-50/50 dark:bg-slate-900/30">{activeClient.quotes.map(q => <div key={q.id} className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex justify-between items-center hover:shadow-md dark:hover:shadow-black/20 bg-white dark:bg-slate-800 transition-shadow group"><div className="flex items-center gap-4"><div><span className="font-black text-lg text-slate-700 dark:text-slate-200">#{q.number}</span><p className="text-xs text-slate-400 dark:text-slate-500">{q.date}</p></div><StatusSelector currentStatus={q.status || 'pending'} onStatusChange={(val) => onUpdateStatus(q.id, val)} /></div><div className="flex items-center gap-4"><span className="font-bold text-slate-800 dark:text-slate-100">{formatCurrency(q.grandTotal)}</span><div className="flex gap-1"><button onClick={() => onLoadQuote(q)} className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 p-2" title="Editar"><Edit size={16} /></button><button onClick={(e) => { e.stopPropagation(); if (confirm("¿Borrar presupuesto?")) onDeleteQuote(q); }} className="text-slate-300 dark:text-slate-500 hover:text-red-600 p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash size={16} /></button></div></div></div>)}</div>
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-slate-50/50 dark:bg-slate-900/30">
+                            {activeClient.quotes.map(q => (
+                                <div key={q.id} className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex flex-col md:flex-row md:justify-between md:items-center hover:shadow-md dark:hover:shadow-black/20 bg-white dark:bg-slate-800 transition-shadow group gap-4">
+                                    <div className="flex justify-between md:justify-start items-center md:gap-4 w-full md:w-auto">
+                                        <div>
+                                            <span className="font-black text-lg text-slate-700 dark:text-slate-200">#{q.number}</span>
+                                            <p className="text-xs text-slate-400 dark:text-slate-500">{q.date}</p>
+                                        </div>
+                                        <div className="md:hidden font-bold text-slate-800 dark:text-slate-100">
+                                            {formatCurrency(q.grandTotal)}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-700 md:border-none">
+                                        <StatusSelector currentStatus={q.status || 'pending'} onStatusChange={(val) => onUpdateStatus(q.id, val)} />
+                                        <div className="flex items-center gap-1 md:gap-4">
+                                            <span className="hidden md:block font-bold text-slate-800 dark:text-slate-100">
+                                                {formatCurrency(q.grandTotal)}
+                                            </span>
+                                            <div className="flex gap-1">
+                                                <button onClick={() => onLoadQuote(q)} className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 p-2" title="Editar">
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button onClick={(e) => { e.stopPropagation(); if (confirm("¿Borrar presupuesto?")) onDeleteQuote(q); }} className="text-slate-300 dark:text-slate-500 hover:text-red-600 p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                                    <Trash size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 p-10 text-center"><div className="bg-slate-50 dark:bg-slate-700/50 p-6 rounded-full mb-4"><Users size={48} className="opacity-50" /></div><p className="font-medium dark:text-slate-500">Selecciona un cliente para ver su historial</p></div>

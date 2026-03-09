@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
 const firebaseConfig = {
@@ -17,6 +17,11 @@ const firebaseConfig = {
 let app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const db = getFirestore(app);
 const auth = getAuth(app);
+
+// Forzar persistencia LOCAL para evitar desconexiones con el botón de "Atrás" (bfcache)
+setPersistence(auth, browserLocalPersistence).catch(err => {
+    console.error("Firebase persistence error:", err);
+});
 
 let analytics;
 if (typeof window !== "undefined") {

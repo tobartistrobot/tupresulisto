@@ -1,8 +1,81 @@
 'use client';
 import React, { useState } from 'react';
 import { useToast } from '../../context/ToastContext';
-import { Box, Edit, Trash, Save, Plus, Percent, Wand, ArrowLeft, ArrowRight, List } from 'lucide-react';
+import { Box, Edit, Trash, Plus, Percent, Wand, ArrowLeft, ArrowRight, List, GripVertical, Save } from 'lucide-react';
 import MatrixEditor from './MatrixEditor';
+import { DndContext, closestCenter, KeyboardSensor, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+const SortableProductCard = ({ p, handleEdit, filterCategory, confirmDelete }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: p.id });
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : 1,
+        opacity: isDragging ? 0.95 : 1,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className={`group bg-white dark:bg-slate-800 rounded-[24px] border border-slate-200/60 dark:border-slate-700/60 ${isDragging ? 'shadow-2xl scale-105 ring-4 ring-blue-500/20' : 'shadow-sm hover:shadow-xl hover:border-slate-300 dark:hover:border-slate-600'} overflow-hidden transition-all flex flex-col h-full relative`}>
+
+            {/* Contextual Drag Area (Only if in "Todas") */}
+            {filterCategory === 'Todas' && (
+                <div
+                    {...attributes}
+                    {...listeners}
+                    className="absolute top-0 right-0 p-3 z-30 cursor-grab active:cursor-grabbing touch-none text-slate-400 hover:text-blue-500 dark:text-slate-400 dark:hover:text-blue-400 transition-colors focus:outline-none"
+                    title="Mantén pulsado y arrastra para ordenar"
+                >
+                    <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-full shadow-lg border border-slate-200 dark:border-slate-700 w-11 h-11 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform">
+                        <GripVertical size={20} />
+                    </div>
+                </div>
+            )}
+
+            {/* Image Section */}
+            <div className="aspect-square bg-slate-50 dark:bg-slate-900/50 relative w-full border-b border-slate-100 dark:border-slate-700/50 overflow-hidden">
+                {p.image ? (
+                    <img src={p.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={p.name} />
+                ) : (
+                    <div className="flex h-full items-center justify-center text-slate-300 dark:text-slate-600 transition-transform duration-700 group-hover:scale-110">
+                        <Box size={40} strokeWidth={1.5} />
+                    </div>
+                )}
+
+                <div className="absolute top-4 left-4 z-10">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-slate-200 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-sm border border-white/40 dark:border-slate-600/50">
+                        {p.category}
+                    </span>
+                </div>
+            </div>
+
+            {/* Content & Clean Actions */}
+            <div className="p-4 flex-1 flex flex-col bg-white dark:bg-slate-800 z-30">
+                <h3 className="font-semibold text-sm md:text-base text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug mb-5 flex-1">
+                    {p.name}
+                </h3>
+
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleEdit(p); }}
+                        className="flex-1 flex items-center justify-center gap-2 h-11 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-2xl font-semibold text-sm transition-all"
+                    >
+                        <Edit size={16} /> <span className="inline">Editar</span>
+                    </button>
+
+                    <button
+                        onClick={(e) => { e.stopPropagation(); confirmDelete(p.id); }}
+                        className="w-11 h-11 flex shrink-0 items-center justify-center bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 rounded-2xl transition-all"
+                        title="Borrar"
+                    >
+                        <Trash size={16} />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const processImage = (file) => new Promise((resolve, reject) => {
     if (!file.type.match(/image.*/)) return reject(new Error("No es un archivo de imagen"));
@@ -53,6 +126,29 @@ const ProductManager = ({ products, setProducts, categories, setCategories, clas
     const moveProduct = (idx, dir) => { if ((dir === -1 && idx === 0) || (dir === 1 && idx === products.length - 1)) return; const n = [...products];[n[idx], n[idx + dir]] = [n[idx + dir], n[idx]]; setProducts(n); };
     const moveCategory = (idx, dir) => { if ((dir === -1 && idx === 0) || (dir === 1 && idx === categories.length - 1)) return; const n = [...categories];[n[idx], n[idx + dir]] = [n[idx + dir], n[idx]]; setCategories(n); };
     const filteredProducts = filterCategory === 'Todas' ? products : products.filter(p => p.category === filterCategory);
+
+    const sensors = useSensors(
+        useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
+
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        if (active && over && active.id !== over.id) {
+            setProducts((items) => {
+                const oldIndex = items.findIndex((i) => i.id === active.id);
+                const newIndex = items.findIndex((i) => i.id === over.id);
+                return arrayMove(items, oldIndex, newIndex);
+            });
+        }
+    };
+
+    const confirmDelete = (id) => {
+        if (confirm("¿Seguro que deseas borrar este producto?")) {
+            setProducts(products.filter(x => x.id !== id));
+        }
+    };
 
     if (isEditing) return (
         <div key="editor-mode" className={`p-4 md:p-8 max-w-6xl mx-auto ${className} animate-fade-in app-tab overflow-y-auto h-full`}>
@@ -128,10 +224,18 @@ const ProductManager = ({ products, setProducts, categories, setCategories, clas
 
     return (
         <div key="list-mode" className={`p-4 md:p-8 max-w-7xl mx-auto ${className} animate-fade-in app-tab overflow-y-auto h-full`}>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4"><div><h2 className="text-3xl font-black text-slate-800 dark:text-slate-100">Catálogo de Productos</h2><p className="text-slate-500 dark:text-slate-400 text-sm">Gestiona tus precios y referencias</p></div><div className="flex gap-2"><button onClick={() => setShowCatManager(!showCatManager)} className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 font-bold rounded-xl flex items-center gap-2 min-h-[48px]"><List size={18} /> Categorías</button><button onClick={handleCreateNew} className="px-6 py-3 bg-blue-600 text-white hover:bg-blue-700 font-bold rounded-xl shadow-lg flex items-center gap-2 min-h-[48px]"><Plus size={18} /> Nuevo Producto</button></div></div>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4"><div><h2 className="text-3xl font-black text-slate-800 dark:text-slate-100">Catálogo de Productos</h2><p className="text-slate-500 dark:text-slate-400 text-sm">Gestiona tus precios y referencias</p></div><div className="flex w-full md:w-auto gap-3"><button onClick={() => setShowCatManager(!showCatManager)} className="flex-1 justify-center md:flex-none px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 font-bold rounded-xl flex items-center gap-2 min-h-[48px] transition-colors"><List size={18} /> Categorías</button><button onClick={handleCreateNew} className="flex-1 justify-center md:flex-none px-4 py-3 bg-blue-600 text-white hover:bg-blue-700 font-bold rounded-xl shadow-lg flex items-center gap-2 min-h-[48px] transition-colors"><Plus size={18} /> <span className="whitespace-nowrap">Nuevo Producto</span></button></div></div>
             {showCatManager && <div className="bg-white dark:bg-slate-800 border dark:border-slate-700 p-4 rounded-xl shadow-xl mb-8 animate-slide-up max-w-md ml-auto"><div className="flex gap-2 mb-4"><input className="border dark:border-slate-700 p-2 rounded flex-1 dark:bg-slate-900 dark:text-slate-100" placeholder="Nueva categoría..." value={newCatName} onChange={e => setNewCatName(e.target.value)} /><button onClick={addCategory} className="px-4 py-2 bg-blue-600 text-white rounded font-bold">Áñadir</button></div><div className="space-y-2 max-h-40 overflow-y-auto">{categories.map((c, i) => <div key={c} className="flex justify-between items-center bg-slate-50 dark:bg-slate-700 p-2 rounded border border-slate-100 dark:border-slate-600"><span className="font-bold text-sm dark:text-slate-200">{c}</span><div className="flex gap-1"><button onClick={() => moveCategory(i, -1)} className="text-slate-400 hover:text-blue-600 px-1">↑</button><button onClick={() => moveCategory(i, 1)} className="text-slate-400 hover:text-blue-600 px-1">↓</button><button onClick={() => confirm("Borrar?") && setCategories(categories.filter(x => x !== c))} className="text-slate-400 hover:text-red-500"><Trash size={14} /></button></div></div>)}</div></div>}
-            <div className="flex gap-2 overflow-x-auto pb-4 mb-2 no-scrollbar"><button onClick={() => setFilterCategory('Todas')} className={`px-5 py-2 rounded-full whitespace-nowrap text-sm font-bold transition-all ${filterCategory === 'Todas' ? 'bg-slate-800 dark:bg-slate-600 text-white shadow-lg' : 'bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>Todas</button>{categories.map(c => (<button key={c} onClick={() => setFilterCategory(c)} className={`px-5 py-2 rounded-full whitespace-nowrap text-sm font-bold transition-all ${filterCategory === c ? 'bg-slate-800 dark:bg-slate-600 text-white shadow-lg' : 'bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{c}</button>))}</div>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">{filteredProducts.map((p, i) => (<div key={p.id} className="group bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-xl dark:hover:shadow-black/30 hover:-translate-y-1 transition-all relative flex flex-col"><div className="aspect-square bg-slate-50 dark:bg-slate-700 relative w-full border-b border-slate-100 dark:border-slate-700">{p.image ? <img src={p.image} className="w-full h-full object-cover" /> : <div className="flex h-full items-center justify-center text-slate-300 dark:text-slate-500"><Box size={40} /></div>}<div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-slate-800/90 backdrop-blur p-1 rounded-lg shadow-sm"><button onClick={() => handleEdit(p)} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"><Edit size={16} /></button><button onClick={() => { if (confirm("¿Borrar?")) setProducts(products.filter(x => x.id !== p.id)) }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"><Trash size={16} /></button></div></div><div className="p-4 flex-1 flex flex-col"><h3 className="font-bold text-sm leading-tight mb-auto dark:text-slate-100">{p.name}</h3><div className="mt-2 flex justify-between items-end"><span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{p.category}</span><div className="flex gap-1 opacity-20 group-hover:opacity-100"><button onClick={() => moveProduct(i, -1)} className="text-xs font-bold hover:text-blue-600 dark:text-slate-400"><ArrowLeft size={14} /></button><button onClick={() => moveProduct(i, 1)} className="text-xs font-bold hover:text-blue-600 dark:text-slate-400"><ArrowRight size={14} /></button></div></div></div></div>))}</div>
+            <div className="flex gap-3 overflow-x-auto pb-4 mb-2 no-scrollbar snap-x"><button onClick={() => setFilterCategory('Todas')} className={`flex-shrink-0 snap-start h-11 flex items-center px-6 rounded-full whitespace-nowrap text-sm font-bold transition-all ${filterCategory === 'Todas' ? 'bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 shadow-xl' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>Todas</button>{categories.map(c => (<button key={c} onClick={() => setFilterCategory(c)} className={`flex-shrink-0 snap-start h-11 flex items-center px-6 rounded-full whitespace-nowrap text-sm font-bold transition-all ${filterCategory === c ? 'bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 shadow-xl' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{c}</button>))}</div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={filteredProducts.map(p => p.id)} strategy={rectSortingStrategy}>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6">
+                        {filteredProducts.map((p) => (
+                            <SortableProductCard key={p.id} p={p} handleEdit={handleEdit} filterCategory={filterCategory} confirmDelete={confirmDelete} />
+                        ))}
+                    </div>
+                </SortableContext>
+            </DndContext>
         </div>
     );
 };

@@ -106,42 +106,42 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
         <div className={`p-4 md:p-8 max-w-4xl mx-auto h-full overflow-y-auto animate-fade-in ${className}`}>
             <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 mb-6">Configuración de Negocio</h2>
             <div className="space-y-6">
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 md:p-6 shadow-sm overflow-hidden w-full">
                     <h3 className="font-bold text-lg mb-4 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">Identidad Corporativa</h3>
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                            <div><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Nombre Comercial</label><input className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-100 outline-none font-bold" value={config.name} onChange={e => setConfig({ ...config, name: e.target.value })} /></div>
-                            <div><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">CIF / NIF</label><input className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 outline-none" value={config.cif} onChange={e => setConfig({ ...config, cif: e.target.value })} /></div>
-                            <div><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Color de Marca</label><div className="flex gap-2"><input type="color" className="h-12 w-20 rounded cursor-pointer border-none" value={config.color} onChange={e => setConfig({ ...config, color: e.target.value })} /><input className="flex-1 p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100" value={config.color} onChange={e => setConfig({ ...config, color: e.target.value })} /></div></div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full min-w-0">
+                        <div className="space-y-4 w-full min-w-0 flex flex-col items-center">
+                            <div className="w-full"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Nombre Comercial</label><input className="input-saas" value={config.name} onChange={e => setConfig({ ...config, name: e.target.value })} /></div>
+                            <div className="w-full"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">CIF / NIF</label><input className="input-saas" value={config.cif} onChange={e => setConfig({ ...config, cif: e.target.value })} /></div>
+                            <div className="w-full"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Color de Marca</label><div className="flex gap-2 w-full"><input type="color" className="h-[44px] w-[56px] rounded-xl cursor-pointer border-none shrink-0 bg-transparent block" value={config.color} onChange={e => setConfig({ ...config, color: e.target.value })} /><input className="input-saas flex-1 font-mono uppercase" value={config.color} onChange={e => setConfig({ ...config, color: e.target.value })} /></div></div>
                         </div>
-                        <div>
+                        <div className="w-full min-w-0">
                             <label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Logotipo (Fondo Blanco/Transparente)</label>
-                            <div className="p-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 hover:bg-white dark:hover:bg-slate-800 transition-colors text-center cursor-pointer relative group h-48 flex items-center justify-center">
-                                <input type="file" accept="image/*" onChange={handleLogo} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                                {config.logo ? <img src={config.logo} className="max-h-full max-w-full object-contain" /> : <div className="text-slate-400 dark:text-slate-500"><Box size={32} className="mx-auto mb-2" /><p className="text-xs">Subir Logo</p></div>}
+                            <div className="p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-center cursor-pointer relative group h-40 md:h-48 flex items-center justify-center overflow-hidden w-full">
+                                <input type="file" accept="image/*" onChange={handleLogo} className="absolute inset-0 opacity-0 cursor-pointer z-10 w-full" />
+                                {config.logo ? <img src={config.logo} className="h-full w-full object-contain p-2" /> : <div className="text-slate-400 dark:text-slate-500"><Box size={32} className="mx-auto mb-2" /><p className="text-xs font-bold">ACTUALIZAR LOGO</p></div>}
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 md:p-6 shadow-sm overflow-hidden w-full">
                     <h3 className="font-bold text-lg mb-4 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">Contacto y Legal</h3>
-                    <div className="grid md:grid-cols-2 gap-4 mb-4">
-                        <div><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Teléfono</label><input className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none" value={config.phone} onChange={e => setConfig({ ...config, phone: e.target.value })} /></div>
-                        <div><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Email</label><input className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none" value={config.email} onChange={e => setConfig({ ...config, email: e.target.value })} /></div>
-                        <div className="md:col-span-2"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Dirección Completa</label><input className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none" value={config.address} onChange={e => setConfig({ ...config, address: e.target.value })} /></div>
-                        <div className="md:col-span-2"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Web</label><input className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none" value={config.website} onChange={e => setConfig({ ...config, website: e.target.value })} /></div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 w-full min-w-0">
+                        <div className="w-full"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Teléfono</label><input className="input-saas" value={config.phone} onChange={e => setConfig({ ...config, phone: e.target.value })} /></div>
+                        <div className="w-full"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Email</label><input className="input-saas" value={config.email} onChange={e => setConfig({ ...config, email: e.target.value })} /></div>
+                        <div className="w-full md:col-span-2"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Dirección Completa</label><input className="input-saas" value={config.address} onChange={e => setConfig({ ...config, address: e.target.value })} /></div>
+                        <div className="w-full md:col-span-2"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Web</label><input className="input-saas" value={config.website} onChange={e => setConfig({ ...config, website: e.target.value })} /></div>
                     </div>
-                    <div><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Cuenta Bancaria (para Presupuestos)</label><textarea className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none h-20 text-sm" value={config.bankAccount} onChange={e => setConfig({ ...config, bankAccount: e.target.value })} /></div>
-                    <div className="mt-4"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Términos Legales (Pie de página)</label><textarea className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none h-32 text-xs" value={config.legalText} onChange={e => setConfig({ ...config, legalText: e.target.value })} /></div>
+                    <div className="w-full min-w-0"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Cuenta Bancaria (para Presupuestos)</label><textarea className="input-saas h-20 min-h-[80px] text-sm py-2" value={config.bankAccount} onChange={e => setConfig({ ...config, bankAccount: e.target.value })} /></div>
+                    <div className="mt-4 w-full min-w-0"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Términos Legales (Pie de página)</label><textarea className="input-saas h-32 min-h-[120px] text-xs py-2" value={config.legalText} onChange={e => setConfig({ ...config, legalText: e.target.value })} /></div>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 md:p-6 shadow-sm overflow-hidden w-full">
                     <h3 className="font-bold text-lg mb-4 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">Fiscalidad</h3>
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full min-w-0">
+                        <div className="w-full">
                             <label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">IVA Global (%)</label>
-                            <input type="number" className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-slate-100 outline-none font-bold" value={config.iva !== undefined ? config.iva : 21} onChange={e => setConfig({ ...config, iva: e.target.value })} />
+                            <input type="number" className="input-saas" value={config.iva !== undefined ? config.iva : 21} onChange={e => setConfig({ ...config, iva: e.target.value })} />
                             <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Por defecto: 21%</p>
                         </div>
                     </div>
@@ -200,12 +200,12 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                         </div>
 
                         {!isPro && (
-                            <div className="w-full md:w-1/2 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <div className="w-full bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                                 <label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Canjear Código Promocional</label>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 w-full flex-col sm:flex-row">
                                     <input
                                         placeholder="INTRODUCE TU CÓDIGO"
-                                        className="flex-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm uppercase font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                                        className="input-saas flex-1"
                                         value={couponCode}
                                         onChange={e => setCouponCode(e.target.value)}
                                         autoComplete="off"
@@ -215,7 +215,7 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                                     <button
                                         onClick={handleRedeem}
                                         disabled={isRedeeming || !couponCode}
-                                        className="px-4 py-2 bg-slate-800 text-white font-bold rounded-lg text-xs hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                        className="btn-primary shadow-none py-2 px-6"
                                     >
                                         {isRedeeming ? '...' : <><Ticket size={14} /> Canjear</>}
                                     </button>
@@ -320,32 +320,32 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                             <p className="text-xs text-red-600 font-bold uppercase mb-2 flex items-center gap-1">
                                 <AlertTriangle size={12} /> Zona de Cambio de Contraseña
                             </p>
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div className="md:col-span-2">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0">
+                                <div className="w-full md:col-span-2">
                                     <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Contraseña Actual (Requerido)</label>
                                     <input
                                         type="password"
-                                        className="w-full p-3 border border-red-200 dark:border-red-800/50 rounded-lg bg-white dark:bg-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-red-200 outline-none"
+                                        className="input-saas border-red-200 dark:border-red-900 focus:ring-red-500/20 focus:border-red-500 bg-white"
                                         placeholder="••••••••"
                                         value={currentPassword}
                                         onChange={e => setCurrentPassword(e.target.value)}
                                     />
                                 </div>
-                                <div>
+                                <div className="w-full min-w-0">
                                     <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Nueva Contraseña</label>
                                     <input
                                         type="password"
-                                        className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 dark:text-slate-100 outline-none"
+                                        className="input-saas bg-white"
                                         placeholder="Mínimo 6 caracteres"
                                         value={newPassword}
                                         onChange={e => setNewPassword(e.target.value)}
                                     />
                                 </div>
-                                <div>
+                                <div className="w-full min-w-0">
                                     <label className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block mb-1">Confirmar Nueva</label>
                                     <input
                                         type="password"
-                                        className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 dark:text-slate-100 outline-none"
+                                        className="input-saas bg-white"
                                         placeholder="Repite la nueva contraseña"
                                         value={confirmNewPassword}
                                         onChange={e => setConfirmNewPassword(e.target.value)}

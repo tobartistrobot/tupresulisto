@@ -13,7 +13,7 @@ export default function PlansScreen({ user, onLogout }) {
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col">
             {/* Header simple */}
-            <header className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+            <header className="bg-white border-b border-slate-200 px-4 py-3 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     {/* Logo con fallback para evitar errores si no carga */}
                     <img
@@ -26,18 +26,18 @@ export default function PlansScreen({ user, onLogout }) {
                 </div>
                 <button
                     onClick={onLogout}
-                    className="text-sm text-slate-500 hover:text-slate-800"
+                    className="text-sm text-slate-500 hover:text-slate-800 py-2 px-3 rounded-lg hover:bg-slate-100 transition-colors"
                 >
                     Cerrar Sesión
                 </button>
             </header>
 
-            <div className="flex-1 flex flex-col items-center justify-center p-6">
-                <div className="max-w-4xl w-full grid md:grid-cols-2 gap-12 items-center">
+            <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
+                <div className="max-w-4xl w-full grid md:grid-cols-2 gap-8 md:gap-12 items-center">
 
-                    {/* Columna Izquierda: Beneficios */}
-                    <div className="space-y-6">
-                        <h1 className="text-4xl font-black text-slate-900 leading-tight">
+                    {/* Columna Izquierda: Beneficios — orden inverso en móvil */}
+                    <div className="space-y-5 order-2 md:order-1">
+                        <h1 className="text-2xl sm:text-4xl font-black text-slate-900 leading-tight">
                             Desbloquea todo el potencial de tu taller.
                         </h1>
                         <p className="text-lg text-slate-600">
@@ -61,8 +61,8 @@ export default function PlansScreen({ user, onLogout }) {
                         </ul>
                     </div>
 
-                    {/* Columna Derecha: Tarjeta de Precios */}
-                    <div className="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-2xl relative overflow-hidden flex flex-col items-center">
+                    {/* Columna Derecha: Tarjeta de Precios — primera en móvil */}
+                    <div className="bg-white rounded-[1.5rem] sm:rounded-[2rem] p-6 sm:p-8 border border-slate-200 shadow-2xl relative overflow-hidden flex flex-col items-center order-1 md:order-2">
                         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-purple-600"></div>
 
                         {/* INTERRUPTOR (TOGGLE) MENSUAL / ANUAL */}

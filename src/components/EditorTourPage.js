@@ -55,14 +55,14 @@ const EditorTourPage = ({ onBack, onRegister }) => {
             </header>
 
             {/* Hero */}
-            <section className="pt-40 pb-20 px-4 text-center max-w-5xl mx-auto">
+            <section className="pt-28 md:pt-40 pb-16 px-4 text-center max-w-5xl mx-auto">
                 <div className="inline-flex items-center gap-2 bg-blue-100/50 border border-blue-200 text-blue-800 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-8 animate-fade-in-up">
                     <Zap size={14} className="fill-blue-800" /> Editor de Producto v3.0
                 </div>
-                <h1 className="text-4xl md:text-6xl font-black text-slate-900 mb-6 leading-tight animate-fade-in-up">
+                <h1 className="text-3xl sm:text-4xl md:text-6xl font-black text-slate-900 mb-6 leading-tight animate-fade-in-up">
                     Tu taller, digitalizado en <br /><span className="text-blue-600">3 sencillos pasos</span>
                 </h1>
-                <p className="text-xl text-slate-500 max-w-2xl mx-auto animate-fade-in-up animation-delay-100">
+                <p className="text-base sm:text-xl text-slate-500 max-w-2xl mx-auto animate-fade-in-up animation-delay-100">
                     Descubre por qué cientos de profesionales ya no usan hojas de cálculo.
                 </p>
             </section>
@@ -103,7 +103,7 @@ const EditorTourPage = ({ onBack, onRegister }) => {
                     <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
                     <div className="relative z-10">
                         <h2 className="text-3xl md:text-5xl font-black mb-8">¿Listo para probarlo?</h2>
-                        <button onClick={onRegister} className="px-12 py-6 bg-blue-600 hover:bg-blue-500 text-white text-xl font-bold rounded-2xl shadow-xl shadow-blue-600/30 hover:shadow-blue-600/50 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 mx-auto group">
+                        <button onClick={onRegister} className="w-full sm:w-auto px-8 sm:px-12 py-5 sm:py-6 bg-blue-600 hover:bg-blue-500 text-white text-lg sm:text-xl font-bold rounded-2xl shadow-xl shadow-blue-600/30 hover:shadow-blue-600/50 hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-3 mx-auto group">
                             Empezar mi prueba gratuita (3 productos) <ArrowRight className="group-hover:translate-x-1 transition-transform" />
                         </button>
                         <p className="mt-8 text-slate-400 text-sm font-medium">Sin tarjeta de crédito · 3 productos incluidos en el plan gratuito</p>

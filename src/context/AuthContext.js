@@ -60,7 +60,7 @@ export function AuthProvider({ children }) {
             await signOut(auth);
             setUser(null);
             setUserProfile(null);
-            router.push('/');
+            router.replace('/login');
         } catch (error) {
             console.error("Logout error:", error);
         }

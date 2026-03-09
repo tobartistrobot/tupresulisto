@@ -212,17 +212,17 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
                 </div>
             )}
 
-            {/* Mobile Header - Fixed at top with z-70 to ensure it's above content */}
-            <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-slate-900 dark:bg-slate-950 z-[70] flex items-center justify-between px-4 shadow-md border-b border-slate-800">
+            {/* Mobile Header - Grado Industrial */}
+            <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl z-[70] flex items-center justify-between px-4 shadow-xl shadow-black/10 border-b border-slate-800/80">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/20">
                         <Calculator className="text-white" size={16} />
                     </div>
                     <span className="font-black text-lg text-white tracking-tight">tupresulisto<span className="text-blue-400">.com</span></span>
                 </div>
                 <div className="flex items-center gap-1">
                     <ThemeToggle className="dark:hover:bg-slate-800" />
-                    <button onClick={onLogout} className="p-2 text-slate-400 hover:text-white transition-colors">
+                    <button onClick={onLogout} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-white transition-colors">
                         <LogOut size={20} />
                     </button>
                 </div>
@@ -274,13 +274,13 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
                 </div>
             </aside>
 
-            {/* Mobile Nav - Fixed at bottom with z-70, uses pb-6 for safe area */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-[70] flex justify-around p-2 pb-6 shadow-2xl dark:shadow-black/50">
-                <button onClick={() => setView('dashboard')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'dashboard' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}><LayoutDashboard size={20} /><span className="text-[10px] font-bold mt-1">Panel</span></button>
-                <button onClick={() => setView('quote')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'quote' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}><ShoppingCart size={20} /><span className="text-[10px] font-bold mt-1">Nuevo</span></button>
-                <button onClick={() => setView('clients')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'clients' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}><Users size={20} /><span className="text-[10px] font-bold mt-1">Clientes</span></button>
-                <button onClick={() => setView('prods')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'prods' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}><Archive size={20} /><span className="text-[10px] font-bold mt-1">Items</span></button>
-                <button onClick={() => setView('config')} className={`p-2 rounded-lg flex flex-col items-center ${view === 'config' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}><Settings size={20} /><span className="text-[10px] font-bold mt-1">Config</span></button>
+            {/* Mobile Nav - Glassmorphism & 44px Touch Targets */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl border-t border-slate-200/50 dark:border-slate-800 z-[70] flex justify-around px-2 pt-2 pb-[calc(env(safe-area-inset-bottom,8px)+8px)] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-black/80">
+                <button onClick={() => setView('dashboard')} className={`p-2 rounded-xl flex flex-col items-center min-w-[56px] min-h-[56px] justify-center transition-all duration-300 ${view === 'dashboard' ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/40 shadow-inner' : 'text-slate-500 dark:text-slate-400 hover:opacity-80'}`}><LayoutDashboard size={22} /><span className="text-[10px] font-black mt-1">Panel</span></button>
+                <button onClick={() => setView('quote')} className={`p-2 rounded-xl flex flex-col items-center min-w-[56px] min-h-[56px] justify-center transition-all duration-300 ${view === 'quote' ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/40 shadow-inner' : 'text-slate-500 dark:text-slate-400 hover:opacity-80'}`}><ShoppingCart size={22} /><span className="text-[10px] font-black mt-1">Nuevo</span></button>
+                <button onClick={() => setView('clients')} className={`p-2 rounded-xl flex flex-col items-center min-w-[56px] min-h-[56px] justify-center transition-all duration-300 ${view === 'clients' ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/40 shadow-inner' : 'text-slate-500 dark:text-slate-400 hover:opacity-80'}`}><Users size={22} /><span className="text-[10px] font-black mt-1">Clientes</span></button>
+                <button onClick={() => setView('prods')} className={`p-2 rounded-xl flex flex-col items-center min-w-[56px] min-h-[56px] justify-center transition-all duration-300 ${view === 'prods' ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/40 shadow-inner' : 'text-slate-500 dark:text-slate-400 hover:opacity-80'}`}><Archive size={22} /><span className="text-[10px] font-black mt-1">Ítems</span></button>
+                <button onClick={() => setView('config')} className={`p-2 rounded-xl flex flex-col items-center min-w-[56px] min-h-[56px] justify-center transition-all duration-300 ${view === 'config' ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/40 shadow-inner' : 'text-slate-500 dark:text-slate-400 hover:opacity-80'}`}><Settings size={22} /><span className="text-[10px] font-black mt-1">Config</span></button>
             </div>
 
             {/* Main Content Area - Uses margins instead of padding to create proper scroll area between fixed header/nav */}

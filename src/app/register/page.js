@@ -7,7 +7,7 @@ export default function RegisterPage() {
 
     return (
         <LoginScreen
-            onLoginSuccess={() => router.push('/dashboard')}
+            onLoginSuccess={() => router.replace('/dashboard')}
             onSwitchToLogin={() => router.push('/login')}
             mode="register"
         />
