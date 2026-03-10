@@ -74,15 +74,34 @@ const ClientManager = ({ quotesHistory, deletedHistory, onLoadQuote, onDeleteCli
     );
 
     return (
-        <div className={`flex h-full p-4 md:p-6 gap-6 ${className} app-tab`}>
+        <div className={`flex h-full p-2 md:p-6 gap-2 md:gap-6 ${className} app-tab`}>
             {/* Panel izquierdo — lista de clientes */}
-            <div className={`${selKey ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl flex-col h-full shadow-lg overflow-hidden`}>
-                <div className="p-4 border-b dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex gap-2 items-center">
-                    <div className="relative flex-1 group"><Search className="absolute left-3 top-2.5 text-slate-400 group-focus-within:text-blue-500" size={16} /><input className="w-full pl-9 p-2 border dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all bg-white dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500" placeholder="Buscar clientes..." value={search} onChange={e => setSearch(e.target.value)} /></div>
-                    <label className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg cursor-pointer transition-colors" title="Importar Cliente"><Upload size={20} /><input type="file" className="hidden" onChange={handleImportFile} /></label>
-                    <button onClick={() => setShowTrash(true)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash size={20} /></button>
+            <div className={`${selKey ? 'hidden md:flex' : 'flex'} w-full md:w-[35%] lg:w-1/3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl flex-col h-full shadow-lg overflow-hidden`}>
+                <div className="p-3 md:p-4 border-b dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex gap-2 items-center shrink-0">
+                    <div className="relative flex-1 group min-w-0">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500" size={16} />
+                        <input className="w-full pl-9 pr-3 py-2.5 md:p-2 md:pl-9 border dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all bg-white dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
+                    </div>
+                    <label className="p-2.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl cursor-pointer transition-colors" title="Importar Cliente">
+                        <Upload size={20} />
+                        <input type="file" className="hidden" onChange={handleImportFile} />
+                    </label>
+                    <button onClick={() => setShowTrash(true)} className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"><Trash size={20} /></button>
                 </div>
-                <div className="flex-1 overflow-y-auto">{filtered.map((c) => <div key={c.key} onClick={() => setSelKey(c.key)} className={`p-4 border-b dark:border-slate-700 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-700/50 ${selKey === c.key ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-600 shadow-inner' : ''}`}><div className="flex justify-between items-center"><h4 className="font-bold text-slate-800 dark:text-slate-100">{c.name}</h4><span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-700 px-1.5 rounded text-slate-500 dark:text-slate-400">{c.quotes.length} pres.</span></div><div className="flex justify-between text-xs mt-1 text-slate-500 dark:text-slate-400"><span>{c.phone}</span><span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(c.total)}</span></div></div>)}</div>
+                <div className="flex-1 overflow-y-auto">
+                    {filtered.map((c) => (
+                        <div key={c.key} onClick={() => setSelKey(c.key)} className={`p-4 border-b dark:border-slate-700 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-700/50 ${selKey === c.key ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-600 shadow-inner' : ''}`}>
+                            <div className="flex justify-between items-center gap-2 mb-1">
+                                <h4 className="font-bold text-slate-800 dark:text-slate-100 truncate w-full flex-1">{c.name}</h4>
+                                <span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400 shrink-0">{c.quotes.length} pres.</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs mt-1 text-slate-500 dark:text-slate-400">
+                                <span className="truncate">{c.phone}</span>
+                                <span className="font-bold text-emerald-600 dark:text-emerald-400 shrink-0 ml-2">{formatCurrency(c.total)}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
 
             {/* Panel derecho — detalle del cliente */}
@@ -122,30 +141,33 @@ const ClientManager = ({ quotesHistory, deletedHistory, onLoadQuote, onDeleteCli
                             {/* Decorative Blur Background */}
                             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-slate-50/50 dark:bg-slate-900/30">
+                        <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-3 md:space-y-4 bg-slate-50/50 dark:bg-slate-900/30 pb-24">
                             {activeClient.quotes.map(q => (
-                                <div key={q.id} className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex flex-col md:flex-row md:justify-between md:items-center hover:shadow-md dark:hover:shadow-black/20 bg-white dark:bg-slate-800 transition-shadow group gap-4">
-                                    <div className="flex justify-between md:justify-start items-center md:gap-4 w-full md:w-auto">
-                                        <div>
-                                            <span className="font-black text-lg text-slate-700 dark:text-slate-200">#{q.number}</span>
-                                            <p className="text-xs text-slate-400 dark:text-slate-500">{q.date}</p>
+                                <div key={q.id} className="border border-slate-200 dark:border-slate-700 rounded-2xl p-4 md:p-5 flex flex-col xl:flex-row xl:justify-between xl:items-center hover:shadow-md dark:hover:shadow-black/20 bg-white dark:bg-slate-800 transition-all group gap-4">
+                                    <div className="flex justify-between xl:justify-start items-center gap-4 w-full xl:w-auto">
+                                        <div className="flex flex-col">
+                                            <span className="font-black text-xl text-slate-800 dark:text-slate-100">#{q.number}</span>
+                                            <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">{q.date}</p>
                                         </div>
-                                        <div className="md:hidden font-bold text-slate-800 dark:text-slate-100">
+                                        <div className="xl:hidden font-black text-lg text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700/50">
                                             {formatCurrency(q.grandTotal)}
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-700 md:border-none">
-                                        <StatusSelector currentStatus={q.status || 'pending'} onStatusChange={(val) => onUpdateStatus(q.id, val)} />
-                                        <div className="flex items-center gap-1 md:gap-4">
-                                            <span className="hidden md:block font-bold text-slate-800 dark:text-slate-100">
+
+                                    <div className="flex items-center justify-between xl:justify-end gap-3 w-full xl:w-auto pt-4 xl:pt-0 border-t border-slate-100 dark:border-slate-700/50 xl:border-none">
+                                        <div className="min-w-0 flex-1 xl:flex-none">
+                                            <StatusSelector currentStatus={q.status || 'pending'} onStatusChange={(val) => onUpdateStatus(q.id, val)} className="h-[44px] !w-full xl:w-auto flex items-center" />
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <span className="hidden xl:flex font-black text-lg text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-900/50 px-4 h-[44px] rounded-xl border border-slate-100 dark:border-slate-700/50 items-center justify-center">
                                                 {formatCurrency(q.grandTotal)}
                                             </span>
-                                            <div className="flex gap-1">
-                                                <button onClick={() => onLoadQuote(q)} className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 p-2" title="Editar">
-                                                    <Edit size={16} />
+                                            <div className="flex gap-2">
+                                                <button onClick={() => onLoadQuote(q)} className="h-[44px] w-[44px] flex items-center justify-center text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors shrink-0" title="Editar">
+                                                    <Edit size={18} />
                                                 </button>
-                                                <button onClick={(e) => { e.stopPropagation(); if (confirm("¿Borrar presupuesto?")) onDeleteQuote(q); }} className="text-slate-300 dark:text-slate-500 hover:text-red-600 p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                                                    <Trash size={16} />
+                                                <button onClick={(e) => { e.stopPropagation(); if (confirm("¿Borrar presupuesto definitivo?")) onDeleteQuote(q); }} className="h-[44px] w-[44px] flex items-center justify-center text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl transition-colors shrink-0" title="Borrar">
+                                                    <Trash size={18} />
                                                 </button>
                                             </div>
                                         </div>
@@ -155,7 +177,10 @@ const ClientManager = ({ quotesHistory, deletedHistory, onLoadQuote, onDeleteCli
                         </div>
                     </>
                 ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 p-10 text-center"><div className="bg-slate-50 dark:bg-slate-700/50 p-6 rounded-full mb-4"><Users size={48} className="opacity-50" /></div><p className="font-medium dark:text-slate-500">Selecciona un cliente para ver su historial</p></div>
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 p-10 text-center">
+                        <div className="bg-slate-50 dark:bg-slate-700/50 p-6 rounded-3xl md:rounded-full mb-4 shadow-sm"><Users size={48} className="opacity-50" /></div>
+                        <p className="font-medium dark:text-slate-500">Selecciona un cliente para ver su historial</p>
+                    </div>
                 )}
             </div>
         </div>
