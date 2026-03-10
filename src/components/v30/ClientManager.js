@@ -89,19 +89,38 @@ const ClientManager = ({ quotesHistory, deletedHistory, onLoadQuote, onDeleteCli
             <div className={`${!selKey ? 'hidden md:flex' : 'flex'} w-full md:flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl flex-col relative h-full shadow-lg overflow-hidden`}>
                 {activeClient ? (
                     <>
-                        <div className="p-6 border-b dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
-                            <button onClick={() => setSelKey(null)} className="md:hidden text-sm font-bold text-slate-500 dark:text-slate-400 mb-4 flex items-center"><ArrowLeft className="mr-1" /> LISTA</button>
-                            <div className="flex justify-between items-start">
-                                <div><h2 className="text-3xl font-black text-slate-800 dark:text-slate-100">{activeClient.name}</h2><div className="flex items-center gap-2 mt-1 text-sm text-slate-600 dark:text-slate-300"><span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded border dark:border-slate-600">{activeClient.phone}</span><span>{activeClient.email}</span></div><p className="text-xs text-slate-400 dark:text-slate-500 mt-2">{activeClient.address}</p></div>
-                                <div className="text-right flex flex-col items-end">
-                                    <div className="text-3xl font-black text-blue-900 dark:text-blue-300 mb-2">{formatCurrency(activeClient.total)}</div>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => handleExportClient(activeClient)} className="py-1 px-3 text-xs bg-white dark:bg-slate-700 border dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 flex items-center gap-1"><Download size={14} /> Exportar Ficha</button>
-                                        <button onClick={() => { if (confirm("¿Eliminar toda la ficha?")) { onDeleteClient(activeClient); setSelKey(null); } }} className="py-1 px-3 text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/40 rounded hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center gap-1"><Trash size={14} /> Eliminar</button>
+                        <div className="p-4 md:p-8 border-b dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden">
+                            <button onClick={() => setSelKey(null)} className="md:hidden text-xs font-bold text-slate-500 dark:text-slate-400 mb-6 flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 w-fit px-3 py-1.5 rounded-full shadow-sm"><ArrowLeft className="mr-1" size={14} /> VOLVER</button>
+
+                            <div className="flex flex-col xl:flex-row justify-between items-start gap-6 relative z-10 w-full min-w-0">
+                                {/* Datos de Cliente (Protegidos contra Overflow) */}
+                                <div className="flex-1 w-full min-w-0">
+                                    <h2 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100 break-words w-full">{activeClient.name}</h2>
+                                    <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-slate-600 dark:text-slate-300">
+                                        {activeClient.phone && <span className="bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg border dark:border-slate-700 font-mono shadow-sm flex items-center shrink-0">{activeClient.phone}</span>}
+                                        {activeClient.email && <span className="bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg border dark:border-slate-700 truncate shadow-sm max-w-full inline-block">{activeClient.email}</span>}
+                                    </div>
+                                    {activeClient.address && <p className="text-xs text-slate-400 dark:text-slate-500 mt-4 flex gap-1 items-start bg-slate-100/50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200/50 dark:border-slate-700/50"><span className="shrink-0 mt-0.5 opacity-50">📍</span> <span className="break-words w-full">{activeClient.address}</span></p>}
+                                </div>
+
+                                {/* Métricas y Acciones (Alineación Responsiva) */}
+                                <div className="flex flex-col items-start xl:items-end w-full xl:w-auto shrink-0 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                                    <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Volumen de Negocio</div>
+                                    <div className="text-2xl md:text-3xl font-black text-blue-600 dark:text-blue-400 mb-3">{formatCurrency(activeClient.total)}</div>
+
+                                    <div className="flex flex-wrap gap-2 w-full xl:w-auto">
+                                        <button onClick={() => handleExportClient(activeClient)} className="flex-1 xl:flex-none py-2 px-4 text-xs bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center gap-1.5 transition-colors"><Download size={14} /> Exportar</button>
+                                        <button onClick={() => { if (confirm("¿Eliminar toda la ficha de cliente y sus presupuestos?")) { onDeleteClient(activeClient); setSelKey(null); } }} className="flex-1 xl:flex-none py-2 px-4 text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/40 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 font-bold flex items-center justify-center gap-1.5 transition-colors"><Trash size={14} /> Eliminar Ficha</button>
                                     </div>
                                 </div>
                             </div>
-                            <div className="mt-6"><button onClick={() => onNewQuoteForClient(activeClient)} className="w-full py-3 shadow-lg bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2"><Plus size={18} /> Crear Nuevo Presupuesto</button></div>
+
+                            <div className="mt-8 relative z-10 w-full min-w-0">
+                                <button onClick={() => onNewQuoteForClient(activeClient)} className="btn-primary w-full shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 py-3.5"><Plus size={20} /> Crear Nuevo Presupuesto</button>
+                            </div>
+
+                            {/* Decorative Blur Background */}
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 bg-slate-50/50 dark:bg-slate-900/30">
                             {activeClient.quotes.map(q => (
