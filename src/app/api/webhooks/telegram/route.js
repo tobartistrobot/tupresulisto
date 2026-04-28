@@ -1,4 +1,23 @@
 import { NextResponse } from 'next/server';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Initialize Gemini
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const systemInstruction = `
+Eres un amable oficinista experto en ventas para 'Gova Ventanas'.
+Atiendes clientes por Telegram.
+Tu objetivo es responder sus dudas sobre ventanas y, si quieren un presupuesto, recoger su nombre, email y qué productos quieren.
+Si ya tienes todos los datos y el cliente confirma que quiere el presupuesto, DEBES incluir al final de tu mensaje exactamente este formato JSON rodeado por bloques de código (y la acción CREATE_BUDGET):
+\`\`\`json
+{
+  "action": "CREATE_BUDGET",
+  "client": { "name": "...", "email": "..." },
+  "products": [...],
+  "total": 1500
+}
+\`\`\`
+Para otros mensajes, responde de forma natural y conversacional. No incluyas el JSON si no tienen toda la información.
+`;
 
 /**
  * Telegram webhook endpoint to receive incoming messages.
@@ -63,7 +82,62 @@ export async function POST(request) {
                     console.log(`Received message from admin: ${text}`);
                 }
             } else {
-                console.log(`Unauthorized message from ${chatId}: ${text}`);
+                // Lógica del Agente IA (Gemini) para clientes
+                console.log(`Mensaje de cliente ${chatId}: ${text}`);
+                
+                try {
+                    const model = genAI.getGenerativeModel({ 
+                        model: "gemini-1.5-flash",
+                        systemInstruction: systemInstruction
+                    });
+
+                    const result = await model.generateContent(text);
+                    const responseText = result.response.text();
+
+                    let replyToTelegram = responseText;
+
+                    // Si Gemini generó la orden de crear presupuesto
+                    const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/);
+                    if (jsonMatch) {
+                        try {
+                            const parsed = JSON.parse(jsonMatch[1]);
+                            if (parsed.action === "CREATE_BUDGET") {
+                                const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+                                
+                                await fetch(`${baseUrl}/api/agent/create-budget`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${process.env.AGENT_SECRET_KEY}`
+                                    },
+                                    body: JSON.stringify(parsed)
+                                });
+                                
+                                // Remover el JSON de la respuesta final que lee el cliente
+                                replyToTelegram = responseText.replace(/```json\n[\s\S]*?\n```/, '').trim();
+                                if (!replyToTelegram) {
+                                    replyToTelegram = "¡Perfecto! Ya he generado tu presupuesto y lo envié a administración para que lo revisen. Te avisaremos pronto.";
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Error parseando JSON de Gemini:", e);
+                        }
+                    }
+
+                    // Enviar respuesta al cliente en Telegram
+                    if (process.env.TELEGRAM_BOT_TOKEN) {
+                        await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                chat_id: chatId,
+                                text: replyToTelegram
+                            })
+                        });
+                    }
+                } catch (geminiError) {
+                    console.error("Gemini Error:", geminiError);
+                }
             }
         }
 
