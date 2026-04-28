@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebaseAdmin';
 import { defineTools, executeTool } from './agentTools';
 
 export const maxDuration = 60; // Evitar timeout en Vercel (hasta 60 segundos)
@@ -108,10 +107,10 @@ export async function POST(request) {
                     });
 
                     // 1. Recuperar historial de Firestore
-                    const chatRef = doc(db, 'telegram_chats', chatId);
-                    const chatDoc = await getDoc(chatRef);
+                    const chatRef = adminDb.collection('telegram_chats').doc(chatId);
+                    const chatDoc = await chatRef.get();
                     let history = [];
-                    if (chatDoc.exists()) {
+                    if (chatDoc.exists) {
                         history = chatDoc.data().history || [];
                     }
 
@@ -158,7 +157,7 @@ export async function POST(request) {
                         history = history.slice(history.length - 20);
                     }
 
-                    await setDoc(chatRef, { history, lastUpdated: new Date() }, { merge: true });
+                    await chatRef.set({ history, lastUpdated: new Date() }, { merge: true });
 
                     let replyToTelegram = responseText;
 

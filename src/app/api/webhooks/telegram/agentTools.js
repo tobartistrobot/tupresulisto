@@ -1,5 +1,4 @@
-import { getDocs, collection, getDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { adminDb } from '@/lib/firebaseAdmin';
 import { calcPrice } from '@/utils/pricingEngine';
 
 export const defineTools = (isAdmin) => {
@@ -62,7 +61,7 @@ export const defineTools = (isAdmin) => {
 export const executeTool = async (callName, args) => {
     try {
         if (callName === "buscar_producto") {
-            const snapshot = await getDocs(collection(db, 'productos'));
+            const snapshot = await adminDb.collection('productos').get();
             const matches = [];
             const q = args.query.toLowerCase();
             snapshot.forEach(d => {
@@ -75,8 +74,8 @@ export const executeTool = async (callName, args) => {
         }
         
         if (callName === "calcular_precio_exacto") {
-            const productDoc = await getDoc(doc(db, 'productos', args.productId));
-            if (!productDoc.exists()) return { error: "Producto no encontrado." };
+            const productDoc = await adminDb.collection('productos').doc(args.productId).get();
+            if (!productDoc.exists) return { error: "Producto no encontrado." };
             const product = productDoc.data();
             const q = args.quantity || 1;
             const price = calcPrice(product, args.width, args.height, q, [], {});
@@ -84,7 +83,7 @@ export const executeTool = async (callName, args) => {
         }
 
         if (callName === "consultar_estado_presupuesto") {
-            const snapshot = await getDocs(collection(db, 'presupuestos'));
+            const snapshot = await adminDb.collection('presupuestos').get();
             const matches = [];
             const q = args.query.toLowerCase();
             snapshot.forEach(d => {
@@ -98,7 +97,7 @@ export const executeTool = async (callName, args) => {
         }
 
         if (callName === "consultar_cliente") {
-            const snapshot = await getDocs(collection(db, 'clientes'));
+            const snapshot = await adminDb.collection('clientes').get();
             const matches = [];
             const q = args.query.toLowerCase();
             snapshot.forEach(d => {
