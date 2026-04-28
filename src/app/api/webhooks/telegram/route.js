@@ -33,56 +33,50 @@ export async function POST(request) {
             const chatId = body.message.chat?.id?.toString();
             const text = body.message.text || '';
 
-            // 1. Verify it's the admin
-            if (chatId === process.env.ADMIN_TELEGRAM_ID) {
-                // 2. Check if it's an approve command
-                const approveMatch = text.match(/^Aprobar\s+(.+)$/i);
+            // 1. Verify if it's an admin approve command
+            const approveMatch = text.match(/^Aprobar\s+(.+)$/i);
+            
+            if (chatId === process.env.ADMIN_TELEGRAM_ID && approveMatch) {
+                const budgetId = approveMatch[1].trim();
+
+                // 3. Call the internal approve endpoint
+                const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
                 
-                if (approveMatch) {
-                    const budgetId = approveMatch[1].trim();
+                try {
+                    const approveRes = await fetch(`${baseUrl}/api/agent/approve-budget`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${process.env.AGENT_SECRET_KEY}`
+                        },
+                        body: JSON.stringify({ budgetId })
+                    });
 
-                    // 3. Call the internal approve endpoint
-                    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-                    
-                    try {
-                        const approveRes = await fetch(`${baseUrl}/api/agent/approve-budget`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${process.env.AGENT_SECRET_KEY}`
-                            },
-                            body: JSON.stringify({ budgetId })
-                        });
+                    const approveData = await approveRes.json();
+                    let replyText = '';
 
-                        const approveData = await approveRes.json();
-                        let replyText = '';
-
-                        if (approveRes.ok) {
-                            replyText = `¡Entendido! Presupuesto #${budgetId} aprobado y enviado al cliente. Estado actualizado a: ENVIADO.`;
-                        } else {
-                            replyText = `Hubo un error al aprobar el presupuesto #${budgetId}: ${approveData.error || 'Error desconocido'}`;
-                        }
-
-                        // 4. Send reply back to Telegram
-                        if (process.env.TELEGRAM_BOT_TOKEN) {
-                            await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    chat_id: chatId,
-                                    text: replyText
-                                })
-                            });
-                        }
-                    } catch (err) {
-                        console.error('Error processing approve command:', err);
+                    if (approveRes.ok) {
+                        replyText = `¡Entendido! Presupuesto #${budgetId} aprobado y enviado al cliente. Estado actualizado a: ENVIADO.`;
+                    } else {
+                        replyText = `Hubo un error al aprobar el presupuesto #${budgetId}: ${approveData.error || 'Error desconocido'}`;
                     }
-                } else {
-                    // TODO: Other agent logic goes here
-                    console.log(`Received message from admin: ${text}`);
+
+                    // 4. Send reply back to Telegram
+                    if (process.env.TELEGRAM_BOT_TOKEN) {
+                        await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                chat_id: chatId,
+                                text: replyText
+                            })
+                        });
+                    }
+                } catch (err) {
+                    console.error('Error processing approve command:', err);
                 }
             } else {
-                // Lógica del Agente IA (Gemini) para clientes
+                // Lógica del Agente IA (Gemini) para clientes o para el administrador probando el bot
                 console.log(`Mensaje de cliente ${chatId}: ${text}`);
                 
                 try {
@@ -137,12 +131,13 @@ export async function POST(request) {
                     }
                 } catch (geminiError) {
                     console.error("Gemini Error:", geminiError);
+                    return NextResponse.json({ success: false, error: "Gemini Error: " + geminiError.message }, { status: 200 });
                 }
             }
         }
 
         // Always return 200 immediately so Telegram doesn't retry
-        return NextResponse.json({ success: true }, { status: 200 });
+        return NextResponse.json({ success: true, processed: true }, { status: 200 });
     } catch (error) {
         console.error('Error in Telegram Webhook:', error);
         // We still return 200 to prevent Telegram from repeatedly sending the same failing webhook,
