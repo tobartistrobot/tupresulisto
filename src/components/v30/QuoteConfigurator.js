@@ -10,6 +10,7 @@ import {
 import MatrixEditor from './MatrixEditor';
 import StatusSelector from './StatusSelector';
 import { round2, sanitizeFloat } from '../../utils/mathUtils';
+import { useQuoteLogic } from '../../hooks/useQuoteLogic';
 
 const formatCurrency = (amount) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount || 0);
 
@@ -26,7 +27,7 @@ const CartSummaryItem = React.memo(({ item, idx, onRemove, onUpdateQty, onMove }
             <div className="w-12 h-12 bg-slate-50 dark:bg-slate-700 rounded-lg flex items-center justify-center shrink-0 border border-slate-100 dark:border-slate-600">{item.product.image ? <img src={item.product.image} className="w-full h-full object-cover rounded-lg" /> : <Box className="text-slate-300 dark:text-slate-500" />}</div>
             <div className="flex-1 min-w-0">
                 <p className="font-black text-base text-slate-900 dark:text-slate-100 truncate pr-16">{item.product.name}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{item.width}x{item.height} {item.locationLabel && `· ${item.locationLabel}`}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium line-clamp-2">{item.width}x{item.height} {item.locationLabel && `· ${item.locationLabel}`}</p>
                 {item.selectedExtras?.length > 0 && <div className="mt-1 flex flex-wrap gap-1">{item.selectedExtras.map((e, i) => (<span key={i} className="inline-flex items-center text-[10px] bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600">{e.qty > 1 && <b className="text-blue-600 dark:text-blue-400 mr-1">{e.qty}x</b>}{e.name}</span>))}</div>}
                 <div className="flex justify-between items-center mt-2"><div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700 rounded-lg p-0.5 border border-slate-200 dark:border-slate-600"><button onClick={() => onUpdateQty(item.id, -1)} className="w-12 h-12 flex items-center justify-center hover:bg-white dark:hover:bg-slate-600 rounded-md transition-colors text-slate-600 dark:text-slate-300 font-bold touch-target-48">-</button><span className="text-xs font-bold w-8 text-center text-slate-700 dark:text-slate-200">{item.quantity}</span><button onClick={() => onUpdateQty(item.id, 1)} className="w-12 h-12 flex items-center justify-center hover:bg-white dark:hover:bg-slate-600 rounded-md transition-colors text-slate-600 dark:text-slate-300 font-bold touch-target-48">+</button></div><b className="text-sm text-blue-900 dark:text-blue-300 font-mono">{formatCurrency(item.price)}</b></div>
             </div>
@@ -35,12 +36,6 @@ const CartSummaryItem = React.memo(({ item, idx, onRemove, onUpdateQty, onMove }
 ));
 
 const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave, onReset, initialData, clientsDb, className, isPro, onUpgrade }) => {
-    const [selectedProduct, setSelectedProduct] = useState(null);
-    const [dims, setDims] = useState({ w: 1000, h: 1000, q: 1 });
-    const [locationLabel, setLocationLabel] = useState('');
-    const [client, setClient] = useState(initialData?.client || { name: '', phone: '', email: '', address: '', city: '', source: '' });
-    const [financials, setFinancials] = useState(initialData?.financials || { discountPercent: 0, deposit: 0 });
-    const [quoteMeta, setQuoteMeta] = useState(initialData ? { number: initialData.number, date: initialData.date, status: initialData.status || 'pending' } : { number: `${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`, date: new Date().toLocaleDateString('es-ES'), status: 'pending' });
     const [showClientSearch, setShowClientSearch] = useState(false);
     const [filterTerm, setFilterTerm] = useState('');
     const [clientSearchTerm, setClientSearchTerm] = useState('');
@@ -49,174 +44,36 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
     const [mobileTab, setMobileTab] = useState('products');
     const [zoomLevel, setZoomLevel] = useState(0.8);
     const [docType, setDocType] = useState('quote');
-    const [saveStatus, setSaveStatus] = useState('idle');
+
     const toast = useToast();
 
-    // Ref for printable document
-    const printableDocRef = useRef(null);
-
-    // Configurable VAT
-    const vatRate = config.iva !== undefined && config.iva !== "" ? parseFloat(config.iva) : 21;
-
-    // ... (keep existing lines)
-
-
-    useEffect(() => {
-        if (initialData) {
-            setClient(initialData.client || { name: '', phone: '', email: '', address: '', city: '', source: initialData.client?.source || '' });
-            setFinancials(initialData.financials || { discountPercent: 0, deposit: 0 });
-            setQuoteMeta({ number: initialData.number, date: initialData.date, status: initialData.status || 'pending' });
-        } else {
-            setClient({ name: '', phone: '', email: '', address: '', city: '', source: '' });
-            setFinancials({ discountPercent: 0, deposit: 0 });
-            setQuoteMeta({ number: `${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`, date: new Date().toLocaleDateString('es-ES'), status: 'pending' });
-        }
-    }, [initialData]);
-
-    const [selectedExtras, setSelectedExtras] = useState([]);
-    const [dropdownSelections, setDropdownSelections] = useState({});
-    const [calculatedPrice, setCalculatedPrice] = useState(null);
-
-    // Precios logic UPDATED for Margin
-
-    // Precios logic UPDATED for Margin
-    const calcPrice = (product, w, h, q, extras, dropdowns) => {
-        let base = 0;
-        if (product.priceType === 'matrix') {
-            const ws = product.matrix.widths; const hs = product.matrix.heights; const ps = product.matrix.prices;
-            let c = ws.findIndex(x => x >= w); if (c === -1) c = ws.length - 1;
-            let r = hs.findIndex(x => x >= h); if (r === -1) r = hs.length - 1;
-            base = sanitizeFloat(ps[r][c]);
-        } else if (product.priceType === 'unit') {
-            base = sanitizeFloat(product.unitPrice);
-        } else if (product.priceType === 'simple_area') {
-            base = (w * h / 1000000) * sanitizeFloat(product.unitPrice);
-        } else if (product.priceType === 'simple_linear') {
-            base = (Math.max(w, h) / 1000) * sanitizeFloat(product.unitPrice);
-        }
-
-        let extraTotal = 0;
-        extras.forEach(e => {
-            const val = sanitizeFloat(e.value);
-            if (e.type === 'fixed') extraTotal += val * e.qty;
-            else if (e.type === 'percent') extraTotal += base * (val / 100) * e.qty;
-            else if (e.type === 'linear') extraTotal += (Math.max(w, h) / 1000) * val * e.qty;
-            else if (e.type === 'area') extraTotal += (w * h / 1000000) * val * e.qty;
-        });
-
-        Object.keys(dropdowns).forEach(extraId => {
-            const extra = product.extras.find(e => e.id.toString() === extraId);
-            if (extra && extra.optionsList) {
-                const optIndex = parseInt(dropdowns[extraId]);
-                const opt = extra.optionsList[optIndex];
-                if (opt) {
-                    const val = sanitizeFloat(opt.value);
-                    if (opt.type === 'fixed') extraTotal += val;
-                    else if (opt.type === 'percent') extraTotal += base * (val / 100);
-                    else if (opt.type === 'linear') extraTotal += (Math.max(w, h) / 1000) * val;
-                    else if (opt.type === 'area') extraTotal += (w * h / 1000000) * val;
-                }
-            }
-        });
-
-        // Apply Margin Logic
-        let priceBeforeMargin = base + extraTotal;
-        let marginAmount = 0;
-        if (product.marginType === 'percent' && product.marginValue) {
-            marginAmount = priceBeforeMargin * (sanitizeFloat(product.marginValue) / 100);
-        } else if (product.marginType === 'fixed' && product.marginValue) {
-            marginAmount = sanitizeFloat(product.marginValue);
-        }
-
-        return round2((priceBeforeMargin + marginAmount) * q);
-    };
-
-    useEffect(() => { if (selectedProduct) { const total = calcPrice(selectedProduct, dims.w, dims.h, dims.q, selectedExtras, dropdownSelections); setCalculatedPrice(total); } }, [selectedProduct, dims, selectedExtras, dropdownSelections]);
-
-    const toggleExtra = (extra) => { const exists = selectedExtras.find(e => e.id === extra.id); if (exists) setSelectedExtras(selectedExtras.filter(e => e.id !== extra.id)); else setSelectedExtras([...selectedExtras, { ...extra, qty: 1 }]); };
-    const updateExtraQty = (extraId, delta) => { setSelectedExtras(prev => prev.map(e => { if (e.id === extraId) return { ...e, qty: Math.max(1, e.qty + delta) }; return e; })); };
-    const addToQuote = () => { const it = { id: Date.now(), product: selectedProduct, width: dims.w, height: dims.h, quantity: dims.q, locationLabel, selectedExtras: [...selectedExtras], dropdownSelections: { ...dropdownSelections }, price: calculatedPrice, unitPriceCalc: calculatedPrice / dims.q }; setCart(prev => [...prev, it]); setSelectedProduct(null); setLocationLabel(''); setSelectedExtras([]); setDropdownSelections({}); toast("Producto añadido", "success"); };
-    const updateQuantity = useCallback((id, d) => setCart(prev => prev.map(item => item.id === id ? { ...item, quantity: Math.max(1, item.quantity + d), price: item.unitPriceCalc * Math.max(1, item.quantity + d) } : item)), []);
-    const removeFromCart = useCallback((id) => setCart(prev => prev.filter(x => x.id !== id)), []);
-    const moveCartItem = useCallback((idx, dir) => { if ((dir === -1 && idx === 0) || (dir === 1 && idx === cart.length - 1)) return; const newCart = [...cart];[newCart[idx], newCart[idx + dir]] = [newCart[idx + dir], newCart[idx]]; setCart(newCart); }, [cart]);
-
-    const grossTotal = useMemo(() => cart.reduce((s, i) => s + i.price, 0), [cart]);
-    const discountAmount = grossTotal * (financials.discountPercent / 100);
-    const netTotal = grossTotal - discountAmount;
-    const grandTotal = netTotal * (1 + vatRate / 100);
-    const remainingBalance = grandTotal - financials.deposit;
-
-    // Safety check for unmount - cleanup all timeouts
-    const isMounted = React.useRef(true);
-    const saveTimeoutRef = React.useRef(null);
-    const idleTimeoutRef = React.useRef(null);
-
-    useEffect(() => {
-        return () => {
-            isMounted.current = false;
-            // Clear any pending timeouts on unmount
-            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-            if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
-        };
-    }, []);
-
-    const handleSave = () => {
-        if (!client.name) {
-            toast("Falta nombre cliente", "error");
-            return;
-        }
-        if (cart.length === 0) {
-            toast("Carrito vacío", "error");
-            return;
-        }
-
-        try {
-            // Clear any existing timeouts before starting new ones
-            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-            if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
-
-            setSaveStatus('saving');
-
-            onSave({
-                id: initialData?.id || Date.now(),
-                number: quoteMeta.number,
-                date: quoteMeta.date,
-                status: quoteMeta.status,
-                client,
-                financials,
-                items: cart,
-                grandTotal
-            });
-
-            // Show saving state for 800ms so user clearly sees it
-            saveTimeoutRef.current = setTimeout(() => {
-                if (isMounted.current) {
-                    setSaveStatus('saved');
-                    idleTimeoutRef.current = setTimeout(() => {
-                        if (isMounted.current) {
-                            setSaveStatus('idle');
-                        }
-                    }, 2000);
-                }
-            }, 800);
-        } catch (error) {
-            console.error("Error saving quote:", error);
-            toast(`Error: ${error.message}`, "error");
-            setSaveStatus('idle');
-        }
-    };
-
-    // Configure react-to-print with dynamic filename
-    const reactToPrintFn = useReactToPrint({
-        contentRef: printableDocRef,
-        documentTitle: `${client.name?.replace(/\s+/g, '') || 'Cliente'}_${quoteMeta.number}`,
+    // Delegate business logic to custom hook
+    const {
+        selectedProduct, setSelectedProduct,
+        dims, setDims,
+        locationLabel, setLocationLabel,
+        client, setClient,
+        financials, setFinancials,
+        quoteMeta, setQuoteMeta,
+        selectedExtras, toggleExtra, updateExtraQty,
+        dropdownSelections, setDropdownSelections,
+        calculatedPrice, addToQuote,
+        updateQuantity, removeFromCart, moveCartItem,
+        grossTotal, discountAmount, netTotal, grandTotal, remainingBalance,
+        vatRate,
+        saveStatus, setSaveStatus,
+        handleSave,
+        printableDocRef, handlePrintPDF,
+        handleLocalReset, saveTimeoutRef, idleTimeoutRef
+    } = useQuoteLogic({
+        initialData,
+        onSave,
+        onReset,
+        config,
+        cart,
+        setCart,
+        toast
     });
-
-    const handlePrintPDF = () => {
-        if (reactToPrintFn) {
-            reactToPrintFn();
-        }
-    };
     const filteredClients = clientsDb.filter(c => (c.name || '').toLowerCase().includes(clientSearchTerm.toLowerCase()) || (c.phone || '').includes(clientSearchTerm));
 
     if (viewMode === 'print') return (
@@ -236,20 +93,6 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
             <div className="shrink-0 bg-white border-t flex gap-4 justify-center no-print z-50 p-4 shadow-2xl"><button onClick={() => setViewMode('edit')} className="px-4 py-2 rounded-lg border bg-white shadow-sm hover:bg-slate-50 font-bold text-slate-600"><span>Seguir Editando</span></button><button onClick={handlePrintPDF} style={{ backgroundColor: config.color }} className="px-8 py-2 rounded-lg text-white font-bold shadow-xl flex items-center gap-2"><Printer size={18} /> <span>Imprimir PDF</span></button></div>
         </div>
     );
-
-    const handleLocalReset = () => {
-        if (onReset) onReset();
-        setClient({ name: '', phone: '', email: '', address: '', city: '', source: '' });
-        setFinancials({ discountPercent: 0, deposit: 0 });
-        setQuoteMeta({ number: `${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`, date: new Date().toLocaleDateString('es-ES'), status: 'pending' });
-        setCart([]);
-        // setEditQuoteData(null); // Removed: Not defined in this scope, handled by onReset()
-        setSelectedProduct(null);
-        setLocationLabel('');
-        setSelectedExtras([]);
-        setDropdownSelections({});
-        toast("Formulario limpio", "success");
-    };
 
     return (
         <div className={`flex flex-col md:flex-row h-full overflow-hidden ${className} app-tab`}>
@@ -326,43 +169,54 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                     </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900/80 space-y-2">{cart.length === 0 && <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 opacity-50"><Calculator size={64} strokeWidth={1} /><p className="mt-4 font-medium">Carrito vacío</p></div>}{cart.map((i, idx) => (<CartSummaryItem key={i.id} item={i} idx={idx} onRemove={removeFromCart} onUpdateQty={updateQuantity} onMove={moveCartItem} />))}</div>
-                <div className="bg-white dark:bg-slate-900 border-t dark:border-slate-700 p-6 space-y-4 shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-5px_20px_rgba(0,0,0,0.3)] z-30"><div className="grid grid-cols-2 gap-4 text-xs"><div><label className="text-slate-400 dark:text-slate-500 font-bold block mb-1">Descuento %</label><input type="number" className="input-saas text-right font-bold" value={financials.discountPercent} onChange={e => setFinancials({ ...financials, discountPercent: parseFloat(e.target.value) || 0 })} /></div><div><label className="text-slate-400 dark:text-slate-500 font-bold block mb-1">Entrega €</label><input type="number" className="input-saas text-right font-bold" value={financials.deposit} onChange={e => setFinancials({ ...financials, deposit: parseFloat(e.target.value) || 0 })} /></div></div><div className="space-y-1 py-2 border-t border-dashed dark:border-slate-700"><div className="flex justify-between text-sm text-slate-500 dark:text-slate-400"><span>Subtotal</span><span>{formatCurrency(grossTotal)}</span></div>{discountAmount > 0 && <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400"><span>Ahorro</span><span>-{formatCurrency(discountAmount)}</span></div>}<div className="flex justify-between text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight"><span>TOTAL</span><span>{formatCurrency(grandTotal)}</span></div>{financials.deposit > 0 && <div className="flex justify-between text-sm font-bold text-slate-400 dark:text-slate-500 pt-1"><span>Restante</span><span>{formatCurrency(remainingBalance)}</span></div>}</div>                <div className="grid grid-cols-2 gap-3">
-                    <button
-                        onClick={handleSave}
-                        disabled={saveStatus === 'saving'}
-                        style={
-                            saveStatus === 'saved'
-                                ? { backgroundColor: '#10b981', color: '#ffffff' }
-                                : saveStatus === 'saving'
-                                    ? { backgroundColor: '#93c5fd', color: '#1e40af' }
-                                    : { backgroundColor: '#ffffff', color: '#1f2937', border: '2px solid #e5e7eb' }
-                        }
-                        className="flex-1 h-14 rounded-lg font-bold text-base flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-md"
-                    >
-                        {saveStatus === 'saving' ? (
-                            <React.Fragment key="btn-saving">
-                                <Loader2 size={20} className="animate-spin" />
-                                <span>Guardando...</span>
-                            </React.Fragment>
-                        ) : saveStatus === 'saved' ? (
-                            <React.Fragment key="btn-saved">
-                                <Check size={22} strokeWidth={3} />
-                                <span className="font-black tracking-wide">¡GUARDADO!</span>
-                            </React.Fragment>
-                        ) : (
-                            <React.Fragment key="btn-idle">
-                                <Save size={20} />
-                                <span>Guardar</span>
-                            </React.Fragment>
-                        )}
-                    </button>
-                    <button onClick={() => {
-                        setSaveStatus('idle');
-                        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-                        if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
-                        setViewMode('print');
-                    }} style={{ backgroundColor: '#3b82f6', color: '#ffffff' }} className="flex-1 h-14 rounded-lg font-bold text-base flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-md"><Printer size={20} /> <span>Finalizar</span></button>
-                </div></div>
+                <div className="bg-white dark:bg-slate-900 border-t dark:border-slate-700 p-6 space-y-4 shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-5px_20px_rgba(0,0,0,0.3)] z-30">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 gap-4 text-xs">
+                        <div>
+                            <label className="text-slate-400 dark:text-slate-500 font-bold block mb-1 uppercase tracking-tighter">Descuento %</label>
+                            <input type="number" className="input-saas text-right font-bold" value={financials.discountPercent} onChange={e => setFinancials({ ...financials, discountPercent: parseFloat(e.target.value) || 0 })} />
+                        </div>
+                        <div>
+                            <label className="text-slate-400 dark:text-slate-500 font-bold block mb-1 uppercase tracking-tighter">Entrega €</label>
+                            <input type="number" className="input-saas text-right font-bold" value={financials.deposit} onChange={e => setFinancials({ ...financials, deposit: parseFloat(e.target.value) || 0 })} />
+                        </div>
+                    </div>
+                    <div className="space-y-1 py-2 border-t border-dashed dark:border-slate-700"><div className="flex justify-between text-sm text-slate-500 dark:text-slate-400"><span>Subtotal</span><span>{formatCurrency(grossTotal)}</span></div>{discountAmount > 0 && <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400"><span>Ahorro</span><span>-{formatCurrency(discountAmount)}</span></div>}<div className="flex justify-between text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight"><span>TOTAL</span><span>{formatCurrency(grandTotal)}</span></div>{financials.deposit > 0 && <div className="flex justify-between text-sm font-bold text-slate-400 dark:text-slate-500 pt-1"><span>Restante</span><span>{formatCurrency(remainingBalance)}</span></div>}</div>                <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={handleSave}
+                            disabled={saveStatus === 'saving'}
+                            style={
+                                saveStatus === 'saved'
+                                    ? { backgroundColor: '#10b981', color: '#ffffff' }
+                                    : saveStatus === 'saving'
+                                        ? { backgroundColor: '#93c5fd', color: '#1e40af' }
+                                        : { backgroundColor: '#ffffff', color: '#1f2937', border: '2px solid #e5e7eb' }
+                            }
+                            className="flex-1 h-14 rounded-lg font-bold text-base flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-md"
+                        >
+                            {saveStatus === 'saving' ? (
+                                <React.Fragment key="btn-saving">
+                                    <Loader2 size={20} className="animate-spin" />
+                                    <span>Guardando...</span>
+                                </React.Fragment>
+                            ) : saveStatus === 'saved' ? (
+                                <React.Fragment key="btn-saved">
+                                    <Check size={22} strokeWidth={3} />
+                                    <span className="font-black tracking-wide">¡GUARDADO!</span>
+                                </React.Fragment>
+                            ) : (
+                                <React.Fragment key="btn-idle">
+                                    <Save size={20} />
+                                    <span>Guardar</span>
+                                </React.Fragment>
+                            )}
+                        </button>
+                        <button onClick={() => {
+                            setSaveStatus('idle');
+                            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+                            if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+                            setViewMode('print');
+                        }} style={{ backgroundColor: '#3b82f6', color: '#ffffff' }} className="flex-1 h-14 rounded-lg font-bold text-base flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-md"><Printer size={20} /> <span>Finalizar</span></button>
+                    </div></div>
             </div>
         </div>
     );

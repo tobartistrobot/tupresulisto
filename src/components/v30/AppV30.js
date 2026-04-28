@@ -283,8 +283,8 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
                 <button onClick={() => setView('config')} className={`p-2 rounded-xl flex flex-col items-center min-w-[56px] min-h-[56px] justify-center transition-all duration-300 ${view === 'config' ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/40 shadow-inner' : 'text-slate-500 dark:text-slate-400 hover:opacity-80'}`}><Settings size={22} /><span className="text-[10px] font-black mt-1">Config</span></button>
             </div>
 
-            {/* Main Content Area - Uses margins instead of padding to create proper scroll area between fixed header/nav */}
-            <main className="flex-1 overflow-y-auto relative flex flex-col bg-slate-100 dark:bg-slate-900 mt-14 mb-[72px] md:mt-0 md:mb-0">
+            {/* Main Content Area - Fixed height container to prevent double scrolling */}
+            <main className="flex-1 overflow-hidden relative flex flex-col bg-slate-100 dark:bg-slate-900 mt-14 mb-[84px] md:mt-0 md:mb-0">
                 <div className={view === 'dashboard' ? 'h-full' : 'hidden h-full'}><Dashboard history={history} products={products} clients={clients} onNavigate={handleNavigate} config={config} /></div>
                 <div className={view === 'quote' ? 'h-full' : 'hidden h-full'}><QuoteConfigurator products={products} categories={categories} config={config} cart={cart} setCart={setCart} onSave={handleSaveQuote} onReset={() => { setCart([]); setEditQuoteData(null) }} initialData={editQuoteData} clientsDb={clients} className="h-full" isPro={isPro} onUpgrade={(msg) => { setUpgradeMessage(msg); setShowUpgradeModal(true); }} /></div>
                 <div className={view === 'prods' ? 'h-full' : 'hidden h-full'}>

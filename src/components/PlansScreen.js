@@ -9,6 +9,7 @@ const YEARLY_VARIANT_ID = 'd5e7b134-5fea-44b7-b636-2637448c89fe';
 
 export default function PlansScreen({ user, onLogout }) {
     const [billing, setBilling] = useState('monthly'); // 'monthly' | 'yearly'
+    const [discountCode, setDiscountCode] = useState('');
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -96,11 +97,23 @@ export default function PlansScreen({ user, onLogout }) {
                             <p className="text-sm text-slate-400 mt-2">Sin permanencia. Cancela cuando quieras.</p>
                         </div>
 
+                        {/* INPUT PARA CÓDIGO DE DESCUENTO */}
+                        <div className="w-full mb-6 select-none relative">
+                            <input
+                                type="text"
+                                placeholder="¿Tienes un código de descuento? Introdúcelo aquí..."
+                                value={discountCode}
+                                onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-sm font-bold text-slate-700 tracking-wider shadow-inner focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400 placeholder:font-normal"
+                            />
+                        </div>
+
                         {/* BOTÓN DE SUSCRIPCIÓN */}
                         <div className="flex justify-center w-full">
                             <SubscriptionButton
                                 key={billing} /* 🪄 TRUCO DE MAGIA: Esto obliga al botón a actualizarse al cambiar el switch */
                                 userId={user?.uid}
+                                discountCode={discountCode}
                                 variantId={billing === 'monthly' ? MONTHLY_VARIANT_ID : YEARLY_VARIANT_ID}
                                 className="w-full justify-center py-4 text-lg"
                             />

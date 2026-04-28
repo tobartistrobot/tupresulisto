@@ -1,7 +1,7 @@
 'use client';
 import { ShoppingCart } from 'lucide-react';
 
-export default function SubscriptionButton({ userId, variantId = 'YOUR_VARIANT_ID', className = '' }) {
+export default function SubscriptionButton({ userId, variantId = 'YOUR_VARIANT_ID', discountCode = '', className = '' }) {
 
     const handleCheckout = () => {
         // Fallback to Env var or hardcoded monthly ID if 'YOUR_VARIANT_ID' is passed (default)
@@ -12,7 +12,10 @@ export default function SubscriptionButton({ userId, variantId = 'YOUR_VARIANT_I
             finalVariantId = process.env.NEXT_PUBLIC_LEMONSQUEEZY_VARIANT_ID || 'cb60ae4e-ad08-496f-8e56-46d803e43f19';
         }
 
-        const checkoutUrl = `https://tupresulisto.lemonsqueezy.com/checkout/buy/${finalVariantId}?checkout[custom][user_id]=${userId}`;
+        let checkoutUrl = `https://tupresulisto.lemonsqueezy.com/checkout/buy/${finalVariantId}?checkout[custom][user_id]=${userId}`;
+        if (discountCode && discountCode.trim() !== '') {
+            checkoutUrl += `&checkout[discount_code]=${encodeURIComponent(discountCode.trim())}`;
+        }
 
         console.log("Opening Checkout for Variant:", finalVariantId); // Debug logging
 

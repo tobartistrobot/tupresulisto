@@ -143,7 +143,7 @@ const Dashboard = ({ history, products, clients, onNavigate, config }) => {
                         <div key={q.id} onClick={() => onNavigate(q)} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-md dark:hover:shadow-black/30 cursor-pointer transition-all flex justify-between items-center group">
                             <div className="flex items-center gap-4">
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${q.status === 'accepted' ? 'bg-emerald-500' : q.status === 'rejected' ? 'bg-red-400' : 'bg-slate-400'}`}>{q.client.name.charAt(0)}</div>
-                                <div><p className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{q.client.name}</p><p className="text-xs text-slate-500 dark:text-slate-400">#{q.number} · {q.date}</p></div>
+                                <div><p className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">{q.client.name}</p><p className="text-xs text-slate-500 dark:text-slate-400">#{q.number} · {q.date}</p></div>
                             </div>
                             <div className="text-right"><p className="font-bold text-slate-700 dark:text-slate-200">{formatCurrency(q.grandTotal)}</p><span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${getStatusConfig(q.status).className}`}>{getStatusConfig(q.status).label}</span></div>
                         </div>
