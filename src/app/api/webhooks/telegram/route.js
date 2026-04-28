@@ -7,6 +7,8 @@ import { defineTools, executeTool } from './agentTools';
 export const maxDuration = 60; // Evitar timeout en Vercel (hasta 60 segundos)
 
 // Initialize Gemini
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
 const getSystemInstruction = (isAdmin) => `
 Eres un comercial experto, cercano y humano de 'Gova Ventanas'. Atiendes a clientes por Telegram.
 Tu tono es profesional pero muy amigable, español de España (ej: usas "tú", "genial", "perfecto").
