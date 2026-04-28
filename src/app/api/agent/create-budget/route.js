@@ -35,7 +35,8 @@ export async function POST(request) {
             ...otherData,
             createdBy: 'AI_AGENT',
             agentEmail: 'presupuestos@govaventanas.es',
-            status: 'draft',
+            status: 'pending_approval',
+            adminNotificationSent: false,
             createdAt: serverTimestamp()
         });
 

@@ -10,15 +10,61 @@ export async function POST(request) {
     try {
         const body = await request.json();
 
-        // Ensure it's a message and has required fields
         if (body.message) {
-            const chatId = body.message.chat?.id;
-            const text = body.message.text;
+            const chatId = body.message.chat?.id?.toString();
+            const text = body.message.text || '';
 
-            // TODO: Here you would integrate with your AI Agent logic.
-            // e.g., Trigger an event, add to a queue, or call your Claude agent.
-            
-            console.log(`Received Telegram message from ${chatId}: ${text}`);
+            // 1. Verify it's the admin
+            if (chatId === process.env.ADMIN_TELEGRAM_ID) {
+                // 2. Check if it's an approve command
+                const approveMatch = text.match(/^Aprobar\s+(.+)$/i);
+                
+                if (approveMatch) {
+                    const budgetId = approveMatch[1].trim();
+
+                    // 3. Call the internal approve endpoint
+                    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+                    
+                    try {
+                        const approveRes = await fetch(`${baseUrl}/api/agent/approve-budget`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${process.env.AGENT_SECRET_KEY}`
+                            },
+                            body: JSON.stringify({ budgetId })
+                        });
+
+                        const approveData = await approveRes.json();
+                        let replyText = '';
+
+                        if (approveRes.ok) {
+                            replyText = `¡Entendido! Presupuesto #${budgetId} aprobado y enviado al cliente. Estado actualizado a: ENVIADO.`;
+                        } else {
+                            replyText = `Hubo un error al aprobar el presupuesto #${budgetId}: ${approveData.error || 'Error desconocido'}`;
+                        }
+
+                        // 4. Send reply back to Telegram
+                        if (process.env.TELEGRAM_BOT_TOKEN) {
+                            await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: chatId,
+                                    text: replyText
+                                })
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Error processing approve command:', err);
+                    }
+                } else {
+                    // TODO: Other agent logic goes here
+                    console.log(`Received message from admin: ${text}`);
+                }
+            } else {
+                console.log(`Unauthorized message from ${chatId}: ${text}`);
+            }
         }
 
         // Always return 200 immediately so Telegram doesn't retry
