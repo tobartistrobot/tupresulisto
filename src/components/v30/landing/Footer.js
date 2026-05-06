@@ -39,7 +39,7 @@ const Footer = () => {
                                 </a>
                             </li>
                             <li>
-                                <a href="/legal" className="text-slate-600 hover:text-blue-600 transition-colors text-sm flex items-center gap-2">
+                                <a href="/terms" className="text-slate-600 hover:text-blue-600 transition-colors text-sm flex items-center gap-2">
                                     <ChevronRight size={14} className="opacity-50" />
                                     Aviso Legal
                                 </a>

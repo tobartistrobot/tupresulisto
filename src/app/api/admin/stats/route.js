@@ -1,31 +1,19 @@
 import { NextResponse } from 'next/server';
-import * as admin from 'firebase-admin';
+import { getAdmin } from '@/lib/firebaseAdmin';
 
 // Next.js API Routes runtime config
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/** @type {string[]} Emails authorized to access the admin stats endpoint. */
 const ADMIN_EMAILS = ['demo@tupresulisto.com', 'admin@tupresulisto.com', 'tobartistrobot@gmail.com'];
 
-function getAdminApp() {
-    // Initialize Firebase Admin if not already done
-    if (!admin.apps.length) {
-        try {
-            admin.initializeApp({
-                credential: admin.credential.cert({
-                    projectId: process.env.FIREBASE_PROJECT_ID,
-                    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-                }),
-            });
-        } catch (error) {
-            console.error('Firebase Admin initialization error:', error);
-            throw new Error('Server configuration error');
-        }
-    }
-    return admin;
-}
-
+/**
+ * Returns admin dashboard statistics. Requires a valid Firebase ID token
+ * from an authorized admin email.
+ * @param {Request} request - The incoming HTTP request.
+ * @returns {Promise<NextResponse>} JSON with user stats and list.
+ */
 export async function GET(request) {
     try {
         // Get auth token from Authorization header
@@ -36,11 +24,10 @@ export async function GET(request) {
 
         const token = authHeader.substring(7);
 
-        // Initialize and get admin instance
-        const adminApp = getAdminApp();
+        const { adminDb, admin } = getAdmin();
 
         // Verify Firebase ID token
-        const decodedToken = await adminApp.auth().verifyIdToken(token);
+        const decodedToken = await admin.auth().verifyIdToken(token);
         const userEmail = decodedToken.email;
 
         // Check if user is admin
@@ -50,11 +37,10 @@ export async function GET(request) {
         }
 
         // Fetch stats with Admin SDK (has full access)
-        const db = adminApp.firestore();
-
-        const usersSnapshot = await db.collection('users').get();
+        const usersSnapshot = await adminDb.collection('users').get();
         const totalUsers = usersSnapshot.size;
 
+        /** @type {Array<object>} */
         const usersList = [];
         let verifiedUsers = 0;
 
@@ -62,7 +48,6 @@ export async function GET(request) {
             const data = doc.data();
             if (data.emailVerified) verifiedUsers++;
 
-            // Add user to list with minimal required fields for the table
             usersList.push({
                 id: doc.id,
                 email: data.email,
@@ -75,22 +60,21 @@ export async function GET(request) {
             });
         });
 
-        // Products count (if you have a products collection)
+        // Products count
         let totalProducts = 0;
         try {
-            const productsSnapshot = await db.collection('products').get();
+            const productsSnapshot = await adminDb.collection('products').get();
             totalProducts = productsSnapshot.size;
-        } catch (e) {
-            console.log('Products collection not found or empty');
+        } catch (_e) {
+            // Products collection may not exist yet
         }
 
         return NextResponse.json({
             totalUsers,
             verifiedUsers,
             totalProducts,
-            users: usersList // Return the list
+            users: usersList
         });
-
 
     } catch (error) {
         console.error('Admin stats error:', error);

@@ -60,9 +60,7 @@ export async function POST(request) {
         const userRef = db.collection('users').doc(userId);
         const subData = payload.data.attributes;
 
-        // Log the payload structure for debugging
-        console.log('Webhook payload data.id:', payload.data.id);
-        console.log('Webhook payload attributes keys:', Object.keys(subData));
+
 
         // Build update object — use payload.data.id for subscription ID (Lemon Squeezy structure)
         let updateData = {
@@ -104,7 +102,7 @@ export async function POST(request) {
             Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
 
         await userRef.set(cleanUndefined(updateData), { merge: true });
-        console.log(`Webhook processed: ${eventName} for user ${userId}`);
+
 
         return NextResponse.json({ message: 'Webhook processed successfully' });
 

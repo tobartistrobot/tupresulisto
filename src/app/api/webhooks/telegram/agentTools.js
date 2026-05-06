@@ -1,4 +1,4 @@
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdmin } from '@/lib/firebaseAdmin';
 import { calcPrice } from '@/utils/pricingEngine';
 
 export const defineTools = (isAdmin) => {
@@ -60,6 +60,7 @@ export const defineTools = (isAdmin) => {
 
 export const executeTool = async (callName, args) => {
     try {
+        const { adminDb } = getAdmin();
         if (callName === "buscar_producto") {
             const snapshot = await adminDb.collection('productos').get();
             const matches = [];

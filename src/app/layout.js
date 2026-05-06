@@ -15,9 +15,22 @@ const geistMono = Geist_Mono({
 export const metadata = {
   metadataBase: new URL('https://tupresulisto.com'),
   title: "TuPresuListo - Gestión para Carpintería",
-  description: "Gestión profesional y sencilla de presupuestos",
+  description: "Presupuestos profesionales en minutos. La herramienta definitiva para carpintería, cristalería y reformas.",
   icons: {
     icon: '/icon.svg',
+  },
+  openGraph: {
+    title: 'TuPresuListo - Gestión para Carpintería',
+    description: 'Presupuestos profesionales en minutos. La herramienta definitiva para carpintería, cristalería y reformas.',
+    url: 'https://tupresulisto.com',
+    siteName: 'TuPresuListo',
+    locale: 'es_ES',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'TuPresuListo - Gestión para Carpintería',
+    description: 'Presupuestos profesionales en minutos. La herramienta definitiva para carpintería, cristalería y reformas.',
   },
 };
 
@@ -35,7 +48,7 @@ import { ToastProvider } from '../context/ToastContext';
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

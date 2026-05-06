@@ -1,11 +1,19 @@
 import * as admin from 'firebase-admin';
 
-if (!admin.apps.length) {
-    try {
-        let privateKey = process.env.FIREBASE_PRIVATE_KEY;
-        // Handle escaped newlines in environment variables
-        if (privateKey) {
-            privateKey = privateKey.replace(/\\n/g, '\n');
+/**
+ * Lazily initializes Firebase Admin SDK and returns the Firestore instance.
+ * Uses a robust regex parser to extract the private key from the environment
+ * variable, ignoring surrounding quotes, backslashes, or encoding artifacts.
+ *
+ * @returns {{ adminDb: admin.firestore.Firestore, admin: typeof admin }}
+ */
+function getAdmin() {
+    if (!admin.apps.length) {
+        let privateKey = process.env.FIREBASE_PRIVATE_KEY || '';
+        // Extract only the valid PEM key portion, ignoring surrounding quotes or escape artifacts
+        const match = privateKey.match(/-----BEGIN PRIVATE KEY-----(?:.|\n|\\n)*?-----END PRIVATE KEY-----/);
+        if (match) {
+            privateKey = match[0].replace(/\\n/g, '\n');
         }
 
         admin.initializeApp({
@@ -16,12 +24,8 @@ if (!admin.apps.length) {
             }),
             databaseURL: `https://${process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebaseio.com`
         });
-        console.log('Firebase Admin initialized successfully.');
-    } catch (error) {
-        console.error('Firebase Admin initialization error:', error.stack);
     }
+    return { adminDb: admin.firestore(), admin };
 }
 
-const adminDb = admin.firestore();
-
-export { adminDb, admin };
+export { getAdmin, admin };

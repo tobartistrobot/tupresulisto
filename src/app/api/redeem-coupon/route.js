@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server';
-import * as admin from 'firebase-admin';
+import { getAdmin } from '@/lib/firebaseAdmin';
 
 // Next.js API Routes runtime config
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Parse coupons from environment variable
-// Format: CODE:TYPE:DURATION,CODE:TYPE:DURATION
+/**
+ * Parses coupon definitions from the COUPON_CODES environment variable.
+ * Format: CODE:TYPE:DURATION,CODE:TYPE:DURATION
+ * @returns {Record<string, {type: string, duration: string, label: string}>}
+ */
 function parseCoupons() {
     const raw = process.env.COUPON_CODES || '';
+    /** @type {Record<string, {type: string, duration: string, label: string}>} */
     const coupons = {};
     raw.split(',').forEach(entry => {
         const [code, type, duration] = entry.trim().split(':');
@@ -17,19 +21,11 @@ function parseCoupons() {
     return coupons;
 }
 
-function getAdminDb() {
-    if (!admin.apps.length) {
-        admin.initializeApp({
-            credential: admin.credential.cert({
-                projectId: process.env.FIREBASE_PROJECT_ID,
-                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-            }),
-        });
-    }
-    return admin.firestore();
-}
-
+/**
+ * Redeems a promotional coupon code for a given user.
+ * @param {Request} request - The incoming HTTP request.
+ * @returns {Promise<NextResponse>} JSON response indicating success or failure.
+ */
 export async function POST(request) {
     try {
         const { userId, code } = await request.json();
@@ -51,8 +47,8 @@ export async function POST(request) {
             });
         }
 
-        const db = getAdminDb();
-        const userRef = db.collection('users').doc(userId);
+        const { adminDb, admin } = getAdmin();
+        const userRef = adminDb.collection('users').doc(userId);
         const userDoc = await userRef.get();
 
         if (!userDoc.exists) {
