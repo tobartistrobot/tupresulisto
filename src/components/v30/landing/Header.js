@@ -19,6 +19,7 @@ const Header = ({ scrolled, mobileMenu, setMobileMenu, onLogin, onRegister }) =>
                         <a href="#features" className="text-sm font-semibold text-slate-600 hover:text-blue-900 transition-colors">Sistema</a>
                         <a href="#freedom" className="text-sm font-semibold text-slate-600 hover:text-blue-900 transition-colors">Libertad Creativa</a>
                         <a href="#pricing" className="text-sm font-semibold text-slate-600 hover:text-blue-900 transition-colors">Precios</a>
+                        <a href="/contact" className="text-sm font-semibold text-slate-600 hover:text-blue-900 transition-colors">Contacto</a>
                     </nav>
 
                     <div className="hidden md:flex items-center gap-4">
