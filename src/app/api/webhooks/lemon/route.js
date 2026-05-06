@@ -9,10 +9,12 @@ export const dynamic = 'force-dynamic';
 function getAdminDb() {
     if (!admin.apps.length) {
         let privateKey = process.env.FIREBASE_PRIVATE_KEY || '';
-        // Remove literal wrapping double quotes if they exist
-        privateKey = privateKey.replace(/^"|"$/g, '');
-        // Replace escaped newlines with actual newlines
-        privateKey = privateKey.replace(/\\n/g, '\n');
+        
+        // Extract only the actual key portion, ignoring any surrounding garbage like quotes or slashes
+        const match = privateKey.match(/-----BEGIN PRIVATE KEY-----(?:.|\n|\\n)*?-----END PRIVATE KEY-----/);
+        if (match) {
+            privateKey = match[0].replace(/\\n/g, '\n');
+        }
 
         admin.initializeApp({
             credential: admin.credential.cert({
