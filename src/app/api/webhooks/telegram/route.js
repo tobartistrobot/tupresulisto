@@ -143,6 +143,26 @@ export async function POST(request) {
                 
                 try {
                     const isAdmin = (chatId === process.env.ADMIN_TELEGRAM_ID);
+
+                    // --- KILL SWITCH DE SEGURIDAD ---
+                    // Si la IA no está explícitamente habilitada, bloqueamos a los clientes normales.
+                    // El admin siempre puede usarla para pruebas internas.
+                    if (!isAdmin && process.env.ENABLE_AI_AGENT !== 'true') {
+                        const fallbackMessage = "En estos momentos nuestro asistente inteligente está en mantenimiento. Por favor, visita tupresulisto.com para gestionar tus presupuestos o contacta con nosotros por los canales habituales.";
+                        if (process.env.TELEGRAM_BOT_TOKEN) {
+                            await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: chatId,
+                                    text: fallbackMessage
+                                })
+                            });
+                        }
+                        return NextResponse.json({ success: true, processed: true, ai_disabled: true }, { status: 200 });
+                    }
+                    // --------------------------------
+
                     const model = genAI.getGenerativeModel({ 
                         model: "gemini-2.5-flash",
                         systemInstruction: getSystemInstruction(isAdmin),
