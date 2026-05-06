@@ -46,11 +46,54 @@ CUANDO TENGAS TODOS LOS DATOS (Solo para clientes):
  */
 export async function POST(request) {
     try {
+        // Security: Verify Telegram Secret Token if configured
+        const secretToken = request.headers.get('x-telegram-bot-api-secret-token');
+        if (process.env.TELEGRAM_SECRET_TOKEN && secretToken !== process.env.TELEGRAM_SECRET_TOKEN) {
+            console.warn('Unauthorized webhook access attempt (Invalid token)');
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const body = await request.json();
 
         if (body.message) {
             const chatId = body.message.chat?.id?.toString();
             const text = body.message.text || '';
+
+            // Rate Limiting Logic via Firestore
+            const { adminDb } = getAdmin();
+            const chatRef = adminDb.collection('telegram_chats').doc(chatId);
+            const chatDoc = await chatRef.get();
+            
+            const now = new Date();
+            const windowMs = 60 * 1000; // 1 minute window
+            const maxMessages = 15; // Max 15 messages per minute
+            
+            let rateLimitData = { count: 0, resetAt: new Date(now.getTime() + windowMs) };
+
+            if (chatDoc.exists) {
+                const data = chatDoc.data();
+                if (data.rateLimit && data.rateLimit.resetAt && data.rateLimit.resetAt.toDate() > now) {
+                    rateLimitData = {
+                        count: data.rateLimit.count + 1,
+                        resetAt: data.rateLimit.resetAt
+                    };
+                } else {
+                    // Reset window
+                    rateLimitData = { count: 1, resetAt: new Date(now.getTime() + windowMs) };
+                }
+            } else {
+                rateLimitData.count = 1;
+            }
+
+            if (rateLimitData.count > maxMessages) {
+                console.warn(`Rate limit exceeded for chatId: ${chatId}`);
+                // Return 200 to stop Telegram retries, but don't process the message
+                return NextResponse.json({ success: true, processed: false, reason: "rate_limit" }, { status: 200 });
+            }
+
+            // Update rate limit in firestore
+            await chatRef.set({ rateLimit: rateLimitData }, { merge: true });
+
 
             // 1. Verify if it's an admin approve command
             const approveMatch = text.match(/^Aprobar\s+(.+)$/i);

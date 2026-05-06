@@ -45,6 +45,7 @@ import Script from "next/script";
 
 import { AuthProvider } from '../context/AuthContext';
 import { ToastProvider } from '../context/ToastContext';
+import { CSPostHogProvider } from '@/components/Providers/PostHogProvider';
 
 export default function RootLayout({ children }) {
   return (
@@ -52,15 +53,18 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AuthProvider>
-            <ToastProvider>
-              {children}
-              <Script src="https://assets.lemonsqueezy.com/lemon.js" strategy="lazyOnload" />
-            </ToastProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <CSPostHogProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <AuthProvider>
+              <ToastProvider>
+                {children}
+                <Script src="https://assets.lemonsqueezy.com/lemon.js" strategy="lazyOnload" />
+              </ToastProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </CSPostHogProvider>
       </body>
     </html>
+
   );
 }
