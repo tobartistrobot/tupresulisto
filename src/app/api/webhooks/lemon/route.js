@@ -1,31 +1,10 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import * as admin from 'firebase-admin';
+import { getAdmin } from '@/lib/firebaseAdmin';
 
 // Next.js API Routes runtime config  
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-function getAdminDb() {
-    if (!admin.apps.length) {
-        let privateKey = process.env.FIREBASE_PRIVATE_KEY || '';
-        
-        // Extract only the actual key portion, ignoring any surrounding garbage like quotes or slashes
-        const match = privateKey.match(/-----BEGIN PRIVATE KEY-----(?:.|\n|\\n)*?-----END PRIVATE KEY-----/);
-        if (match) {
-            privateKey = match[0].replace(/\\n/g, '\n');
-        }
-
-        admin.initializeApp({
-            credential: admin.credential.cert({
-                projectId: process.env.FIREBASE_PROJECT_ID,
-                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                privateKey: privateKey,
-            }),
-        });
-    }
-    return admin.firestore();
-}
 
 export async function POST(request) {
     try {
@@ -56,7 +35,7 @@ export async function POST(request) {
             return NextResponse.json({ message: 'No user_id found' }, { status: 200 });
         }
 
-        const db = getAdminDb();
+        const { adminDb: db, admin } = getAdmin();
         const userRef = db.collection('users').doc(userId);
         const subData = payload.data.attributes;
 
@@ -88,6 +67,7 @@ export async function POST(request) {
 
             case 'subscription_cancelled':
             case 'subscription_expired':
+            case 'order_refunded':
                 updateData.subscriptionStatus = 'inactive';
                 break;
 
