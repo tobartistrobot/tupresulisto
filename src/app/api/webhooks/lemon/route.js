@@ -60,13 +60,18 @@ export async function POST(request) {
         const userRef = db.collection('users').doc(userId);
         const subData = payload.data.attributes;
 
+        // Log the payload structure for debugging
+        console.log('Webhook payload data.id:', payload.data.id);
+        console.log('Webhook payload attributes keys:', Object.keys(subData));
+
+        // Build update object — use payload.data.id for subscription ID (Lemon Squeezy structure)
         let updateData = {
-            lemonCustomerId: subData.customer_id,
-            lemonSubscriptionId: subData.id,
-            lemonVariantId: subData.variant_id,
-            lemonRenewsAt: subData.renews_at || null,
-            lemonCancelled: subData.cancelled || false,
-            lemonCustomerPortalUrl: subData.urls?.customer_portal || null,
+            lemonCustomerId: subData.customer_id ?? payload.data.id ?? null,
+            lemonSubscriptionId: payload.data.id ?? null,
+            lemonVariantId: subData.variant_id ?? null,
+            lemonRenewsAt: subData.renews_at ?? null,
+            lemonCancelled: subData.cancelled ?? false,
+            lemonCustomerPortalUrl: subData.urls?.customer_portal ?? null,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
@@ -93,7 +98,12 @@ export async function POST(request) {
                 return NextResponse.json({ message: 'Event ignored' }, { status: 200 });
         }
 
-        await userRef.set(updateData, { merge: true });
+        // Remove any remaining undefined values — Firestore rejects them
+        /** @param {Record<string, unknown>} obj */
+        const cleanUndefined = (obj) =>
+            Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
+
+        await userRef.set(cleanUndefined(updateData), { merge: true });
         console.log(`Webhook processed: ${eventName} for user ${userId}`);
 
         return NextResponse.json({ message: 'Webhook processed successfully' });
