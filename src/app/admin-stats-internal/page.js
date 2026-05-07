@@ -94,8 +94,30 @@ export default function AdminStats() {
     };
 
     const toggleProStatus = async (userId, currentStatus) => {
-        // This functionality needs a new API route to be secure
-        alert("Esta funcionalidad requiere una nueva API segura. Por ahora usa la consola de Firebase o implementa /api/admin/update-user");
+        try {
+            if (!user) return;
+            const newStatus = !currentStatus;
+            const token = await user.getIdToken();
+            const response = await fetch('/api/admin/update-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ userId, isPro: newStatus })
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Error al actualizar el usuario');
+            }
+
+            // Refresh the list after update
+            fetchStats(user);
+        } catch (error) {
+            console.error("Error al cambiar estado PRO:", error);
+            alert("Error: " + error.message);
+        }
     };
 
     const filteredUsers = usersList.filter(u =>
@@ -245,9 +267,7 @@ export default function AdminStats() {
                                                 <div className="flex justify-end gap-2">
                                                     <button
                                                         onClick={() => toggleProStatus(u.id, isPro)}
-                                                        className={`text-xs font-bold px-3 py-1.5 rounded transition-colors bg-slate-800 text-slate-500 cursor-not-allowed`}
-                                                        disabled
-                                                        title="Edición deshabilitada temporalmente en nueva versión segura"
+                                                        className={`text-xs font-bold px-3 py-1.5 rounded transition-colors ${isPro ? 'bg-red-900/50 text-red-400 hover:bg-red-800' : 'bg-emerald-900/50 text-emerald-400 hover:bg-emerald-800'}`}
                                                     >
                                                         {isPro ? 'Desactivar PRO' : 'Activar PRO'}
                                                     </button>

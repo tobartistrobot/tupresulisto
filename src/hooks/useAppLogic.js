@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import posthog from 'posthog-js';
 
 /**
  * Custom hook to manage the business logic for standard Quote and Client operations.
@@ -20,6 +21,15 @@ export const useAppLogic = ({ history, setHistory, deletedHistory, setDeletedHis
             setHistory(history.map(q => q.id === quote.id ? quote : q));
         } else {
             setHistory([quote, ...history]);
+            // Disparar evento analítico clave (Nivel 1000%)
+            try {
+                posthog.capture('budget_created', {
+                    value: quote.total,
+                    items_count: quote.products ? quote.products.length : 0
+                });
+            } catch (e) {
+                console.error("Error capturing PostHog event", e);
+            }
         }
         // Keep user in editor with updated data
         if (setEditQuoteData) setEditQuoteData(quote);

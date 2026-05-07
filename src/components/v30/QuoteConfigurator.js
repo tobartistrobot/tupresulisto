@@ -149,8 +149,8 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                     <div className="animate-fade-in">
                         <div className="mb-4 md:mb-6 flex flex-col gap-3 md:gap-4">
                             <div className="relative group w-full"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500 group-focus-within:text-blue-500 transition-colors" size={18} /><input className="input-saas pl-10 w-full h-12" placeholder="Buscar producto..." value={filterTerm} onChange={e => setFilterTerm(e.target.value)} /></div>
-                            <div className="flex gap-2 overflow-x-auto pb-2 w-full scrollbar-hide snap-x md:flex-wrap">
-                                {['Todas', ...categories].map(c => <button key={c} onClick={() => setFilterCategory(c)} className={`snap-start shrink-0 px-4 py-2 rounded-lg whitespace-nowrap text-[13px] md:text-sm font-bold transition-all border ${filterCategory === c ? 'bg-slate-800 dark:bg-slate-600 text-white shadow-md border-transparent' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-blue-600'}`}>{c}</button>)}
+                            <div className="flex flex-wrap gap-2 pb-2 w-full">
+                                {['Todas', ...categories].map(c => <button key={c} onClick={() => setFilterCategory(c)} className={`px-4 py-2 rounded-lg whitespace-nowrap text-[13px] md:text-sm font-bold transition-all border ${filterCategory === c ? 'bg-slate-800 dark:bg-slate-600 text-white shadow-md border-transparent' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-blue-600'}`}>{c}</button>)}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">{products.filter(p => (filterCategory === 'Todas' || p.category === filterCategory) && p.name.toLowerCase().includes(filterTerm.toLowerCase())).map((p) => {
