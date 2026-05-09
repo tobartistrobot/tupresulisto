@@ -29,14 +29,26 @@ export const useQuoteLogic = ({ initialData, cart, setCart, config, onSave, onRe
     const [selectedExtras, setSelectedExtras] = useState([]);
     const [dropdownSelections, setDropdownSelections] = useState({});
     const [calculatedPrice, setCalculatedPrice] = useState(null);
+    const [validationError, setValidationError] = useState(null);
 
     const calcPrice = useCallback((product, w, h, q, extras, dropdowns) => {
         let base = 0;
         if (product.priceType === 'matrix') {
             const ws = product.matrix.widths; const hs = product.matrix.heights; const ps = product.matrix.prices;
+            
+            // Validate max limits
+            if (w > ws[ws.length - 1] || h > hs[hs.length - 1]) {
+                return { price: null, error: 'Medidas exceden el máximo permitido en tarifa.' };
+            }
+
             let c = ws.findIndex(x => x >= w); if (c === -1) c = ws.length - 1;
             let r = hs.findIndex(x => x >= h); if (r === -1) r = hs.length - 1;
             base = sanitizeFloat(ps[r][c]);
+            
+            // Validate forbidden zone
+            if (base === 0) {
+                return { price: null, error: 'Rango de medidas desactivado o prohibido.' };
+            }
         } else if (product.priceType === 'unit') {
             base = sanitizeFloat(product.unitPrice);
         } else if (product.priceType === 'simple_area') {
@@ -77,13 +89,19 @@ export const useQuoteLogic = ({ initialData, cart, setCart, config, onSave, onRe
             marginAmount = sanitizeFloat(product.marginValue);
         }
 
-        return round2((priceBeforeMargin + marginAmount) * q);
+        return { price: round2((priceBeforeMargin + marginAmount) * q), error: null };
     }, []);
 
     useEffect(() => {
         if (selectedProduct) {
-            const total = calcPrice(selectedProduct, dims.w, dims.h, dims.q, selectedExtras, dropdownSelections);
-            setCalculatedPrice(total);
+            const result = calcPrice(selectedProduct, dims.w, dims.h, dims.q, selectedExtras, dropdownSelections);
+            if (result.error) {
+                setValidationError(result.error);
+                setCalculatedPrice(null);
+            } else {
+                setValidationError(null);
+                setCalculatedPrice(result.price);
+            }
         }
     }, [selectedProduct, dims, selectedExtras, dropdownSelections, calcPrice]);
 
@@ -215,7 +233,7 @@ export const useQuoteLogic = ({ initialData, cart, setCart, config, onSave, onRe
         vatRate,
         selectedExtras, toggleExtra, updateExtraQty,
         dropdownSelections, setDropdownSelections,
-        calculatedPrice, addToQuote,
+        calculatedPrice, addToQuote, validationError,
         updateQuantity, removeFromCart, moveCartItem,
         grossTotal, discountAmount, netTotal, grandTotal, remainingBalance,
         handleSave, handleLocalReset,
