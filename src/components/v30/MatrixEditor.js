@@ -124,19 +124,19 @@ const MatrixEditor = ({ matrix, onChange }) => {
                     <thead>
                         <tr>
                             {/* Esquina Sticky Z-30 */}
-                            <th className="sticky-corner bg-slate-200 dark:bg-slate-900 p-2 border-b dark:border-slate-700 border-r dark:border-r-slate-700 text-slate-500 dark:text-slate-400 font-black tracking-tighter text-[10px] min-w-[80px] shadow-[2px_2px_5px_rgba(0,0,0,0.05)]">
+                            <th className="sticky-corner bg-slate-200 dark:bg-slate-900 p-2 border-b dark:border-slate-700 border-r dark:border-r-slate-700 text-slate-500 dark:text-slate-400 font-black tracking-tighter text-[10px] min-w-[90px] shadow-[2px_2px_5px_rgba(0,0,0,0.05)]">
                                 ALTO \ ANCHO
                             </th>
                             {safe.widths.map((w, i) =>
-                                <th key={`w${i}`} className="sticky-row-header bg-slate-50 dark:bg-slate-900/60 p-1 min-w-[70px] border-b dark:border-slate-700 border-r border-slate-100 dark:border-r-slate-700 group hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                <th key={`w${i}`} className="sticky-row-header bg-slate-50 dark:bg-slate-900/60 p-2 min-w-[100px] border-b dark:border-slate-700 border-r border-slate-100 dark:border-r-slate-700 group hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                                     <div className="flex flex-col items-center">
-                                        <input type="number" className="w-full bg-transparent text-center font-bold text-slate-700 dark:text-slate-200 outline-none mb-1 text-sm" value={w} onChange={e => updateDim('widths', i, e.target.value)} />
-                                        <button onClick={() => removeDim('widths', i)} className="text-red-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"><Trash size={10} /></button>
+                                        <input type="number" className="w-full bg-transparent text-center font-bold text-slate-700 dark:text-slate-200 outline-none mb-1 text-base [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={w} onChange={e => updateDim('widths', i, e.target.value)} onFocus={e => e.target.select()} />
+                                        <button onClick={() => removeDim('widths', i)} className="text-red-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-1"><Trash size={12} /></button>
                                     </div>
                                 </th>
                             )}
-                            <th className="sticky-row-header p-1 border-b dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 min-w-[40px]">
-                                <button onClick={() => addDim('widths')} className="text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/20 p-1 rounded w-full flex justify-center"><Plus size={14} /></button>
+                            <th className="sticky-row-header p-2 border-b dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 min-w-[60px]">
+                                <button onClick={() => addDim('widths')} className="text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/20 p-2 rounded-lg w-full flex justify-center transition-colors"><Plus size={16} /></button>
                             </th>
                         </tr>
                     </thead>
@@ -144,24 +144,37 @@ const MatrixEditor = ({ matrix, onChange }) => {
                         {safe.heights.map((h, r) =>
                             <tr key={`r${r}`}>
                                 {/* Primera columna Sticky Z-10 */}
-                                <td className="sticky-col bg-slate-50 dark:bg-slate-900/60 p-1 border-r border-b border-slate-100 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200 group hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors min-w-[80px] shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
-                                    <div className="flex flex-col items-center">
-                                        <input type="number" className="w-full bg-transparent text-center outline-none text-sm dark:text-slate-200" value={h} onChange={e => updateDim('heights', r, e.target.value)} />
-                                        <button onClick={() => removeDim('heights', r)} className="text-red-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"><Trash size={10} /></button>
+                                <td className="sticky-col bg-slate-50 dark:bg-slate-900/60 p-2 border-r border-b border-slate-100 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200 group hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors min-w-[90px] shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
+                                    <div className="flex flex-col items-center justify-center h-full">
+                                        <input type="number" className="w-full bg-transparent text-center outline-none text-base dark:text-slate-200 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={h} onChange={e => updateDim('heights', r, e.target.value)} onFocus={e => e.target.select()} />
+                                        <button onClick={() => removeDim('heights', r)} className="text-red-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-1"><Trash size={12} /></button>
                                     </div>
                                 </td>
                                 {safe.widths.map((_, c) => {
                                     const val = safe.prices[r]?.[c] ?? 0;
-                                    return <td key={`c${c}`} className="p-0 border-r border-b border-slate-100 dark:border-slate-700 relative group transition-colors hover:z-0 hover:shadow-lg hover:bg-blue-50 dark:hover:bg-blue-900/20">
-                                        <input type="number" className="w-full h-12 text-center outline-none bg-transparent font-medium text-slate-600 dark:text-slate-300 focus:text-blue-700 dark:focus:text-blue-300 focus:font-bold" value={val} onChange={e => updatePrice(r, c, e.target.value)} />
-                                        <button onClick={() => updatePrice(r, c, 0)} className="absolute top-0 right-0 text-slate-300 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 p-1"><Ban size={14} /></button>
+                                    const isZero = val === 0 || val === '0';
+                                    return <td key={`c${c}`} className={`p-0 border-r border-b border-slate-100 dark:border-slate-700 relative group transition-colors hover:z-0 hover:shadow-lg ${isZero ? 'bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40' : 'hover:bg-blue-50 dark:hover:bg-blue-900/20'}`}>
+                                        <input 
+                                            type="number" 
+                                            className={`w-full h-14 sm:h-16 px-2 text-center outline-none bg-transparent font-medium text-base sm:text-lg focus:font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${isZero ? 'text-red-500 dark:text-red-400' : 'text-slate-700 dark:text-slate-300 focus:text-blue-700 dark:focus:text-blue-300'}`} 
+                                            value={val} 
+                                            onChange={e => updatePrice(r, c, e.target.value)} 
+                                            onFocus={e => e.target.select()}
+                                        />
+                                        <button 
+                                            onClick={() => updatePrice(r, c, 0)} 
+                                            className="absolute top-1 left-1 text-slate-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 opacity-0 group-hover:opacity-100 p-1.5 rounded-md transition-all z-10 bg-white/90 dark:bg-slate-800/90 shadow-sm backdrop-blur-md"
+                                            title="Desactivar / Cancelar"
+                                        >
+                                            <Ban size={14} />
+                                        </button>
                                     </td>;
                                 })}
                             </tr>
                         )}
                         <tr>
-                            <td className="sticky-col text-center p-1 border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 min-w-[80px]">
-                                <button onClick={() => addDim('heights')} className="text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/20 p-1 rounded w-full flex justify-center"><Plus size={14} /></button>
+                            <td className="sticky-col text-center p-2 border-r dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 min-w-[90px]">
+                                <button onClick={() => addDim('heights')} className="text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/20 p-2 rounded-lg w-full flex justify-center transition-colors"><Plus size={16} /></button>
                             </td>
                         </tr>
                     </tbody>
