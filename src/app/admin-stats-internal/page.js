@@ -1,13 +1,11 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { auth } from '../../lib/firebase'; // Removed db import
+import { useState, useEffect, useCallback } from 'react';
+import { auth } from '../../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-// Removed firestore imports
-import { ShieldCheck, Users, Box, Lock } from 'lucide-react';
+import { ShieldCheck, Lock, UserCheck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AdminStats() {
     const [user, setUser] = useState(null);
@@ -21,7 +19,10 @@ export default function AdminStats() {
     const [usersList, setUsersList] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [error, setError] = useState('');
+    /** @type {[string | null, Function]} Track which userId is being impersonated */
+    const [impersonatingId, setImpersonatingId] = useState(null);
     const router = useRouter();
+    const { startImpersonation } = useAuth();
 
     const ALLOWED_EMAILS = ['demo@tupresulisto.com', 'admin@tupresulisto.com', 'tobartistrobot@gmail.com'];
 
@@ -92,6 +93,41 @@ export default function AdminStats() {
             setLoading(false);
         }
     };
+
+    /**
+     * Initiates an admin impersonation session for the target user.
+     * Calls the /api/admin/impersonate endpoint to get a Firebase custom token,
+     * then delegates sign-in to the AuthContext startImpersonation function.
+     *
+     * @param {string} targetUserId - UID of the user to impersonate.
+     * @param {string} targetEmail - Email of the user (for the banner display).
+     */
+    const handleImpersonate = useCallback(async (targetUserId, targetEmail) => {
+        if (!user || !targetEmail) return;
+        setImpersonatingId(targetUserId);
+        try {
+            const token = await user.getIdToken();
+            const response = await fetch('/api/admin/impersonate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ targetUserId, targetUserEmail: targetEmail }),
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Error generating impersonation token');
+            }
+
+            await startImpersonation(data.customToken, targetEmail, user.email);
+        } catch (err) {
+            console.error('Impersonation failed:', err);
+            alert(`Error al acceder como usuario: ${err.message}`);
+            setImpersonatingId(null);
+        }
+    }, [user, startImpersonation]);
 
     const toggleProStatus = async (userId, currentStatus) => {
         try {
@@ -264,7 +300,21 @@ export default function AdminStats() {
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <div className="flex justify-end gap-2">
+                                                <div className="flex justify-end gap-2 flex-wrap">
+                                                    {/* Impersonate button – only for users with an email */}
+                                                    {u.email && (
+                                                        <button
+                                                            onClick={() => handleImpersonate(u.id, u.email)}
+                                                            disabled={impersonatingId === u.id}
+                                                            title={`Acceder como ${u.email}`}
+                                                            className="text-xs font-bold px-3 py-1.5 rounded transition-colors flex items-center gap-1.5 bg-amber-900/50 text-amber-400 hover:bg-amber-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        >
+                                                            {impersonatingId === u.id
+                                                                ? <Loader2 size={12} className="animate-spin" />
+                                                                : <UserCheck size={12} />}
+                                                            {impersonatingId === u.id ? 'Accediendo...' : 'Ver como'}
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => toggleProStatus(u.id, isPro)}
                                                         className={`text-xs font-bold px-3 py-1.5 rounded transition-colors ${isPro ? 'bg-red-900/50 text-red-400 hover:bg-red-800' : 'bg-emerald-900/50 text-emerald-400 hover:bg-emerald-800'}`}

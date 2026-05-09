@@ -46,6 +46,7 @@ import Script from "next/script";
 import { AuthProvider } from '../context/AuthContext';
 import { ToastProvider } from '../context/ToastContext';
 import { CSPostHogProvider } from '@/components/Providers/PostHogProvider';
+import ImpersonationBanner from '../components/ImpersonationBanner';
 
 export default function RootLayout({ children }) {
   return (
@@ -57,6 +58,7 @@ export default function RootLayout({ children }) {
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <AuthProvider>
               <ToastProvider>
+                <ImpersonationBanner />
                 {children}
                 <Script src="https://assets.lemonsqueezy.com/lemon.js" strategy="lazyOnload" />
               </ToastProvider>
