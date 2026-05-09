@@ -156,17 +156,17 @@ const MatrixEditor = ({ matrix, onChange }) => {
                                     return <td key={`c${c}`} className={`p-0 border-r border-b border-slate-100 dark:border-slate-700 relative group transition-colors hover:z-0 hover:shadow-lg focus-within:z-20 ${isZero ? 'bg-red-50/80 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40' : 'hover:bg-blue-50 dark:hover:bg-blue-900/20'}`}>
                                         <input 
                                             type="number" 
-                                            className={`w-full h-14 sm:h-16 px-2 text-center outline-none bg-transparent font-medium text-base sm:text-lg focus:font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${isZero ? 'text-red-500 dark:text-red-400' : 'text-slate-700 dark:text-slate-300 focus:text-blue-700 dark:focus:text-blue-300'}`} 
+                                            className={`w-full h-14 sm:h-16 px-6 text-center outline-none bg-transparent font-medium text-base sm:text-lg focus:font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${isZero ? 'text-red-500 dark:text-red-400' : 'text-slate-700 dark:text-slate-300 focus:text-blue-700 dark:focus:text-blue-300'}`} 
                                             value={val} 
                                             onChange={e => updatePrice(r, c, e.target.value)} 
                                             onFocus={e => e.target.select()}
                                         />
                                         <button 
                                             onClick={() => updatePrice(r, c, 0)} 
-                                            className="absolute top-0 right-0 text-slate-300 dark:text-slate-500 hover:text-red-600 bg-white/50 dark:bg-slate-800/50 hover:bg-red-100 dark:hover:bg-red-900/50 opacity-0 group-hover:opacity-100 focus-within:opacity-100 p-1.5 rounded-bl-lg transition-all z-10"
+                                            className="absolute top-0 right-0 text-slate-300 dark:text-slate-500 hover:text-red-600 bg-white/30 dark:bg-slate-800/30 hover:bg-red-100 dark:hover:bg-red-900/50 opacity-0 group-hover:opacity-100 focus-within:opacity-20 hover:!opacity-100 p-1 rounded-bl-lg transition-all z-10"
                                             title="Desactivar / Cancelar"
                                         >
-                                            <Ban size={12} strokeWidth={2.5} />
+                                            <Ban size={10} strokeWidth={3} />
                                         </button>
                                     </td>;
                                 })}
