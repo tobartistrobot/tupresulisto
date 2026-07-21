@@ -4,17 +4,16 @@ import { ArrowRight, Calculator, AppWindow } from 'lucide-react';
 const Hero = ({ onRegister, onLogin }) => {
     return (
         <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center relative z-10">
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 dark:text-white leading-tight tracking-tight mb-8 mt-6 animate-fade-in-up">
-                Inmediatez radical con<br />
-                <span className="text-blue-600 dark:text-blue-400">acabado de gran empresa.</span>
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 dark:text-white leading-[1.1] tracking-tight mb-5 sm:mb-8 mt-4 sm:mt-6 animate-fade-in-up">
+                Cierra la venta <span className="text-blue-600 dark:text-blue-400">antes de irte</span> de casa del cliente
             </h1>
 
-            <p className="text-base sm:text-xl md:text-2xl text-slate-500 dark:text-slate-400 max-w-4xl mx-auto mb-12 leading-relaxed font-medium animate-fade-in-up animation-delay-100">
-                El software que elimina el secuestro de tiempo del autónomo.
-                <span className="block mt-2 text-slate-700 dark:text-slate-300">Haz presupuestos de ventanas, toldos, carpintería y más en 30 segundos.</span>
+            <p className="text-base sm:text-xl md:text-2xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto mb-8 sm:mb-12 leading-relaxed font-medium animate-fade-in-up animation-delay-100">
+                Mide, calcula y envía el presupuesto <strong className="text-slate-900 dark:text-white font-bold">por WhatsApp desde el móvil</strong>.
+                <span className="block mt-2 text-slate-500 dark:text-slate-400">Ventanas, toldos, carpintería y más. Sin volver a la oficina.</span>
             </p>
 
-            <div className="flex flex-col sm:flex-row justify-center gap-4 mb-16 sm:mb-24 animate-fade-in-up animation-delay-200 px-2 sm:px-0">
+            <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 mb-10 sm:mb-24 animate-fade-in-up animation-delay-200 px-2 sm:px-0">
                 <button onClick={onRegister} className="px-8 sm:px-10 py-4 sm:py-5 bg-blue-600 text-white text-base sm:text-lg font-bold rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow-xl shadow-blue-600/20 hover:scale-105 flex items-center justify-center gap-3 group">
                     Probar Gratis Ahora <ArrowRight className="group-hover:translate-x-1 transition-transform" />
                 </button>

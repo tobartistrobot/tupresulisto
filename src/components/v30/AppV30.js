@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { ToastProvider, useToast } from '../../context/ToastContext';
-import { LayoutDashboard, ShoppingCart, Archive, Settings, LogOut, Users, Cloud, CloudOff, RefreshCw, Loader2, Calculator } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Archive, Settings, LogOut, Users, Cloud, CloudOff, RefreshCw, Loader2, Calculator, Crown } from 'lucide-react';
 import ThemeToggle from '../ThemeToggle';
 import { useSyncEngine } from '../../hooks/useSyncEngine';
 
@@ -36,7 +36,7 @@ class ErrorBoundary extends React.Component {
     }
 }
 
-const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
+const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) => {
     const toast = useToast();
     const [view, setView] = useState('dashboard'); // dashboard, quote, prods, clients, config
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -212,6 +212,24 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
                 </div>
             )}
 
+            {/* Aviso de prueba a punto de caducar.
+                Es también el mejor momento para convertir: el usuario ya conoce
+                el valor de PRO y aún lo está disfrutando. */}
+            {subscription?.isTrial && subscription.isPro && subscription.daysLeft <= 7 && (
+                <button
+                    onClick={() => { setUpgradeMessage(`Tu prueba PRO termina en ${subscription.daysLeft} ${subscription.daysLeft === 1 ? 'día' : 'días'}. Sigue con todo desbloqueado.`); setShowUpgradeModal(true); }}
+                    className="fixed top-14 md:top-0 left-0 right-0 z-[80] bg-amber-500 hover:bg-amber-600 text-white text-xs md:text-sm font-bold py-2 px-4 flex items-center justify-center gap-2 shadow-lg transition-colors"
+                >
+                    <Crown size={14} className="shrink-0" />
+                    <span className="truncate">
+                        {subscription.daysLeft === 1
+                            ? 'Tu prueba PRO termina mañana'
+                            : `Te quedan ${subscription.daysLeft} días de prueba PRO`}
+                    </span>
+                    <span className="underline underline-offset-2 shrink-0">Seguir con PRO</span>
+                </button>
+            )}
+
             {/* Mobile Header - Grado Industrial */}
             <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl z-[70] flex items-center justify-between px-4 shadow-xl shadow-black/10 border-b border-slate-800/80">
                 <div className="flex items-center gap-2">
@@ -305,10 +323,10 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating }) => {
     );
 };
 
-export default function AppV30({ onLogout, isPro, user, isImpersonating }) {
+export default function AppV30({ onLogout, isPro, user, isImpersonating, subscription }) {
     return (
         <ErrorBoundary>
-            <AppContent onLogout={onLogout} isPro={isPro} user={user} isImpersonating={isImpersonating} />
+            <AppContent onLogout={onLogout} isPro={isPro} user={user} isImpersonating={isImpersonating} subscription={subscription} />
         </ErrorBoundary>
     );
 }

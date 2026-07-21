@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getAdmin } from '@/lib/firebaseAdmin';
+import { isAdminEmail } from '@/lib/adminEmails';
 
 // Next.js API Routes runtime config
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-/** @type {string[]} Emails authorized to access the admin endpoints. */
-const ADMIN_EMAILS = ['demo@tupresulisto.com', 'admin@tupresulisto.com', 'tobartistrobot@gmail.com'];
 
 export async function POST(request) {
     try {
@@ -24,7 +22,7 @@ export async function POST(request) {
         const userEmail = decodedToken.email;
 
         // Check if user is admin
-        if (!ADMIN_EMAILS.includes(userEmail)) {
+        if (!isAdminEmail(userEmail)) {
             console.warn(`Unauthorized admin update attempt by: ${userEmail}`);
             return NextResponse.json({ error: 'Forbidden - Admin access only' }, { status: 403 });
         }

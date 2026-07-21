@@ -28,10 +28,14 @@ export const useSysConfig = ({ user, config, setConfig, products, categories, se
     const handleRedeem = useCallback(async () => {
         setIsRedeeming(true);
         try {
+            const token = await user?.getIdToken();
             const response = await fetch('/api/redeem-coupon', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user?.uid, code: couponCode })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ code: couponCode })
             });
             const result = await response.json();
             if (result.success) {

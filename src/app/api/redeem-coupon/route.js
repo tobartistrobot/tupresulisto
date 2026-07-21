@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdmin } from '@/lib/firebaseAdmin';
+import { resolveCouponExpiry } from '@/lib/subscription';
 
 // Next.js API Routes runtime config
 export const runtime = 'nodejs';
@@ -28,13 +29,36 @@ function parseCoupons() {
  */
 export async function POST(request) {
     try {
-        const { userId, code } = await request.json();
+        const { code } = await request.json();
 
-        if (!userId || !code) {
+        // Verify caller identity — the coupon is applied to the authenticated
+        // user, never to an arbitrary userId sent in the body.
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+            return NextResponse.json({
+                success: false,
+                message: 'No autorizado'
+            }, { status: 401 });
+        }
+
+        if (!code) {
             return NextResponse.json({
                 success: false,
                 message: 'Datos incompletos'
             }, { status: 400 });
+        }
+
+        const { adminDb, admin } = getAdmin();
+
+        let userId;
+        try {
+            const decoded = await admin.auth().verifyIdToken(authHeader.substring(7));
+            userId = decoded.uid;
+        } catch (_e) {
+            return NextResponse.json({
+                success: false,
+                message: 'Sesión no válida. Vuelve a iniciar sesión.'
+            }, { status: 401 });
         }
 
         const coupons = parseCoupons();
@@ -47,7 +71,6 @@ export async function POST(request) {
             });
         }
 
-        const { adminDb, admin } = getAdmin();
         const userRef = adminDb.collection('users').doc(userId);
         const userDoc = await userRef.get();
 
@@ -71,9 +94,9 @@ export async function POST(request) {
             planLabel: coupon.label,
             redeemCode: code.toUpperCase(),
             redeemedAt: admin.firestore.FieldValue.serverTimestamp(),
-            planExpiry: coupon.duration === 'lifetime'
-                ? 'lifetime'
-                : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+            // Respeta los días declarados en el cupón (30, 90, 365... o 'lifetime').
+            // Antes cualquier valor distinto de 'lifetime' se convertía en 30 días.
+            planExpiry: resolveCouponExpiry(coupon.duration)
         };
 
         await userRef.update(upgradeData);

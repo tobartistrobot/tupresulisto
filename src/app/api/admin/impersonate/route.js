@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getAdmin } from '@/lib/firebaseAdmin';
+import { isAdminEmail } from '@/lib/adminEmails';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-/** @type {string[]} Emails authorized to perform impersonation. */
-const ADMIN_EMAILS = ['demo@tupresulisto.com', 'admin@tupresulisto.com', 'tobartistrobot@gmail.com'];
 
 /**
  * Generates a Firebase custom token so an admin can sign in as another user.
@@ -26,7 +24,7 @@ export async function POST(request) {
 
         // Verify the caller is a real admin
         const decodedToken = await admin.auth().verifyIdToken(token);
-        if (!ADMIN_EMAILS.includes(decodedToken.email)) {
+        if (!isAdminEmail(decodedToken.email)) {
             console.warn(`Unauthorized impersonation attempt by: ${decodedToken.email}`);
             return NextResponse.json({ error: 'Forbidden - Admin access only' }, { status: 403 });
         }

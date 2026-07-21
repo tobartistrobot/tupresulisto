@@ -4,6 +4,7 @@ import AppV30 from '../../components/v30/AppV30';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { getSubscriptionState } from '../../lib/subscription';
 
 export default function DashboardPage() {
     const { user, userProfile, loading, logout } = useAuth();
@@ -25,11 +26,16 @@ export default function DashboardPage() {
 
     if (!user) return null; // Prevent flash
 
+    // Una prueba regalada caduca; una suscripción de pago, no. Lo decide
+    // getSubscriptionState para que no haya dos criterios distintos por el código.
+    const subscription = getSubscriptionState(userProfile);
+
     return (
         <AppV30
             user={user}
             onLogout={logout}
-            isPro={userProfile?.subscriptionStatus === 'active'}
+            isPro={subscription.isPro}
+            subscription={subscription}
             isImpersonating={false} // Todo: Add impersonation logic if needed
         />
     );
