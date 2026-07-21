@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdmin } from '@/lib/firebaseAdmin';
+import { resolveCouponExpiry } from '@/lib/subscription';
 
 // Next.js API Routes runtime config
 export const runtime = 'nodejs';
@@ -93,9 +94,9 @@ export async function POST(request) {
             planLabel: coupon.label,
             redeemCode: code.toUpperCase(),
             redeemedAt: admin.firestore.FieldValue.serverTimestamp(),
-            planExpiry: coupon.duration === 'lifetime'
-                ? 'lifetime'
-                : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+            // Respeta los días declarados en el cupón (30, 90, 365... o 'lifetime').
+            // Antes cualquier valor distinto de 'lifetime' se convertía en 30 días.
+            planExpiry: resolveCouponExpiry(coupon.duration)
         };
 
         await userRef.update(upgradeData);
