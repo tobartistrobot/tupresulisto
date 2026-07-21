@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getAdmin } from '@/lib/firebaseAdmin';
+import { isAdminEmail } from '@/lib/adminEmails';
 
 // Next.js API Routes runtime config
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-/** @type {string[]} Emails authorized to access the admin stats endpoint. */
-const ADMIN_EMAILS = ['demo@tupresulisto.com', 'admin@tupresulisto.com', 'tobartistrobot@gmail.com'];
 
 /**
  * Returns admin dashboard statistics. Requires a valid Firebase ID token
@@ -31,7 +29,7 @@ export async function GET(request) {
         const userEmail = decodedToken.email;
 
         // Check if user is admin
-        if (!ADMIN_EMAILS.includes(userEmail)) {
+        if (!isAdminEmail(userEmail)) {
             console.warn(`Unauthorized admin access attempt by: ${userEmail}`);
             return NextResponse.json({ error: 'Forbidden - Admin access only' }, { status: 403 });
         }

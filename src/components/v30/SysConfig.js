@@ -45,11 +45,14 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
         setIsRedeeming(true);
 
         try {
+            const token = await user?.getIdToken();
             const response = await fetch('/api/redeem-coupon', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
-                    userId: user?.uid,
                     code: couponCode
                 })
             });

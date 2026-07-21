@@ -28,13 +28,36 @@ function parseCoupons() {
  */
 export async function POST(request) {
     try {
-        const { userId, code } = await request.json();
+        const { code } = await request.json();
 
-        if (!userId || !code) {
+        // Verify caller identity — the coupon is applied to the authenticated
+        // user, never to an arbitrary userId sent in the body.
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+            return NextResponse.json({
+                success: false,
+                message: 'No autorizado'
+            }, { status: 401 });
+        }
+
+        if (!code) {
             return NextResponse.json({
                 success: false,
                 message: 'Datos incompletos'
             }, { status: 400 });
+        }
+
+        const { adminDb, admin } = getAdmin();
+
+        let userId;
+        try {
+            const decoded = await admin.auth().verifyIdToken(authHeader.substring(7));
+            userId = decoded.uid;
+        } catch (_e) {
+            return NextResponse.json({
+                success: false,
+                message: 'Sesión no válida. Vuelve a iniciar sesión.'
+            }, { status: 401 });
         }
 
         const coupons = parseCoupons();
@@ -47,7 +70,6 @@ export async function POST(request) {
             });
         }
 
-        const { adminDb, admin } = getAdmin();
         const userRef = adminDb.collection('users').doc(userId);
         const userDoc = await userRef.get();
 
