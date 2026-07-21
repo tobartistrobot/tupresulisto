@@ -14,8 +14,25 @@ import { Check, Crown } from 'lucide-react';
  * "Precio de lanzamiento" no es un truco de urgencia: permite subir el precio
  * más adelante respetando a quien confió al principio.
  */
+/**
+ * Precios.
+ *
+ * `previsto` es el precio al que se subirá cuando acabe el lanzamiento, y por
+ * eso aparece tachado. Es importante que sea eso —un precio futuro anunciado—
+ * y no un supuesto precio anterior: tachar un importe que nunca se ha cobrado
+ * es publicidad engañosa y, desde la Directiva Ómnibus, está regulado en España.
+ * Anunciar una subida futura es honesto, legal y además crea más urgencia.
+ *
+ * Si cambian, hay que cambiarlos también en UpgradeModal.js, dentro de la app.
+ */
+const PRECIOS = {
+    mensual: { lanzamiento: '9,99 €', previsto: '19,99 €', periodo: '/ mes' },
+    anual: { lanzamiento: '99 €', previsto: '199 €', periodo: '/ año' },
+};
+
 const Plans = ({ onRegister }) => {
     const [anual, setAnual] = useState(false);
+    const precio = anual ? PRECIOS.anual : PRECIOS.mensual;
 
     const incluidoEnAmbos = [
         'Presupuestos y clientes ilimitados',
@@ -35,9 +52,16 @@ const Plans = ({ onRegister }) => {
                     <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 dark:text-white mt-3 mb-4 leading-tight">
                         Empieza gratis. Sin tarjeta.
                     </h2>
-                    <p className="text-slate-600 dark:text-slate-400 text-base sm:text-lg max-w-2xl mx-auto">
+                    <p className="text-slate-600 dark:text-slate-400 text-base sm:text-lg max-w-2xl mx-auto mb-6">
                         Prueba la herramienta con tus propios productos y decide después.
                     </p>
+
+                    <div className="inline-flex items-center gap-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-900 dark:text-amber-300 px-4 py-2.5 rounded-full text-sm font-bold max-w-full">
+                        <span className="text-base leading-none">🔥</span>
+                        <span className="text-left">
+                            Precio de lanzamiento: PRO a mitad de precio para los primeros
+                        </span>
+                    </div>
                 </div>
 
                 {/* Conmutador mensual / anual */}
@@ -95,24 +119,35 @@ const Plans = ({ onRegister }) => {
 
                     {/* PRO */}
                     <div className="relative bg-white dark:bg-slate-900 border-2 border-blue-600 rounded-3xl p-6 sm:p-8 flex flex-col h-full shadow-2xl shadow-blue-600/10">
-                        <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[11px] font-black uppercase tracking-wider px-4 py-1.5 rounded-full whitespace-nowrap">
-                            Precio de lanzamiento
+                        <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[11px] sm:text-xs font-black uppercase tracking-wider px-4 py-2 rounded-full whitespace-nowrap shadow-lg shadow-blue-600/30">
+                            🔥 Precio de lanzamiento
                         </span>
 
-                        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-1 flex items-center gap-2">
+                        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-1 flex items-center gap-2 mt-2">
                             <Crown size={22} className="text-amber-500" /> PRO
                         </h3>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Cuando tu catálogo crece</p>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mb-5">Cuando tu catálogo crece</p>
 
-                        <div className="mb-2">
-                            <span className="text-5xl font-black text-slate-900 dark:text-white">
-                                {anual ? '99 €' : '9,99 €'}
+                        {/* El importe tachado es el precio FUTURO anunciado, no uno anterior */}
+                        <div className="flex items-end gap-3 mb-1 flex-wrap">
+                            <span className="text-5xl font-black text-slate-900 dark:text-white leading-none">
+                                {precio.lanzamiento}
                             </span>
-                            <span className="text-slate-500 dark:text-slate-400 font-medium">{anual ? ' / año' : ' / mes'}</span>
+                            <span className="text-slate-500 dark:text-slate-400 font-medium pb-1">{precio.periodo}</span>
+                            <span className="text-2xl font-bold text-slate-400 dark:text-slate-500 line-through decoration-red-500 decoration-2 pb-0.5">
+                                {precio.previsto}
+                            </span>
                         </div>
-                        <p className="text-xs text-blue-600 dark:text-blue-400 font-bold mb-6">
-                            Si te suscribes ahora, mantienes este precio siempre.
-                        </p>
+
+                        <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-xl p-3 mb-6 mt-4">
+                            <p className="text-sm font-black text-blue-900 dark:text-blue-300 mb-1">
+                                Ahorras {anual ? '100 €' : '10 €'} {anual ? 'al año' : 'al mes'}
+                            </p>
+                            <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
+                                El precio subirá a {precio.previsto} {precio.periodo.replace('/ ', 'al ')}.
+                                <strong> Si entras ahora, mantienes {precio.lanzamiento} mientras sigas suscrito.</strong>
+                            </p>
+                        </div>
 
                         <ul className="space-y-3 mb-8 flex-1">
                             <li className="flex gap-3 text-sm">
