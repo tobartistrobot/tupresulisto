@@ -20,7 +20,7 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
     }, []);
 
     return (
-        <div className="font-sans text-slate-800 bg-slate-50 min-h-screen selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden">
+        <div className="font-sans text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-950 min-h-screen selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden transition-colors">
             <Header
                 scrolled={scrolled}
                 mobileMenu={mobileMenu}
