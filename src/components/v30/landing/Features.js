@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, ArrowRight, Zap, Settings, Box } from 'lucide-react';
+import { Check, ArrowRight, Zap } from 'lucide-react';
 
 const Features = ({ onShowTour }) => {
     return (
@@ -9,77 +9,57 @@ const Features = ({ onShowTour }) => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid lg:grid-cols-2 gap-16 items-center">
                         <div>
-                            <span className="text-blue-600 dark:text-blue-400 font-black tracking-widest uppercase text-sm border-l-4 border-blue-600 dark:border-blue-400 pl-4 mb-6 block">Catálogo Regalo Incluido</span>
+                            <span className="text-blue-600 dark:text-blue-400 font-black tracking-widest uppercase text-sm border-l-4 border-blue-600 dark:border-blue-400 pl-4 mb-6 block">Catálogo incluido</span>
                             <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6 leading-tight">
-                                Entra y vende,<br />
-                                <span className="text-slate-400 dark:text-slate-500">desde el primer minuto.</span>
+                                No empiezas con la<br />
+                                <span className="text-slate-400 dark:text-slate-500">pantalla en blanco.</span>
                             </h2>
                             <p className="text-lg text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
-                                A diferencia de otros programas rígidos, te regalamos un catálogo base para tu gremio. Y si quieres añadir tus productos: <span className="text-slate-900 dark:text-white font-bold">Súbelo hoy en 30 segundos.</span>
+                                Te damos un catálogo de tu gremio ya montado, para que puedas presupuestar el primer día.
+                                Luego lo ajustas a tus precios y añades lo tuyo <span className="text-slate-900 dark:text-white font-bold">en menos de un minuto por producto.</span>
                             </p>
 
                             <ul className="space-y-4 mb-10">
                                 <li className="flex items-start gap-4">
                                     <div className="p-1 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 rounded-full mt-1"><Check size={16} strokeWidth={3} /></div>
                                     <div>
-                                        <strong className="text-slate-900 dark:text-white block">Catálogos Pre-cargados</strong>
-                                        <span className="text-slate-500 dark:text-slate-400 text-sm">Cristalería, Toldos, Carpintería Metálica. Listo para usar.</span>
+                                        <strong className="text-slate-900 dark:text-white block">Catálogos ya preparados</strong>
+                                        <span className="text-slate-500 dark:text-slate-400 text-sm">Cristalería, toldos y carpintería metálica, listos para usar.</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
                                     <div className="p-1 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 rounded-full mt-1"><Check size={16} strokeWidth={3} /></div>
                                     <div>
-                                        <strong className="text-slate-900 dark:text-white block">Sube tus propias fotos</strong>
-                                        <span className="text-slate-500 dark:text-slate-400 text-sm">Personaliza cada ficha de producto con imágenes reales de tu taller.</span>
+                                        <strong className="text-slate-900 dark:text-white block">Con las fotos de tu taller</strong>
+                                        <span className="text-slate-500 dark:text-slate-400 text-sm">El cliente ve el producto real que le vas a instalar, no un dibujo.</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">
                                     <div className="p-1 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 rounded-full mt-1"><Check size={16} strokeWidth={3} /></div>
                                     <div>
-                                        <strong className="text-slate-900 dark:text-white block">Tipos de Cálculo Infinitos</strong>
-                                        <span className="text-slate-500 dark:text-slate-400 text-sm">Motor Matricial, Lineal, por M2 o Unitario.</span>
+                                        <strong className="text-slate-900 dark:text-white block">Tus precios y tu margen</strong>
+                                        <span className="text-slate-500 dark:text-slate-400 text-sm">Cobras como cobras tú: por medidas, por m², por metro o por unidad.</span>
                                     </div>
                                 </li>
                             </ul>
 
-                            <div onClick={onShowTour} className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold hover:gap-3 transition-all cursor-pointer group-hover:text-blue-500">
-                                Ver cómo funciona el editor <ArrowRight size={18} />
-                            </div>
+                            <button onClick={onShowTour} className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold hover:gap-3 transition-all cursor-pointer">
+                                Ver cómo se monta un producto <ArrowRight size={18} />
+                            </button>
                         </div>
 
-                        {/* Visual Illustration of Customization */}
+                        {/* Captura real del catálogo. Antes había aquí una maqueta hecha con
+                            barras grises de relleno: parecía un boceto sin terminar y restaba
+                            credibilidad justo donde hay que demostrar que el producto existe. */}
                         <div className="relative">
                             <div className="absolute inset-0 bg-blue-100 dark:bg-blue-900/20 rounded-3xl transform rotate-3 -z-10"></div>
-                            <div className="glass-panel rounded-3xl p-8">
-                                <div className="flex items-center gap-4 mb-8">
-                                    <div className="w-12 h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-center shadow-sm">
-                                        <Settings className="text-slate-400 dark:text-slate-500" />
-                                    </div>
-                                    <div>
-                                        <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
-                                        <div className="h-3 w-20 bg-slate-100 dark:bg-slate-800 rounded"></div>
-                                    </div>
-                                </div>
-                                <div className="space-y-4">
-                                    <div className="bg-white dark:bg-slate-800 border text-center border-slate-200 dark:border-slate-700 rounded-xl p-4 flex items-center gap-4 shadow-sm hover:border-blue-400 dark:hover:border-blue-500 cursor-pointer transition-colors">
-                                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-900 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                            <img src="/manilla-acero.png" className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal dark:opacity-80" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex justify-between mb-1">
-                                                <span className="font-bold text-slate-700 dark:text-slate-200">Manilla de acero</span>
-                                                <span className="text-green-600 dark:text-green-400 font-bold text-xs bg-green-50 dark:bg-green-500/10 px-2 py-0.5 rounded-full border border-green-200 dark:border-green-500/20">Activo</span>
-                                            </div>
-                                            <div className="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                                <div className="h-full w-2/3 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="h-24 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all cursor-pointer">
-                                        <Box size={24} className="mb-2" />
-                                        <span className="text-sm font-bold">Subir Nuevo Producto</span>
-                                    </div>
-                                </div>
+                            <div className="rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-2xl bg-white">
+                                <img
+                                    src="/captura-catalogo.png"
+                                    alt="Catálogo de productos de TuPresuListo con fichas de ventanas y mosquiteras"
+                                    className="w-full h-auto"
+                                    loading="lazy"
+                                />
                             </div>
                         </div>
                     </div>
@@ -98,28 +78,39 @@ const Features = ({ onShowTour }) => {
                             </div>
 
                             <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6 leading-tight">
-                                Rellena tu tabla de precios en segundos.
+                                Monta tu tabla de precios sin rellenar casilla por casilla.
                             </h2>
 
                             <p className="text-lg text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
-                                Olvídate de usar la calculadora casilla por casilla. Con el nuevo <strong>Cálculo Automático Matricial</strong>, solo necesitas definir las esquinas de tu tabla. Nuestro motor predice y rellena matemáticamente el resto con precisión milimétrica.
+                                Una tabla de medidas puede tener cientos de casillas y llenarlas a mano con la calculadora
+                                lleva una tarde entera. Aquí defines <strong className="text-slate-900 dark:text-white">las esquinas de tu tabla</strong> y
+                                el resto se calcula solo, siguiendo tu propia escala de precios.
                             </p>
 
-                            <div className="flex items-center gap-4 text-slate-800 dark:text-slate-200 font-bold">
-                                <div className="p-2 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 rounded-lg">
-                                    <Check size={20} strokeWidth={3} />
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-4 text-slate-800 dark:text-slate-200">
+                                    <div className="p-2 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 rounded-lg shrink-0">
+                                        <Check size={20} strokeWidth={3} />
+                                    </div>
+                                    <span className="text-lg font-bold">Puedes retocar a mano cualquier casilla</span>
                                 </div>
-                                <span className="text-lg">Cierra ventas con PDFs imponentes.</span>
+                                <div className="flex items-center gap-4 text-slate-800 dark:text-slate-200">
+                                    <div className="p-2 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 rounded-lg shrink-0">
+                                        <Check size={20} strokeWidth={3} />
+                                    </div>
+                                    <span className="text-lg font-bold">Los precios son los tuyos, no estimaciones</span>
+                                </div>
                             </div>
                         </div>
 
                         {/* Right Column: Visual */}
                         <div className="order-1 lg:order-2 relative group">
-                            <div className="absolute -inset-4 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-[3rem] transform rotate-2 group-hover:rotate-1 transition-transform -z-10"></div>
+                            <div className="absolute -inset-4 bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-[3rem] transform rotate-2 group-hover:rotate-1 transition-transform -z-10"></div>
                             <img
                                 src="/auto-calc-hero.png"
-                                alt="Cálculo Automático de Precios"
-                                className="w-full h-auto rounded-2xl shadow-2xl border border-slate-200/50 transform group-hover:scale-105 transition-transform duration-500"
+                                alt="Tabla de precios por medidas rellenándose automáticamente"
+                                className="w-full h-auto rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 transform group-hover:scale-105 transition-transform duration-500"
+                                loading="lazy"
                             />
                         </div>
                     </div>

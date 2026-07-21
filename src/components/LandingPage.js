@@ -7,6 +7,7 @@ import Features from './v30/landing/Features';
 import Pricing from './v30/landing/Pricing';
 import Plans from './v30/landing/Plans';
 import FAQ from './v30/landing/FAQ';
+import FinalCTA from './v30/landing/FinalCTA';
 import Footer from './v30/landing/Footer';
 
 /**
@@ -44,6 +45,7 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
                 <Pricing onRegister={onRegister} />
                 <Plans onRegister={onRegister} />
                 <FAQ />
+                <FinalCTA onRegister={onRegister} />
             </main>
 
             <Footer />

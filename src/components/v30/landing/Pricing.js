@@ -9,10 +9,11 @@ const Pricing = ({ onRegister }) => {
             <section id="tipos-de-calculo" className="py-24 bg-white dark:bg-slate-900 px-4 transition-colors">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-16">
-                        <span className="text-blue-600 dark:text-blue-400 font-bold tracking-widest uppercase text-xs">Potencia de Cálculo</span>
-                        <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mt-4 mb-6">Versatilidad en el Precio</h2>
+                        <span className="text-blue-600 dark:text-blue-400 font-bold tracking-widest uppercase text-xs">Formas de cobrar</span>
+                        <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mt-4 mb-6">Cobra como cobras tú</h2>
                         <p className="text-slate-500 dark:text-slate-400 text-lg max-w-2xl mx-auto">
-                            Soportamos todas las lógicas de cobro estándar de la industria. No cambies tu forma de trabajar.
+                            Cada gremio tiene su forma de poner precio. Aquí caben las cuatro habituales,
+                            así que no tienes que cambiar tu manera de trabajar.
                         </p>
                     </div>
 
@@ -36,7 +37,7 @@ const Pricing = ({ onRegister }) => {
                                 </div>
                             </div>
                             <p className="text-xl text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                                <strong className="text-slate-900 dark:text-white">Cálculo exacto</strong> por cruce de medidas. La opción profesional para aluminio y PVC.
+                                <strong className="text-slate-900 dark:text-white">Tu tabla de ancho por alto.</strong> Es como se presupuesta el aluminio y el PVC.
                             </p>
                         </div>
 
@@ -59,7 +60,7 @@ const Pricing = ({ onRegister }) => {
                                 </div>
                             </div>
                             <p className="text-xl text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                                <strong className="text-slate-900 dark:text-white">Superficie automática.</strong> Ideal para cerramientos, vidrios, suelos y techos.
+                                <strong className="text-slate-900 dark:text-white">Calcula la superficie sola.</strong> Para cerramientos, vidrios, suelos y techos.
                             </p>
                         </div>
 
@@ -82,7 +83,7 @@ const Pricing = ({ onRegister }) => {
                                 </div>
                             </div>
                             <p className="text-xl text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                                <strong className="text-slate-900 dark:text-white">Venta rápida</strong> por longitud. Perfecto para perfiles, tubos, toldos y vallas.
+                                <strong className="text-slate-900 dark:text-white">Cobras por metros de largo.</strong> Para perfiles, tubos, toldos y vallas.
                             </p>
                         </div>
 
@@ -105,25 +106,10 @@ const Pricing = ({ onRegister }) => {
                                 </div>
                             </div>
                             <p className="text-xl text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                                <strong className="text-slate-900 dark:text-white">Simple y directo.</strong> Para accesorios, herrajes, servicios y mano de obra.
+                                <strong className="text-slate-900 dark:text-white">Precio cerrado por pieza.</strong> Para herrajes, accesorios y mano de obra.
                             </p>
                         </div>
                     </div>
-                </div>
-            </section>
-
-            {/* CTA Final */}
-            <section className="py-24 bg-blue-900 text-white relative overflow-hidden">
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
-                <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
-                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-6 sm:mb-8 tracking-tight">Rompe los límites de tu catálogo.</h2>
-                    <p className="text-lg sm:text-xl md:text-2xl text-blue-200 mb-10 sm:mb-12 max-w-2xl mx-auto font-light">
-                        Una herramienta que crece contigo. Empieza hoy mismo.
-                    </p>
-                    <button onClick={onRegister} className="w-full sm:w-auto px-10 sm:px-12 py-5 sm:py-6 bg-white text-blue-900 text-lg sm:text-xl font-bold rounded-lg shadow-xl shadow-blue-950/50 hover:bg-blue-50 hover:scale-105 active:scale-95 transition-all">
-                        Crear Cuenta Profesional
-                    </button>
-                    <p className="text-blue-300/60 text-sm mt-8 font-mono uppercase tracking-widest">Sin tarjeta de crédito</p>
                 </div>
             </section>
         </>
