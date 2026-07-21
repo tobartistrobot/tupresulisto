@@ -288,7 +288,12 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                     </div>
                 )}
             </div>
-            <div className={`${mobileTab === 'cart' ? 'flex' : 'hidden'} md:flex w-full md:w-1/3 bg-white dark:bg-slate-900 md:border-l dark:border-slate-700 shadow-2xl flex-col z-20 h-full`}>
+            {/* flex-1 min-h-0 (no h-full): en móvil este panel es hermano de la barra
+                CATÁLOGO/PRESUPUESTO, que también ocupa alto real. h-full forzaba el 100%
+                del contenedor entero por encima de esa barra, desbordando por debajo y
+                tapando "Guardar" bajo la nav inferior. flex-1 min-h-0 hace que ocupe
+                exactamente el espacio que sobra, sin ambigüedad. */}
+            <div className={`${mobileTab === 'cart' ? 'flex' : 'hidden'} md:flex w-full md:w-1/3 bg-white dark:bg-slate-900 md:border-l dark:border-slate-700 shadow-2xl flex-col z-20 flex-1 min-h-0 md:h-full`}>
                 <div className="p-5 border-b dark:border-slate-700 font-bold flex justify-between items-center bg-white dark:bg-slate-900 shrink-0">
                     <span className="text-lg dark:text-slate-100">Tu Presupuesto</span>
                     <div className="flex gap-2">
@@ -298,69 +303,83 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                         />
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900/80 space-y-2">{cart.length === 0 && <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 opacity-50"><Calculator size={64} strokeWidth={1} /><p className="mt-4 font-medium">Carrito vacío</p></div>}{cart.map((i, idx) => (<CartSummaryItem key={i.id} item={i} idx={idx} onRemove={removeFromCart} onUpdateQty={updateQuantity} onMove={moveCartItem} />))}</div>
-                <div className="bg-white dark:bg-slate-900 border-t dark:border-slate-700 p-4 md:p-6 space-y-3 shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-5px_20px_rgba(0,0,0,0.3)] z-30">
-                    <button
-                        onClick={() => setShowAdjustments(v => !v)}
-                        className="w-full flex items-center justify-between gap-2 py-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                    >
-                        <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-tighter">
-                            <Percent size={14} /> Descuento y entrega
-                            {(financials.discountPercent > 0 || financials.deposit > 0) && (
-                                <span className="normal-case tracking-normal text-[10px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full">
-                                    {financials.discountPercent > 0 && `-${financials.discountPercent}%`}
-                                    {financials.discountPercent > 0 && financials.deposit > 0 && ' · '}
-                                    {financials.deposit > 0 && `${formatCurrency(financials.deposit)}`}
+                <div className="flex-1 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-900/80 space-y-2">
+                    {cart.length === 0 && <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 opacity-50"><Calculator size={64} strokeWidth={1} /><p className="mt-4 font-medium">Carrito vacío</p></div>}
+                    {cart.map((i, idx) => (<CartSummaryItem key={i.id} item={i} idx={idx} onRemove={removeFromCart} onUpdateQty={updateQuantity} onMove={moveCartItem} />))}
+                    {/* Desglose de precios: vive en la zona con scroll (junto a los productos) para que
+                        los botones de acción de abajo queden siempre visibles, aunque haya muchos ítems
+                        o el desglose se despliegue entero. Antes competían por el mismo espacio fijo y
+                        "Guardar" quedaba tapado por la barra de navegación inferior. */}
+                    {cart.length > 0 && (
+                        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mt-2">
+                            <button
+                                onClick={() => setShowAdjustments(v => !v)}
+                                className="w-full flex items-center justify-between gap-2 py-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                            >
+                                <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-tighter">
+                                    <Percent size={14} /> Descuento y entrega
+                                    {(financials.discountPercent > 0 || financials.deposit > 0) && (
+                                        <span className="normal-case tracking-normal text-[10px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full">
+                                            {financials.discountPercent > 0 && `-${financials.discountPercent}%`}
+                                            {financials.discountPercent > 0 && financials.deposit > 0 && ' · '}
+                                            {financials.deposit > 0 && `${formatCurrency(financials.deposit)}`}
+                                        </span>
+                                    )}
                                 </span>
+                                <ChevronDown size={16} className={`shrink-0 transition-transform duration-200 ${showAdjustments ? 'rotate-180' : ''}`} />
+                            </button>
+                            {showAdjustments && (
+                                <div className="grid grid-cols-1 xs:grid-cols-2 gap-4 text-xs animate-fade-in pb-1">
+                                    <div>
+                                        <label className="text-slate-400 dark:text-slate-500 font-bold block mb-1 uppercase tracking-tighter">Descuento %</label>
+                                        <input type="number" className="input-saas text-right font-bold" value={financials.discountPercent} onChange={e => setFinancials({ ...financials, discountPercent: parseFloat(e.target.value) || 0 })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-400 dark:text-slate-500 font-bold block mb-1 uppercase tracking-tighter">Entrega €</label>
+                                        <input type="number" className="input-saas text-right font-bold" value={financials.deposit} onChange={e => setFinancials({ ...financials, deposit: parseFloat(e.target.value) || 0 })} />
+                                    </div>
+                                </div>
                             )}
-                        </span>
-                        <ChevronDown size={16} className={`shrink-0 transition-transform duration-200 ${showAdjustments ? 'rotate-180' : ''}`} />
-                    </button>
-                    {showAdjustments && (
-                        <div className="grid grid-cols-1 xs:grid-cols-2 gap-4 text-xs animate-fade-in pb-1">
-                            <div>
-                                <label className="text-slate-400 dark:text-slate-500 font-bold block mb-1 uppercase tracking-tighter">Descuento %</label>
-                                <input type="number" className="input-saas text-right font-bold" value={financials.discountPercent} onChange={e => setFinancials({ ...financials, discountPercent: parseFloat(e.target.value) || 0 })} />
-                            </div>
-                            <div>
-                                <label className="text-slate-400 dark:text-slate-500 font-bold block mb-1 uppercase tracking-tighter">Entrega €</label>
-                                <input type="number" className="input-saas text-right font-bold" value={financials.deposit} onChange={e => setFinancials({ ...financials, deposit: parseFloat(e.target.value) || 0 })} />
+                            <div className="space-y-1.5 py-3 border-t border-dashed dark:border-slate-700">
+                                <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
+                                    <span>Subtotal</span><span className="font-medium">{formatCurrency(grossTotal)}</span>
+                                </div>
+                                {discountAmount > 0 && (
+                                    <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400 font-semibold">
+                                        <span>Descuento ({financials.discountPercent}%)</span><span>-{formatCurrency(discountAmount)}</span>
+                                    </div>
+                                )}
+                                {discountAmount > 0 && (
+                                    <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400 pb-1 border-b border-dashed dark:border-slate-700">
+                                        <span>Base imponible</span><span className="font-medium">{formatCurrency(netTotal)}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400 pb-2 border-b dark:border-slate-700">
+                                    <span className="flex items-center gap-1">IVA <span className="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-bold">{vatRate}%</span></span>
+                                    <span className="font-medium">{formatCurrency(netTotal * (vatRate / 100))}</span>
+                                </div>
+                                <div className="flex justify-between text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight pt-1">
+                                    <span>TOTAL</span><span>{formatCurrency(grandTotal)}</span>
+                                </div>
+                                {financials.deposit > 0 && (
+                                    <div className="flex justify-between text-sm font-semibold text-slate-400 dark:text-slate-500 pt-2 border-t border-dashed dark:border-slate-700 mt-1">
+                                        <span>Entrega a cuenta</span><span>-{formatCurrency(financials.deposit)}</span>
+                                    </div>
+                                )}
+                                {financials.deposit > 0 && (
+                                    <div className="flex justify-between font-black text-base text-blue-600 dark:text-blue-400">
+                                        <span>RESTANTE</span><span>{formatCurrency(remainingBalance)}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
-                    <div className="space-y-1.5 py-3 border-t border-dashed dark:border-slate-700">
-                        <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400">
-                            <span>Subtotal</span><span className="font-medium">{formatCurrency(grossTotal)}</span>
-                        </div>
-                        {discountAmount > 0 && (
-                            <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400 font-semibold">
-                                <span>Descuento ({financials.discountPercent}%)</span><span>-{formatCurrency(discountAmount)}</span>
-                            </div>
-                        )}
-                        {discountAmount > 0 && (
-                            <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400 pb-1 border-b border-dashed dark:border-slate-700">
-                                <span>Base imponible</span><span className="font-medium">{formatCurrency(netTotal)}</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between text-sm text-slate-500 dark:text-slate-400 pb-2 border-b dark:border-slate-700">
-                            <span className="flex items-center gap-1">IVA <span className="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-bold">{vatRate}%</span></span>
-                            <span className="font-medium">{formatCurrency(netTotal * (vatRate / 100))}</span>
-                        </div>
-                        <div className="flex justify-between text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight pt-1">
-                            <span>TOTAL</span><span>{formatCurrency(grandTotal)}</span>
-                        </div>
-                        {financials.deposit > 0 && (
-                            <div className="flex justify-between text-sm font-semibold text-slate-400 dark:text-slate-500 pt-2 border-t border-dashed dark:border-slate-700 mt-1">
-                                <span>Entrega a cuenta</span><span>-{formatCurrency(financials.deposit)}</span>
-                            </div>
-                        )}
-                        {financials.deposit > 0 && (
-                            <div className="flex justify-between font-black text-base text-blue-600 dark:text-blue-400">
-                                <span>RESTANTE</span><span>{formatCurrency(remainingBalance)}</span>
-                            </div>
-                        )}
-                    </div>
-                <div className="flex flex-col-reverse sm:flex-row gap-3">
+                </div>
+                <div className="bg-white dark:bg-slate-900 border-t dark:border-slate-700 p-3 md:p-4 shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-5px_20px_rgba(0,0,0,0.3)] z-30 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
+                {/* Fila siempre en horizontal (nunca apilada): en móvil, dos botones altos
+                    apilados hacían que este pie no cupiera en el espacio disponible y
+                    "Guardar" quedaba tapado por la barra de navegación inferior. */}
+                <div className="flex gap-2 md:gap-3">
                         <button
                             onClick={handleSave}
                             disabled={saveStatus === 'saving'}
@@ -371,7 +390,7 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                                         ? { backgroundColor: '#93c5fd', color: '#1e40af' }
                                         : { backgroundColor: '#ffffff', color: '#1f2937', border: '2px solid #e5e7eb' }
                             }
-                            className="flex-1 h-14 rounded-lg font-bold text-base flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-md"
+                            className="flex-1 h-12 md:h-14 rounded-lg font-bold text-sm md:text-base flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-md"
                         >
                             {saveStatus === 'saving' ? (
                                 <React.Fragment key="btn-saving">
@@ -395,7 +414,7 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
                             if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
                             setViewMode('print');
-                        }} style={{ backgroundColor: '#3b82f6', color: '#ffffff' }} className="flex-1 h-14 rounded-lg font-black text-base md:text-lg flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-xl shadow-md"><Printer size={22} /> <span>FINALIZAR</span></button>
+                        }} style={{ backgroundColor: '#3b82f6', color: '#ffffff' }} className="flex-1 h-12 md:h-14 rounded-lg font-black text-sm md:text-lg flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-xl shadow-md"><Printer size={20} className="shrink-0" /> <span>FINALIZAR</span></button>
                     </div></div>
             </div>
         </div>
