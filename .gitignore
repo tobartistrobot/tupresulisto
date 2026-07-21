@@ -58,3 +58,19 @@ node_modules/
 .env*.local
 playwright-report/
 test-results/
+
+# Artefactos de build / logs que no deben commitearse
+stash.diff
+*.log
+lint-error.log
+vercel-deploy.log
+vercel-error.log
+
+# Scripts de migración/refactor de un solo uso
+fix.js
+refactorQuoteLogic.js
+refactorSysConfig.js
+export_migration_data.js
+
+# Configuración local de Claude Code (launch.json sí se comparte)
+.claude/settings.local.json
