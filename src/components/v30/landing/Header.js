@@ -16,8 +16,8 @@ const Header = ({ scrolled, mobileMenu, setMobileMenu, onLogin, onRegister }) =>
                     </div>
 
                     <nav className="hidden md:flex items-center gap-8 bg-white/50 dark:bg-slate-900/50 px-6 py-2 rounded-full border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
-                        <a href="#features" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-900 dark:hover:text-blue-400 transition-colors">Sistema</a>
-                        <a href="#freedom" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-900 dark:hover:text-blue-400 transition-colors">Libertad Creativa</a>
+                        <a href="#como-funciona" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-900 dark:hover:text-blue-400 transition-colors">Cómo funciona</a>
+                        <a href="#tipos-de-calculo" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-900 dark:hover:text-blue-400 transition-colors">Tipos de cálculo</a>
                         <a href="#pricing" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-900 dark:hover:text-blue-400 transition-colors">Precios</a>
                         <a href="/contact" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-900 dark:hover:text-blue-400 transition-colors">Contacto</a>
                     </nav>

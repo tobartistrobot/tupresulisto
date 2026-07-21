@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Header from './v30/landing/Header';
 import Hero from './v30/landing/Hero';
+import Problem from './v30/landing/Problem';
+import HowItWorks from './v30/landing/HowItWorks';
 import Features from './v30/landing/Features';
 import Pricing from './v30/landing/Pricing';
+import Plans from './v30/landing/Plans';
+import FAQ from './v30/landing/FAQ';
 import Footer from './v30/landing/Footer';
 
 /**
@@ -29,10 +33,17 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
                 onRegister={onRegister}
             />
 
+            {/* Orden pensado como un embudo: que se reconozca en el problema, entienda
+                cómo se resuelve, vea que sirve para lo suyo, y solo entonces el precio.
+                Las dudas van al final, justo donde aparecen antes de decidirse. */}
             <main>
                 <Hero onRegister={onRegister} onLogin={onLogin} />
+                <Problem />
+                <HowItWorks onRegister={onRegister} />
                 <Features onShowTour={onShowTour} />
                 <Pricing onRegister={onRegister} />
+                <Plans onRegister={onRegister} />
+                <FAQ />
             </main>
 
             <Footer />

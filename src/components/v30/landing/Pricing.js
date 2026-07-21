@@ -4,7 +4,9 @@ import { Calculator, Layers, Ruler, MousePointerClick } from 'lucide-react';
 const Pricing = ({ onRegister }) => {
     return (
         <>
-            <section id="pricing" className="py-24 bg-slate-50 dark:bg-slate-950 px-4 transition-colors">
+            {/* Esta sección explica los TIPOS DE CÁLCULO, no los precios.
+                El ancla #pricing la ocupa ahora Plans.js, que sí muestra planes. */}
+            <section id="tipos-de-calculo" className="py-24 bg-white dark:bg-slate-900 px-4 transition-colors">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-16">
                         <span className="text-blue-600 dark:text-blue-400 font-bold tracking-widest uppercase text-xs">Potencia de Cálculo</span>
