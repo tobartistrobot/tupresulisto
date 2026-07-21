@@ -12,11 +12,27 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const TITULO = 'TuPresuListo — Presupuestos para profesionales desde el móvil';
+const DESCRIPCION =
+  'Haz presupuestos de ventanas, toldos, carpintería y cristalería en el móvil y envíalos por WhatsApp al momento, desde casa del cliente. Prueba gratis, sin tarjeta.';
+
 export const metadata = {
   metadataBase: new URL('https://tupresulisto.com'),
-  title: "TuPresuListo - Gestión para Carpintería",
-  description: "Presupuestos profesionales en minutos. La herramienta definitiva para carpintería, cristalería y reformas.",
+  // `template` deja que cada página ponga su propio título ("Login | TuPresuListo")
+  // sin repetir la marca a mano. `default` es el de la home.
+  title: {
+    default: TITULO,
+    template: '%s | TuPresuListo',
+  },
+  description: DESCRIPCION,
   applicationName: 'TuPresuListo',
+  keywords: [
+    'presupuestos', 'app presupuestos', 'programa presupuestos',
+    'carpintería', 'aluminio', 'PVC', 'cristalería', 'toldos', 'ventanas',
+    'autónomo', 'gremio', 'presupuesto por WhatsApp',
+  ],
+  authors: [{ name: 'TuPresuListo' }],
+  alternates: { canonical: '/' },
   icons: {
     icon: '/icon.svg',
     apple: '/apple-icon.png',
@@ -28,17 +44,17 @@ export const metadata = {
     statusBarStyle: 'default',
   },
   openGraph: {
-    title: 'TuPresuListo - Gestión para Carpintería',
-    description: 'Presupuestos profesionales en minutos. La herramienta definitiva para carpintería, cristalería y reformas.',
+    title: TITULO,
+    description: DESCRIPCION,
     url: 'https://tupresulisto.com',
     siteName: 'TuPresuListo',
     locale: 'es_ES',
     type: 'website',
   },
   twitter: {
-    card: 'summary',
-    title: 'TuPresuListo - Gestión para Carpintería',
-    description: 'Presupuestos profesionales en minutos. La herramienta definitiva para carpintería, cristalería y reformas.',
+    card: 'summary_large_image',
+    title: TITULO,
+    description: DESCRIPCION,
   },
 };
 
