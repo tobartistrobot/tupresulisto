@@ -1,10 +1,18 @@
 import React from 'react';
 import { Crown, Check, X } from 'lucide-react';
+import { track, EVENTS } from '../lib/analytics';
 
 const UpgradeModal = ({ onClose, onUpgrade, message }) => {
     const [billing, setBilling] = React.useState('monthly');
     const MONTHLY_VARIANT_ID = 'cb60ae4e-ad08-496f-8e56-46d803e43f19';
     const YEARLY_VARIANT_ID = 'd5e7b134-5fea-44b7-b636-2637448c89fe';
+
+    // El modal solo se monta cuando se muestra, así que basta con registrarlo aquí
+    // para captar todas las formas de llegar a él (límite de productos, aviso de
+    // caducidad, etc.) con una sola línea.
+    React.useEffect(() => {
+        track(EVENTS.UPGRADE_ABIERTO);
+    }, []);
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">

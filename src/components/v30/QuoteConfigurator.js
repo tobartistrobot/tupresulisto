@@ -11,6 +11,7 @@ import MatrixEditor from './MatrixEditor';
 import StatusSelector from './StatusSelector';
 import { round2, sanitizeFloat } from '../../utils/mathUtils';
 import { useQuoteLogic } from '../../hooks/useQuoteLogic';
+import { track, EVENTS } from '../../lib/analytics';
 
 const formatCurrency = (amount) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount || 0);
 
@@ -124,6 +125,9 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
             const result = await shareQuotePdf({ blob, filename, message, phone: client.phone });
 
             if (result.cancelled) return;
+            // El "momento aha": el presupuesto llega al cliente. Es el evento que de
+            // verdad indica que el producto cumple su promesa.
+            track(EVENTS.PRESUPUESTO_ENVIADO, { via: result.method });
             toast(
                 result.method === 'share'
                     ? '¡Presupuesto enviado!'

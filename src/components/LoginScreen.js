@@ -5,6 +5,7 @@ import { auth, db } from '../lib/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { getFriendlyErrorMessage } from '../utils/authErrors';
+import { track, identify, EVENTS } from '../lib/analytics';
 
 const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwitchToLogin }) => {
     const toast = useToast();
@@ -78,6 +79,9 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
                     role: 'user'
                 });
 
+                identify(userCredential.user.uid, { email });
+                track(EVENTS.REGISTRO_COMPLETADO, { metodo: 'email' });
+
                 await sendEmailVerification(userCredential.user);
                 toast("Cuenta creada. ¡Verifica tu email!", "success");
             }
@@ -100,7 +104,8 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
             const userRef = doc(db, "users", user.uid);
             const userSnap = await getDoc(userRef);
 
-            if (!userSnap.exists()) {
+            const esCuentaNueva = !userSnap.exists();
+            if (esCuentaNueva) {
                 await setDoc(userRef, {
                     email: user.email,
                     createdAt: new Date().toISOString(),
@@ -110,6 +115,10 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
                     displayName: user.displayName
                 });
             }
+
+            identify(user.uid, { email: user.email });
+            // Solo cuenta como registro la primera vez; en accesos posteriores no.
+            if (esCuentaNueva) track(EVENTS.REGISTRO_COMPLETADO, { metodo: 'google' });
 
             if (onLoginSuccess) onLoginSuccess(user);
 

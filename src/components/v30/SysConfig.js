@@ -4,6 +4,7 @@ import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { Box, Save, Crown, Ticket, Shield, AlertTriangle } from 'lucide-react';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'; // Import auth methods
+import { track, EVENTS } from '../../lib/analytics';
 
 const processImage = (file) => new Promise((resolve, reject) => {
     if (!file.type.match(/image.*/)) return reject(new Error("No es un archivo de imagen"));
@@ -60,6 +61,7 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
             const result = await response.json();
 
             if (result.success) {
+                track(EVENTS.CUPON_CANJEADO, { codigo: couponCode });
                 toast(result.message, "success");
                 setCouponCode('');
                 setTimeout(() => window.location.reload(), 1500);

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { track, EVENTS } from '../lib/analytics';
 import Header from './v30/landing/Header';
 import Hero from './v30/landing/Hero';
 import Problem from './v30/landing/Problem';
@@ -24,6 +25,13 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    // Envuelve el registro para saber DESDE QUÉ sección se pulsa. Es lo que luego
+    // dice qué parte de la página convierte y cuál sobra.
+    const registrarDesde = useCallback((origen) => () => {
+        track(EVENTS.REGISTRO_INICIADO, { origen });
+        onRegister();
+    }, [onRegister]);
+
     return (
         <div className="font-sans text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-950 min-h-screen selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden transition-colors">
             <Header
@@ -31,21 +39,21 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
                 mobileMenu={mobileMenu}
                 setMobileMenu={setMobileMenu}
                 onLogin={onLogin}
-                onRegister={onRegister}
+                onRegister={registrarDesde('cabecera')}
             />
 
             {/* Orden pensado como un embudo: que se reconozca en el problema, entienda
                 cómo se resuelve, vea que sirve para lo suyo, y solo entonces el precio.
                 Las dudas van al final, justo donde aparecen antes de decidirse. */}
             <main>
-                <Hero onRegister={onRegister} onLogin={onLogin} />
+                <Hero onRegister={registrarDesde('hero')} onLogin={onLogin} />
                 <Problem />
-                <HowItWorks onRegister={onRegister} />
+                <HowItWorks onRegister={registrarDesde('como_funciona')} />
                 <Features onShowTour={onShowTour} />
-                <Pricing onRegister={onRegister} />
-                <Plans onRegister={onRegister} />
+                <Pricing onRegister={registrarDesde('cta_tipos_calculo')} />
+                <Plans onRegister={registrarDesde('precios')} />
                 <FAQ />
-                <FinalCTA onRegister={onRegister} />
+                <FinalCTA onRegister={registrarDesde('cierre')} />
             </main>
 
             <Footer />

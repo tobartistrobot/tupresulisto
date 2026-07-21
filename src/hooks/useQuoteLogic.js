@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { round2, sanitizeFloat } from '../utils/mathUtils';
+import { track, EVENTS } from '../lib/analytics';
 
 export const useQuoteLogic = ({ initialData, cart, setCart, config, onSave, onReset, toast }) => {
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -191,6 +192,10 @@ export const useQuoteLogic = ({ initialData, cart, setCart, config, onSave, onRe
                 items: cart,
                 grandTotal
             });
+
+            // Activación: mide cuánta gente pasa del registro a crear presupuestos.
+            // `nuevo` distingue el primer guardado de una edición posterior.
+            track(EVENTS.PRESUPUESTO_GUARDADO, { nuevo: !initialData?.id, lineas: cart.length });
 
             saveTimeoutRef.current = setTimeout(() => {
                 if (isMounted.current) {
