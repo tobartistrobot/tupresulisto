@@ -1,5 +1,10 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import {
+    getFirestore,
+    initializeFirestore,
+    persistentLocalCache,
+    persistentMultipleTabManager
+} from "firebase/firestore";
 import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
@@ -15,7 +20,30 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const db = getFirestore(app);
+
+/**
+ * Firestore con caché offline persistente (IndexedDB).
+ *
+ * Caso de uso: el autónomo presupuesta en casa del cliente, donde puede no haber
+ * cobertura (sótanos, chalets, obra). Con la caché persistente la app sigue
+ * funcionando sin conexión y sincroniza sola al recuperar red.
+ *
+ * Sólo aplica en navegador (IndexedDB no existe en SSR). initializeFirestore
+ * lanza si Firestore ya se inició (p.ej. con Fast Refresh), de ahí el fallback.
+ */
+function createDb(firebaseApp) {
+    if (typeof window === "undefined") return getFirestore(firebaseApp);
+    try {
+        return initializeFirestore(firebaseApp, {
+            localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+        });
+    } catch (err) {
+        // Ya inicializado (HMR o import duplicado): reutilizamos la instancia.
+        return getFirestore(firebaseApp);
+    }
+}
+
+const db = createDb(app);
 const auth = getAuth(app);
 
 // Forzar persistencia LOCAL para evitar desconexiones con el botón de "Atrás" (bfcache)
