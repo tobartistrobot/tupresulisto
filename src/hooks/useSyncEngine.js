@@ -8,6 +8,11 @@ const log = (msg, ...args) => {
     if (DEBUG) console.log(`%c[SYNC-DEBUG] ${msg}`, 'color: #0ea5e9; font-weight: bold;', ...args);
 };
 
+// Códigos de error de Firestore que de verdad indican un problema de red.
+// El resto (permission-denied, invalid-argument, resource-exhausted...) no
+// tiene nada que ver con la conexión y no debe mostrarse como tal.
+const NETWORK_ERROR_CODES = new Set(['unavailable', 'deadline-exceeded', 'cancelled']);
+
 // --- DATA MARSHALLER (Firestore Compatibility) ---
 // Firestore forbids: undefined, nested arrays (Array<Array>), and custom prototypes.
 // We preserve Dates.
@@ -106,6 +111,8 @@ export const useSyncEngine = (user) => {
     // Refs to track previous values for change detection
     const isFirstLoad = useRef(true);
     const saveTimeout = useRef(null);
+    // Cuenta fallos de RED consecutivos; solo eso justifica el aviso de "sin conexión"
+    const consecutiveNetworkErrors = useRef(0);
 
     // 1. INITIAL LOAD
     useEffect(() => {
@@ -219,15 +226,29 @@ export const useSyncEngine = (user) => {
             await setDoc(doc(db, 'users', user.uid, 'data', 'history'), cleanHistory);
 
             setStatus('READY'); // Return to ready
+            consecutiveNetworkErrors.current = 0;
             log('✅ Guardado exitoso.');
         } catch (err) {
             console.error("Save Error:", err);
             setError(err.message);
-            setStatus('ERROR'); // Stuck in error until reload or manual retry?
-            // Actually, let's revert to ready to allow retry?
-            // No, keep error visible. User might need to check net.
-            // Auto-retry via SWR logic? For now, simple error state.
-            setTimeout(() => setStatus('READY'), 5000); // Retry state after 5s
+
+            // Con la caché offline persistente activada, una desconexión real
+            // casi nunca rechaza el write (se encola y se resuelve solo). Un
+            // solo fallo suele ser un blip transitorio o un error que no
+            // tiene nada que ver con la red (permisos, datos inválidos...), y
+            // avisar "comprueba tu internet" en esos casos es engañoso.
+            const isNetworkError = NETWORK_ERROR_CODES.has(err.code);
+            const reallyOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+            consecutiveNetworkErrors.current = isNetworkError ? consecutiveNetworkErrors.current + 1 : 0;
+
+            if (isNetworkError && (reallyOffline || consecutiveNetworkErrors.current >= 2)) {
+                setStatus('ERROR');
+                setTimeout(() => setStatus('READY'), 5000); // Retry state after 5s
+            } else {
+                // No lo consideramos una desconexión: no interrumpimos con el
+                // aviso. El próximo cambio disparará un nuevo intento normal.
+                setStatus('READY');
+            }
         }
     }, [user, status, products, config, history, deletedHistory]);
 

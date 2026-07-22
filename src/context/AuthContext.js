@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged, signOut, signInWithCustomToken } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
 /** @typedef {{ adminEmail: string, targetEmail: string, adminRedirectUrl: string }} ImpersonationInfo */
@@ -10,6 +10,18 @@ import { useRouter } from 'next/navigation';
 const IMPERSONATION_KEY = 'tupresulisto_impersonation';
 
 const AuthContext = createContext(null);
+
+/** Aplica a un snapshot de `users/{uid}` la misma normalización de estado
+ * que usan tanto el listener en tiempo real como el refresco puntual, para
+ * que ambos caminos calculen `subscriptionStatus` de forma idéntica. */
+function normalizeProfile(docSnap) {
+    if (!docSnap.exists()) return { subscriptionStatus: 'inactive' };
+    const data = docSnap.data();
+    let status = data.subscriptionStatus || 'inactive';
+    // Keep compatibility with 'pro' string or isPro boolean
+    if (status === 'pro' || data.isPro === true) status = 'active';
+    return { ...data, subscriptionStatus: status };
+}
 
 /**
  * Global authentication provider. Manages user session, profile sync from
@@ -53,15 +65,7 @@ export function AuthProvider({ children }) {
             if (currentUser) {
                 // Sync Profile reactively
                 unsubProfile = onSnapshot(doc(db, 'users', currentUser.uid), (docSnap) => {
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        let status = data.subscriptionStatus || 'inactive';
-                        // Keep compatibility with 'pro' string or isPro boolean
-                        if (status === 'pro' || data.isPro === true) status = 'active';
-                        setUserProfile({ ...data, subscriptionStatus: status });
-                    } else {
-                        setUserProfile({ subscriptionStatus: 'inactive' });
-                    }
+                    setUserProfile(normalizeProfile(docSnap));
                     // Release loading if we have a user and we just got the first profile snap
                     setLoading(false);
                 }, (error) => {
@@ -90,6 +94,22 @@ export function AuthProvider({ children }) {
             console.error('Logout error:', error);
         }
     }, [router]);
+
+    /**
+     * Vuelve a leer el documento del usuario una sola vez y actualiza
+     * `userProfile`. Sirve para forzar el estado justo tras una acción que lo
+     * cambia en el servidor (p. ej. canjear un cupón) sin depender de que el
+     * listener en tiempo real reciba el push a tiempo.
+     */
+    const refreshUserProfile = useCallback(async () => {
+        if (!auth.currentUser) return;
+        try {
+            const docSnap = await getDoc(doc(db, 'users', auth.currentUser.uid));
+            setUserProfile(normalizeProfile(docSnap));
+        } catch (error) {
+            console.error('Profile refresh error:', error);
+        }
+    }, []);
 
     /**
      * Initiates an admin impersonation session for the given user.
@@ -148,6 +168,7 @@ export function AuthProvider({ children }) {
             userProfile,
             loading,
             logout,
+            refreshUserProfile,
             impersonationInfo,
             startImpersonation,
             exitImpersonation,
@@ -157,7 +178,7 @@ export function AuthProvider({ children }) {
     );
 }
 
-/** @returns {{ user: import('firebase/auth').User | null, userProfile: object | null, loading: boolean, logout: Function, impersonationInfo: ImpersonationInfo | null, startImpersonation: Function, exitImpersonation: Function }} */
+/** @returns {{ user: import('firebase/auth').User | null, userProfile: object | null, loading: boolean, logout: Function, refreshUserProfile: Function, impersonationInfo: ImpersonationInfo | null, startImpersonation: Function, exitImpersonation: Function }} */
 export function useAuth() {
     return useContext(AuthContext);
 }

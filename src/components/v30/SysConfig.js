@@ -1,10 +1,11 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { Box, Save, Crown, Ticket, Shield, AlertTriangle } from 'lucide-react';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'; // Import auth methods
 import { track, EVENTS } from '../../lib/analytics';
+import { getSubscriptionState } from '../../lib/subscription';
 
 const processImage = (file) => new Promise((resolve, reject) => {
     if (!file.type.match(/image.*/)) return reject(new Error("No es un archivo de imagen"));
@@ -27,9 +28,15 @@ const processImage = (file) => new Promise((resolve, reject) => {
 
 const SysConfig = ({ config, setConfig, className, user, isPro, products = [], setProducts, categories = [], setCategories }) => {
     const toast = useToast();
-    const { userProfile } = useAuth(); // Access Firestore profile with Lemon Squeezy data
+    const { userProfile, refreshUserProfile } = useAuth(); // Access Firestore profile with Lemon Squeezy data
+    // Fuente única de verdad para distinguir prueba por cupón (con planExpiry)
+    // de suscripción de pago (con lemonRenewsAt) — antes esta sección mostraba
+    // lemonRenewsAt para cualquier cuenta PRO, aunque el PRO viniera de un
+    // cupón y ese campo fuera de una suscripción antigua/de prueba sin relación.
+    const subscription = getSubscriptionState(userProfile);
     const [couponCode, setCouponCode] = useState('');
     const [isRedeeming, setIsRedeeming] = useState(false);
+    const redeemInFlight = useRef(false); // cierra la ventana de doble-tap antes de que el re-render desactive el botón
 
     // SECURITY STATE
     const [currentPassword, setCurrentPassword] = useState('');
@@ -43,6 +50,8 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
     const handleLogo = async (e) => { try { const b64 = await processImage(e.target.files[0]); setConfig({ ...config, logo: b64 }); } catch (err) { toast(err.message, "error"); } };
 
     const handleRedeem = async () => {
+        if (redeemInFlight.current) return; // evita doble envío si el segundo tap llega antes del re-render
+        redeemInFlight.current = true;
         setIsRedeeming(true);
 
         try {
@@ -64,7 +73,10 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                 track(EVENTS.CUPON_CANJEADO, { codigo: couponCode });
                 toast(result.message, "success");
                 setCouponCode('');
-                setTimeout(() => window.location.reload(), 1500);
+                // Refresco puntual en vez de recargar la página entera: no
+                // dependemos de que el listener en tiempo real reciba el push
+                // a tiempo, y el usuario ve el PRO activo al instante.
+                await refreshUserProfile();
             } else {
                 toast(result.message, "error");
             }
@@ -72,6 +84,7 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
             console.error('Coupon error:', error);
             toast("Error al canjear el código. Inténtalo de nuevo.", "error");
         } finally {
+            redeemInFlight.current = false;
             setIsRedeeming(false);
         }
     };
@@ -166,8 +179,24 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                                 {isPro ? "Disfrutas de acceso ilimitado a todas las funciones." : "Limitado a 3 productos. Actualiza para eliminar límites."}
                             </p>
 
-                            {/* Subscription Details for PRO users */}
-                            {isPro && userProfile?.lemonRenewsAt && (
+                            {/* Prueba PRO por cupón: la fecha real es planExpiry, no lemonRenewsAt */}
+                            {isPro && subscription.isTrial && subscription.expiresAt && (
+                                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/50">
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <span className="text-blue-600 dark:text-blue-400 font-bold">📅 Tu prueba PRO termina:</span>
+                                        <span className="text-slate-700 dark:text-slate-300 font-medium">
+                                            {subscription.expiresAt.toLocaleDateString('es-ES', {
+                                                day: 'numeric',
+                                                month: 'long',
+                                                year: 'numeric'
+                                            })}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Suscripción de pago (Lemon Squeezy): esta sí usa lemonRenewsAt */}
+                            {isPro && !subscription.isTrial && userProfile?.lemonRenewsAt && (
                                 <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/50">
                                     <div className="flex items-center gap-2 text-sm">
                                         <span className="text-blue-600 dark:text-blue-400 font-bold">📅 Próxima renovación:</span>
