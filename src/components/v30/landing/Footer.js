@@ -1,12 +1,13 @@
 import React from 'react';
 import { Calculator, ChevronRight, Shield } from 'lucide-react';
+import { LISTA_GREMIOS } from '../../../lib/gremios';
 
 const Footer = () => {
     return (
         <footer className="bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 py-16 transition-colors">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Main Footer Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
                     {/* Column 1: Logo & Slogan */}
                     <div>
                         <div className="flex items-center gap-2.5 mb-4">
@@ -22,7 +23,22 @@ const Footer = () => {
                         </p>
                     </div>
 
-                    {/* Column 2: Legal Links */}
+                    {/* Column 2: Páginas por gremio (enlazado interno para SEO) */}
+                    <div>
+                        <h3 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider mb-4">Por gremio</h3>
+                        <ul className="space-y-3">
+                            {LISTA_GREMIOS.map(g => (
+                                <li key={g.slug}>
+                                    <a href={`/${g.seoSlug}`} className="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm flex items-center gap-2">
+                                        <ChevronRight size={14} className="opacity-50" />
+                                        {g.nombre}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    {/* Column 3: Legal Links */}
                     <div>
                         <h3 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider mb-4">Legal</h3>
                         <ul className="space-y-3">
@@ -47,7 +63,7 @@ const Footer = () => {
                         </ul>
                     </div>
 
-                    {/* Column 3: Support */}
+                    {/* Column 4: Support */}
                     <div>
                         <h3 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider mb-4">Soporte</h3>
                         <ul className="space-y-3">
