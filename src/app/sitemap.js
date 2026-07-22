@@ -1,4 +1,5 @@
 import { LISTA_GREMIOS } from '../lib/gremios';
+import { SITE_URL } from '../lib/site';
 
 /**
  * Mapa del sitio para buscadores. Next lo sirve en /sitemap.xml.
@@ -14,7 +15,7 @@ import { LISTA_GREMIOS } from '../lib/gremios';
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap
  */
 export default function sitemap() {
-    const base = 'https://tupresulisto.com';
+    const base = SITE_URL;
     const ahora = new Date();
 
     const paginasGremios = LISTA_GREMIOS.map(g => ({
