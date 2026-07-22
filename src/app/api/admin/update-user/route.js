@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdmin } from '@/lib/firebaseAdmin';
-import { isAdminEmail } from '@/lib/adminEmails';
+import { isVerifiedAdmin } from '@/lib/adminEmails';
 
 // Next.js API Routes runtime config
 export const runtime = 'nodejs';
@@ -21,8 +21,8 @@ export async function POST(request) {
         const decodedToken = await admin.auth().verifyIdToken(token);
         const userEmail = decodedToken.email;
 
-        // Check if user is admin
-        if (!isAdminEmail(userEmail)) {
+        // Check if user is admin (email en la lista Y verificado)
+        if (!isVerifiedAdmin(decodedToken)) {
             console.warn(`Unauthorized admin update attempt by: ${userEmail}`);
             return NextResponse.json({ error: 'Forbidden - Admin access only' }, { status: 403 });
         }
@@ -42,9 +42,15 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Not Found - User does not exist' }, { status: 404 });
         }
 
+        // planExpiry se limpia SIEMPRE: si quedara una caducidad vieja de un
+        // cupón, getSubscriptionState() anularía el PRO manual en cuanto esa
+        // fecha pasara (o al instante, si ya está vencida), y el panel diría
+        // PRO mientras la app dice FREE.
         await userRef.update({
             isPro: isPro,
             subscriptionStatus: isPro ? 'manual' : 'inactive',
+            planLabel: isPro ? 'PRO manual' : admin.firestore.FieldValue.delete(),
+            planExpiry: admin.firestore.FieldValue.delete(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 

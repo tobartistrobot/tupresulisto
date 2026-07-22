@@ -6,6 +6,9 @@ import { ShieldCheck, Lock, UserCheck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import { ADMIN_EMAILS } from '../../lib/adminEmails';
+import { getSubscriptionState } from '../../lib/subscription';
 
 export default function AdminStats() {
     const [user, setUser] = useState(null);
@@ -23,13 +26,15 @@ export default function AdminStats() {
     const [impersonatingId, setImpersonatingId] = useState(null);
     const router = useRouter();
     const { startImpersonation } = useAuth();
+    const toast = useToast();
 
-    const ALLOWED_EMAILS = ['demo@tupresulisto.com', 'admin@tupresulisto.com', 'tobartistrobot@gmail.com'];
-
+    // La lista real vive en lib/adminEmails (compartida con las API routes).
+    // Este check es solo cosmético — la seguridad la imponen las APIs, que
+    // además exigen email verificado.
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (u) => {
             if (u) {
-                if (ALLOWED_EMAILS.includes(u.email)) {
+                if (ADMIN_EMAILS.includes(u.email?.toLowerCase())) {
                     setUser(u);
                     fetchStats(u);
                 } else {
@@ -61,13 +66,13 @@ export default function AdminStats() {
 
             const data = await response.json();
 
-            // Process users from API response
+            // Process users from API response. Mismo criterio PRO que la app
+            // (getSubscriptionState): una prueba caducada NO cuenta como PRO.
             const users = data.users || [];
             let activeSubsCount = 0;
 
             users.forEach(u => {
-                const isPro = u.subscriptionStatus === 'active' || u.subscriptionStatus === 'pro' || u.isPro === true;
-                if (isPro) activeSubsCount++;
+                if (getSubscriptionState(u).isPro) activeSubsCount++;
             });
 
             // Sort by creation time
@@ -124,10 +129,10 @@ export default function AdminStats() {
             await startImpersonation(data.customToken, targetEmail, user.email);
         } catch (err) {
             console.error('Impersonation failed:', err);
-            alert(`Error al acceder como usuario: ${err.message}`);
+            toast(`Error al acceder como usuario: ${err.message}`, 'error');
             setImpersonatingId(null);
         }
-    }, [user, startImpersonation]);
+    }, [user, startImpersonation, toast]);
 
     const toggleProStatus = async (userId, currentStatus) => {
         try {
@@ -148,11 +153,19 @@ export default function AdminStats() {
                 throw new Error(data.error || 'Error al actualizar el usuario');
             }
 
-            // Refresh the list after update
-            fetchStats(user);
+            // Actualiza solo la fila afectada (espejo de lo que escribe la API)
+            // en vez de recargar todo el directorio.
+            setUsersList(prev => {
+                const updated = prev.map(u => u.id === userId
+                    ? { ...u, isPro: newStatus, subscriptionStatus: newStatus ? 'manual' : 'inactive', planExpiry: null, planLabel: newStatus ? 'PRO manual' : null }
+                    : u);
+                setStats(s => ({ ...s, activeSubs: updated.filter(u => getSubscriptionState(u).isPro).length }));
+                return updated;
+            });
+            toast(newStatus ? 'PRO activado para el usuario' : 'PRO desactivado para el usuario', 'success');
         } catch (error) {
             console.error("Error al cambiar estado PRO:", error);
-            alert("Error: " + error.message);
+            toast('Error: ' + error.message, 'error');
         }
     };
 
@@ -248,7 +261,9 @@ export default function AdminStats() {
                             </thead>
                             <tbody className="divide-y divide-slate-700">
                                 {filteredUsers.map((u) => {
-                                    const isPro = u.subscriptionStatus === 'active' || u.subscriptionStatus === 'pro' || u.isPro === true;
+                                    // Mismo criterio que la app: prueba caducada = FREE.
+                                    const sub = getSubscriptionState(u);
+                                    const isPro = sub.isPro;
                                     return (
                                         <tr key={u.id} className="hover:bg-slate-700/50 transition-colors">
                                             <td className="px-6 py-4">
@@ -293,10 +308,22 @@ export default function AdminStats() {
                                                                 <div className="font-mono font-bold tracking-wider">{u.redeemCode}</div>
                                                             </div>
                                                         )}
+                                                        {/* Caducidad de la prueba: clave para saber a quién contactar antes de que expire */}
+                                                        {sub.isTrial && sub.expiresAt && (
+                                                            <span className={`text-[9px] font-bold ${sub.daysLeft <= 7 ? 'text-amber-400' : 'text-slate-400'}`}>
+                                                                caduca {sub.expiresAt.toLocaleDateString('es-ES')} ({sub.daysLeft} d)
+                                                            </span>
+                                                        )}
                                                         <span className='text-[8px] uppercase tracking-wider text-slate-500'>{u.subscriptionStatus || 'manual'}</span>
                                                     </div>
                                                 ) : (
-                                                    <span className="bg-slate-700/50 text-slate-400 text-[10px] font-bold px-2 py-1 rounded border border-slate-600">FREE</span>
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <span className="bg-slate-700/50 text-slate-400 text-[10px] font-bold px-2 py-1 rounded border border-slate-600">FREE</span>
+                                                        {/* Tuvo una prueba y se le acabó: candidato a reactivación */}
+                                                        {sub.hasExpired && (
+                                                            <span className="text-[9px] text-red-400/80 font-bold">prueba caducada</span>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 text-right">

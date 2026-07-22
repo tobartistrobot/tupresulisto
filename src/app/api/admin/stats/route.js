@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdmin } from '@/lib/firebaseAdmin';
-import { isAdminEmail } from '@/lib/adminEmails';
+import { isVerifiedAdmin } from '@/lib/adminEmails';
 
 // Next.js API Routes runtime config
 export const runtime = 'nodejs';
@@ -28,8 +28,8 @@ export async function GET(request) {
         const decodedToken = await admin.auth().verifyIdToken(token);
         const userEmail = decodedToken.email;
 
-        // Check if user is admin
-        if (!isAdminEmail(userEmail)) {
+        // Check if user is admin (email en la lista Y verificado)
+        if (!isVerifiedAdmin(decodedToken)) {
             console.warn(`Unauthorized admin access attempt by: ${userEmail}`);
             return NextResponse.json({ error: 'Forbidden - Admin access only' }, { status: 403 });
         }
@@ -38,34 +38,49 @@ export async function GET(request) {
         const usersSnapshot = await adminDb.collection('users').get();
         const totalUsers = usersSnapshot.size;
 
+        // El estado de verificación vive en Firebase Auth, no en Firestore:
+        // la copia del documento se escribe al registrarse y se queda vieja si
+        // el usuario verifica su email después. Se lee de Auth (paginado).
+        /** @type {Map<string, boolean>} */
+        const verifiedByUid = new Map();
+        try {
+            let pageToken;
+            do {
+                const page = await admin.auth().listUsers(1000, pageToken);
+                page.users.forEach(u => verifiedByUid.set(u.uid, u.emailVerified));
+                pageToken = page.pageToken;
+            } while (pageToken);
+        } catch (authError) {
+            // Si Auth fallara, se degrada a la copia de Firestore en vez de romper el panel.
+            console.error('Admin stats: listUsers failed, falling back to Firestore emailVerified', authError);
+        }
+
         /** @type {Array<object>} */
         const usersList = [];
         let verifiedUsers = 0;
+        let totalProducts = 0;
 
         usersSnapshot.forEach(doc => {
             const data = doc.data();
-            if (data.emailVerified) verifiedUsers++;
+            const emailVerified = verifiedByUid.has(doc.id) ? verifiedByUid.get(doc.id) : Boolean(data.emailVerified);
+            if (emailVerified) verifiedUsers++;
+
+            const productsCount = data.products?.length || 0;
+            totalProducts += productsCount;
 
             usersList.push({
                 id: doc.id,
                 email: data.email,
                 createdAt: data.createdAt ? (data.createdAt.toDate ? data.createdAt.toDate().toISOString() : data.createdAt) : null,
-                emailVerified: data.emailVerified,
+                emailVerified,
                 subscriptionStatus: data.subscriptionStatus,
                 isPro: data.isPro,
                 redeemCode: data.redeemCode,
-                productsCount: data.products?.length || 0
+                planExpiry: data.planExpiry ?? null,
+                planLabel: data.planLabel ?? null,
+                productsCount
             });
         });
-
-        // Products count
-        let totalProducts = 0;
-        try {
-            const productsSnapshot = await adminDb.collection('products').get();
-            totalProducts = productsSnapshot.size;
-        } catch (_e) {
-            // Products collection may not exist yet
-        }
 
         return NextResponse.json({
             totalUsers,
