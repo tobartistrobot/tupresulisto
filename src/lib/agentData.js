@@ -12,9 +12,10 @@ import { marshal, unmarshal } from './firestoreMarshal';
  * Limitación conocida (fase 1): la app guarda el historial COMPLETO desde el
  * cliente con un setDoc. Si el usuario tiene la app abierta con estado antiguo
  * y guarda un cambio después de que un agente cree un presupuesto, ese guardado
- * puede pisar el presupuesto del agente. El append de aquí es transaccional
- * para no pisar nada en el sentido contrario. Los presupuestos creados por
- * agentes aparecen en la app al recargarla.
+ * puede pisar el presupuesto del agente. Mitigado: la app escucha este
+ * documento con onSnapshot (useSyncEngine) y refleja lo que escriben los
+ * agentes en segundos, así que la ventana de estado antiguo es mínima. El
+ * append de aquí es transaccional para no pisar nada en el sentido contrario.
  */
 
 /** @returns {Promise<Array<object>>} Catálogo de productos del usuario, desmarshalizado. */
@@ -92,7 +93,9 @@ export async function appendQuote(uid, quote) {
         const snap = await tx.get(ref);
         const data = snap.exists ? snap.data() : {};
         const list = Array.isArray(data.list) ? data.list : [];
-        list.push(marshal(quote));
+        // Al principio, como hace la app (AppV30 usa [quote, ...history]):
+        // varios sitios asumen que la lista va de más nuevo a más antiguo.
+        list.unshift(marshal(quote));
         tx.set(ref, { ...data, list });
     });
 }

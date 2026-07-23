@@ -408,7 +408,7 @@ const handler = createMcpHandler(
                         ivaPorcentaje: iva,
                         total: Math.round(grandTotal * 100) / 100,
                     },
-                    nota: 'Guardado como PENDIENTE en el historial. El usuario debe revisarlo y enviarlo al cliente desde la app (si la tenía abierta, debe recargarla para verlo).',
+                    nota: 'Guardado como PENDIENTE en el historial. El usuario debe revisarlo y enviarlo al cliente desde la app; si la tiene abierta, aparece solo en unos segundos.',
                 });
             }
         );
