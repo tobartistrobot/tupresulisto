@@ -100,6 +100,12 @@ export const useQuoteLogic = ({ initialData, cart, setCart, config, onSave, onRe
     }, [reactToPrintFn]);
 
     useEffect(() => {
+        // Marcarlo montado AQUÍ, no solo en el useRef inicial: en desarrollo,
+        // StrictMode monta → desmonta → vuelve a montar, y el cleanup dejaba
+        // isMounted en false para siempre. Consecuencia: el temporizador del
+        // guardado no se atrevía a pasar a 'saved' y el botón se quedaba en
+        // "Guardando..." girando y deshabilitado.
+        isMounted.current = true;
         return () => {
             isMounted.current = false;
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
