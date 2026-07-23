@@ -1,8 +1,9 @@
 'use client';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
-import { Box, Save, Crown, Ticket, Shield, AlertTriangle } from 'lucide-react';
+import { Box, Save, Crown, Ticket, Shield, AlertTriangle, Bot, Copy, Trash2 } from 'lucide-react';
+import { SITE_URL } from '../../lib/site';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'; // Import auth methods
 import { track, EVENTS } from '../../lib/analytics';
 import { getSubscriptionState } from '../../lib/subscription';
@@ -46,6 +47,71 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
 
     // Check provider (google.com vs password)
     const isGoogleUser = user?.providerData?.some(p => p.providerId === 'google.com');
+
+    // AGENTES / CLAVES DE API — estado de la sección "Agentes y API"
+    const [apiKeys, setApiKeys] = useState([]);
+    const [apiKeysLoading, setApiKeysLoading] = useState(false);
+    const [newKeyLabel, setNewKeyLabel] = useState('');
+    const [creatingKey, setCreatingKey] = useState(false);
+    /** La clave en claro se enseña UNA vez, justo tras crearla. */
+    const [createdKey, setCreatedKey] = useState(null);
+
+    const loadApiKeys = useCallback(async () => {
+        if (!user) return;
+        setApiKeysLoading(true);
+        try {
+            const token = await user.getIdToken();
+            const res = await fetch('/api/agent-keys', { headers: { Authorization: `Bearer ${token}` } });
+            const data = await res.json();
+            if (res.ok) setApiKeys(data.keys || []);
+        } catch (err) {
+            console.error('Error cargando claves de API:', err);
+        } finally {
+            setApiKeysLoading(false);
+        }
+    }, [user]);
+
+    useEffect(() => { loadApiKeys(); }, [loadApiKeys]);
+
+    const handleCreateKey = async () => {
+        if (creatingKey) return;
+        setCreatingKey(true);
+        try {
+            const token = await user.getIdToken();
+            const res = await fetch('/api/agent-keys', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ label: newKeyLabel }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'No se pudo crear la clave');
+            setCreatedKey(data.key);
+            setNewKeyLabel('');
+            toast('Clave creada. Cópiala ahora: no volverá a mostrarse.', 'success');
+            loadApiKeys();
+        } catch (err) {
+            toast(err.message, 'error');
+        } finally {
+            setCreatingKey(false);
+        }
+    };
+
+    const handleRevokeKey = async (id) => {
+        try {
+            const token = await user.getIdToken();
+            const res = await fetch('/api/agent-keys', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ id }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'No se pudo revocar');
+            toast('Clave revocada. Los agentes que la usaban ya no tienen acceso.', 'success');
+            loadApiKeys();
+        } catch (err) {
+            toast(err.message, 'error');
+        }
+    };
 
     const handleLogo = async (e) => { try { const b64 = await processImage(e.target.files[0]); setConfig({ ...config, logo: b64 }); } catch (err) { toast(err.message, "error"); } };
 
@@ -350,6 +416,83 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                             </label>
                         </div>
                     </div>
+                </div>
+
+                {/* AGENTES Y API (BETA): claves para que agentes de IA trabajen sobre esta cuenta vía MCP */}
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm animate-fade-in">
+                    <h3 className="font-bold text-lg mb-1 flex items-center gap-2 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">
+                        <Bot className="text-emerald-600" /> Agentes y API
+                        <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full uppercase tracking-wider">Beta</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                        Conecta un asistente de IA (Claude u otro compatible con MCP) para que te haga los presupuestos como si fuera tu oficinista.
+                        Cada clave da acceso <span className="font-bold">solo a tu cuenta</span> y puedes revocarla cuando quieras.
+                        Dirección de conexión: <code className="font-mono text-[11px] bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded select-all">{SITE_URL}/api/mcp</code>
+                    </p>
+
+                    {createdKey && (
+                        <div className="mb-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl">
+                            <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300 mb-2">
+                                ⚠️ Guarda esta clave ahora: por seguridad no volverá a mostrarse.
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <code className="flex-1 font-mono text-xs bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800/50 rounded-lg px-3 py-2 break-all select-all">{createdKey}</code>
+                                <button
+                                    onClick={() => { navigator.clipboard.writeText(createdKey); toast('Clave copiada', 'success'); }}
+                                    className="p-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+                                    title="Copiar clave"
+                                >
+                                    <Copy size={16} />
+                                </button>
+                            </div>
+                            <button onClick={() => setCreatedKey(null)} className="text-[10px] text-emerald-700 dark:text-emerald-400 underline mt-2">Ya la he guardado, ocultar</button>
+                        </div>
+                    )}
+
+                    <div className="flex gap-2 flex-col sm:flex-row mb-4">
+                        <input
+                            placeholder="Nombre de la clave (ej: Agente presupuestos)"
+                            className="input-saas flex-1"
+                            value={newKeyLabel}
+                            onChange={e => setNewKeyLabel(e.target.value)}
+                            maxLength={60}
+                        />
+                        <button onClick={handleCreateKey} disabled={creatingKey} className="btn-primary shadow-none py-2 px-6">
+                            {creatingKey ? '...' : 'Crear clave'}
+                        </button>
+                    </div>
+
+                    {apiKeysLoading ? (
+                        <p className="text-xs text-slate-400">Cargando claves…</p>
+                    ) : apiKeys.length === 0 ? (
+                        <p className="text-xs text-slate-400 dark:text-slate-500">Aún no tienes claves. Crea una para conectar tu primer agente.</p>
+                    ) : (
+                        <ul className="divide-y divide-slate-100 dark:divide-slate-700">
+                            {apiKeys.map(k => (
+                                <li key={k.id} className={`py-2.5 flex items-center gap-3 ${k.revoked ? 'opacity-50' : ''}`}>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{k.label}</p>
+                                        <p className="text-[10px] text-slate-400 font-mono">
+                                            {k.prefix}…
+                                            {k.createdAt && <> · creada {new Date(k.createdAt).toLocaleDateString('es-ES')}</>}
+                                            {k.lastUsedAt ? <> · último uso {new Date(k.lastUsedAt).toLocaleDateString('es-ES')}</> : <> · sin usar</>}
+                                        </p>
+                                    </div>
+                                    {k.revoked ? (
+                                        <span className="text-[10px] font-bold uppercase text-red-400">Revocada</span>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleRevokeKey(k.id)}
+                                            className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0"
+                                            title="Revocar clave"
+                                        >
+                                            <Trash2 size={15} />
+                                        </button>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
 
                 {/* SEGURIDAD / CAMBIAR CONTRASEÑA */}

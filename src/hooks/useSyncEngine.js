@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { marshal, unmarshal } from '../lib/firestoreMarshal';
 
 const DEBUG = true;
 
@@ -13,80 +14,8 @@ const log = (msg, ...args) => {
 // tiene nada que ver con la conexión y no debe mostrarse como tal.
 const NETWORK_ERROR_CODES = new Set(['unavailable', 'deadline-exceeded', 'cancelled']);
 
-// --- DATA MARSHALLER (Firestore Compatibility) ---
-// Firestore forbids: undefined, nested arrays (Array<Array>), and custom prototypes.
-// We preserve Dates.
-
-const marshal = (payload) => {
-    if (payload === undefined) return null;
-    if (payload === null) return null;
-    if (typeof payload === 'function') return null;
-    if (payload instanceof Date) return payload; // Dates are native to Firestore
-
-    if (Array.isArray(payload)) {
-        // CHECK NESTED ARRAYS
-        // If an item in this array is ALSO an array, Firestore will explode.
-        // We MUST convert the inner array to a Map/Object.
-        return payload.map(item => {
-            if (Array.isArray(item)) {
-                // Detected Nested Array: Convert [a, b] -> { '0': a, '1': b, _isNested: true }
-                const objWrapper = { _isNested: true };
-                item.forEach((subItem, idx) => {
-                    objWrapper[idx.toString()] = marshal(subItem);
-                });
-                return objWrapper;
-            }
-            return marshal(item);
-        });
-    }
-
-    if (typeof payload === 'object') {
-        const cleanObj = {};
-        Object.keys(payload).forEach(key => {
-            cleanObj[key] = marshal(payload[key]);
-        });
-        return cleanObj;
-    }
-
-    return payload;
-};
-
-// UN-MARSHAL (Restore State)
-// When loading, we look for { _isNested: true } and convert back to Array.
-const unmarshal = (payload) => {
-    if (payload === null || payload === undefined) return payload;
-    if (payload instanceof Date) return payload;
-    // Firestore Timestamps to Date (if needed, though usually SDK handles it if saved as Date)
-    if (payload && typeof payload.toDate === 'function') return payload.toDate();
-
-    if (Array.isArray(payload)) {
-        return payload.map(item => unmarshal(item));
-    }
-
-    if (typeof payload === 'object') {
-        if (payload._isNested === true) {
-            // Convert back to array
-            // Keys are "0", "1", "2"... 
-            const arr = [];
-            Object.keys(payload).forEach(key => {
-                if (key !== '_isNested') {
-                    arr[parseInt(key)] = unmarshal(payload[key]);
-                }
-            });
-            // Filter out holes if any, though standard iteration usually matches
-            return Array.from(arr);
-        }
-
-        const cleanObj = {};
-        Object.keys(payload).forEach(key => {
-            cleanObj[key] = unmarshal(payload[key]);
-        });
-        return cleanObj;
-    }
-
-    return payload;
-};
-// ------------------------------------------------
+// El marshal/unmarshal de Firestore vive en src/lib/firestoreMarshal.js,
+// compartido con el servidor MCP para que ambos escriban el mismo formato.
 
 export const useSyncEngine = (user) => {
     // STATE MACHINE: 'IDLE' | 'LOADING' | 'READY' | 'SAVING' | 'ERROR'

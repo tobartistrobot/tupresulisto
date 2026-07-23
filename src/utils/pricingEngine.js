@@ -1,17 +1,42 @@
 import { round2, sanitizeFloat } from './mathUtils';
 
 /**
- * Calcula el precio final de un producto teniendo en cuenta sus dimensiones,
- * cantidad, extras seleccionados, opciones desplegables seleccionadas y márgenes.
- * Función extraída siguiendo SRP (Principios SOLID) para estar desacoplada de la vista.
+ * Motor de precios de TuPresuListo — fuente única de verdad del cálculo.
+ *
+ * Lo usan la app (useQuoteLogic, en el navegador) y el servidor MCP (agentes
+ * creando presupuestos por API). Cualquier cambio aquí afecta a ambos por
+ * igual, que es exactamente lo que se quiere: un agente debe presupuestar
+ * el mismo importe que saldría tocando la pantalla.
+ *
+ * Calcula el precio final de un producto según sus dimensiones, cantidad,
+ * extras seleccionados, opciones desplegables y margen del producto.
+ *
+ * @param {object} product - Producto del catálogo (con matrix/unitPrice, extras, margen).
+ * @param {number} w - Ancho en mm.
+ * @param {number} h - Alto en mm.
+ * @param {number} q - Cantidad.
+ * @param {Array<object>} extras - Extras seleccionados: [{ id, type, value, qty }].
+ * @param {Record<string, string|number>} dropdowns - Selecciones de desplegables: { [extraId]: índiceOpción }.
+ * @returns {{ price: number | null, error: string | null }} Precio redondeado a 2 decimales, o error de validación.
  */
 export const calcPrice = (product, w, h, q, extras, dropdowns) => {
     let base = 0;
     if (product.priceType === 'matrix') {
         const ws = product.matrix.widths; const hs = product.matrix.heights; const ps = product.matrix.prices;
+
+        // Validate max limits
+        if (w > ws[ws.length - 1] || h > hs[hs.length - 1]) {
+            return { price: null, error: 'Medidas exceden el máximo permitido en tarifa.' };
+        }
+
         let c = ws.findIndex(x => x >= w); if (c === -1) c = ws.length - 1;
         let r = hs.findIndex(x => x >= h); if (r === -1) r = hs.length - 1;
         base = sanitizeFloat(ps[r][c]);
+
+        // Validate forbidden zone
+        if (base === 0) {
+            return { price: null, error: 'Rango de medidas desactivado o prohibido.' };
+        }
     } else if (product.priceType === 'unit') {
         base = sanitizeFloat(product.unitPrice);
     } else if (product.priceType === 'simple_area') {
@@ -44,7 +69,6 @@ export const calcPrice = (product, w, h, q, extras, dropdowns) => {
         }
     });
 
-    // Apply Margin Logic
     let priceBeforeMargin = base + extraTotal;
     let marginAmount = 0;
     if (product.marginType === 'percent' && product.marginValue) {
@@ -53,5 +77,5 @@ export const calcPrice = (product, w, h, q, extras, dropdowns) => {
         marginAmount = sanitizeFloat(product.marginValue);
     }
 
-    return round2((priceBeforeMargin + marginAmount) * q);
+    return { price: round2((priceBeforeMargin + marginAmount) * q), error: null };
 };
