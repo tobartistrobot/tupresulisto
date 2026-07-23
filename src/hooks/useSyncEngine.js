@@ -179,19 +179,38 @@ export const useSyncEngine = (user) => {
                     ]);
                     // La marca va al final: si algo falla antes, la próxima
                     // carga reintenta la migración completa.
-                    await setDoc(doc(db, 'users', user.uid, 'data', 'history'), { migratedToSubcollection: true, migratedAt: Date.now() }, { merge: true });
+                    await setDoc(doc(db, 'users', user.uid, 'data', 'history'), { migratedToSubcollection: true, migratedAt: Date.now(), adoptedIds: [] }, { merge: true });
                     log('✅ Migración completada. El doc legacy queda como copia de seguridad.');
                 } else if (migratedAt !== null && legacyData) {
                     // ADOPCIÓN DE HUÉRFANOS: un escritor con código antiguo
                     // (PWA cacheada, MCP sin redesplegar) puede seguir metiendo
                     // presupuestos NUEVOS en el doc legacy. Los detectamos por
                     // id (timestamp) posterior a la migración y los adoptamos.
+                    //
+                    // CADA HUÉRFANO SE ADOPTA UNA SOLA VEZ y queda anotado en
+                    // adoptedIds. Sin ese registro, la condición "está en legacy
+                    // y no en la subcolección" volvía a cumplirse en cuanto el
+                    // usuario BORRABA el presupuesto, así que la siguiente carga
+                    // lo resucitaba — y con él, su cliente. Borrar no servía de
+                    // nada.
                     const legacyList = unmarshal(legacyData.list || []) || [];
-                    const subIds = new Set(quotes.map(q => String(q.id)));
-                    const strays = (Array.isArray(legacyList) ? legacyList : []).filter(q => q && (q.id || 0) > migratedAt && !subIds.has(String(q.id)));
-                    if (strays.length > 0) {
+                    const adoptados = Array.isArray(legacyData.adoptedIds) ? legacyData.adoptedIds.map(String) : null;
+                    const yaResueltos = new Set([...quotes.map(q => String(q.id)), ...(adoptados || [])]);
+                    const strays = (Array.isArray(legacyList) ? legacyList : [])
+                        .filter(q => q && (q.id || 0) > migratedAt && !yaResueltos.has(String(q.id)));
+                    const historyRef = doc(db, 'users', user.uid, 'data', 'history');
+
+                    if (adoptados === null) {
+                        // Primera carga con el registro: la subcolección YA es la
+                        // verdad (el usuario ha podido borrar cosas a conciencia).
+                        // Damos por resueltos los pendientes SIN resucitarlos,
+                        // para no deshacerle borrados que hizo a propósito.
+                        await setDoc(historyRef, { adoptedIds: strays.map(q => String(q.id)) }, { merge: true });
+                        if (strays.length > 0) log(`Anotados ${strays.length} huérfano(s) como ya resueltos: no se resucitan.`);
+                    } else if (strays.length > 0) {
                         log(`🧹 Adoptando ${strays.length} presupuesto(s) huérfano(s) del doc legacy.`);
                         await commitOps(strays.map(q => ({ ref: doc(db, 'users', user.uid, 'quotes', String(q.id)), data: marshal(q) })));
+                        await setDoc(historyRef, { adoptedIds: [...adoptados, ...strays.map(q => String(q.id))] }, { merge: true });
                         quotes = [...quotes, ...strays];
                     }
                 }
