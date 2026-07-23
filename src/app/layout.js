@@ -79,6 +79,7 @@ import Script from "next/script";
 
 import { AuthProvider } from '../context/AuthContext';
 import { ToastProvider } from '../context/ToastContext';
+import { ConfirmProvider } from '../context/ConfirmContext';
 import { CSPostHogProvider } from '@/components/Providers/PostHogProvider';
 import ImpersonationBanner from '../components/ImpersonationBanner';
 import ServiceWorkerRegister from '../components/ServiceWorkerRegister';
@@ -93,10 +94,12 @@ export default function RootLayout({ children }) {
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <AuthProvider>
               <ToastProvider>
-                <ServiceWorkerRegister />
-                <ImpersonationBanner />
-                {children}
-                <Script src="https://assets.lemonsqueezy.com/lemon.js" strategy="lazyOnload" />
+                <ConfirmProvider>
+                  <ServiceWorkerRegister />
+                  <ImpersonationBanner />
+                  {children}
+                  <Script src="https://assets.lemonsqueezy.com/lemon.js" strategy="lazyOnload" />
+                </ConfirmProvider>
               </ToastProvider>
             </AuthProvider>
           </ThemeProvider>
