@@ -9,13 +9,11 @@ import { marshal, unmarshal } from './firestoreMarshal';
  * la subcolección data/products), configuración en data/config e historial en
  * data/history como { list, deleted } pasado por marshal/unmarshal.
  *
- * Limitación conocida (fase 1): la app guarda el historial COMPLETO desde el
- * cliente con un setDoc. Si el usuario tiene la app abierta con estado antiguo
- * y guarda un cambio después de que un agente cree un presupuesto, ese guardado
- * puede pisar el presupuesto del agente. Mitigado: la app escucha este
- * documento con onSnapshot (useSyncEngine) y refleja lo que escriben los
- * agentes en segundos, así que la ventana de estado antiguo es mínima. El
- * append de aquí es transaccional para no pisar nada en el sentido contrario.
+ * Historial: esquema moderno = un documento por presupuesto en la subcolección
+ * users/{uid}/quotes (marca migratedToSubcollection en data/history). Crear un
+ * documento nuevo no puede pisar nada. Para usuarios sin migrar se mantiene el
+ * formato legacy (documento único data/history con list) con escritura doble
+ * durante la transición.
  */
 
 /** @returns {Promise<Array<object>>} Catálogo de productos del usuario, desmarshalizado. */
@@ -53,9 +51,21 @@ export async function loadIva(uid) {
 /** @returns {Promise<Array<object>>} Historial de presupuestos, desmarshalizado, tal como lo ve la app. */
 export async function loadHistory(uid) {
     const { adminDb } = getAdmin();
-    const doc = await adminDb.collection('users').doc(uid).collection('data').doc('history').get();
-    if (!doc.exists) return [];
-    const list = unmarshal(doc.data().list || []);
+    const userRef = adminDb.collection('users').doc(uid);
+    const legacy = await userRef.collection('data').doc('history').get();
+
+    // Usuario migrado: cada presupuesto es su propio documento en la
+    // subcolección quotes; el doc legacy es solo una copia de seguridad.
+    if (legacy.exists && legacy.data().migratedToSubcollection === true) {
+        const snap = await userRef.collection('quotes').get();
+        const list = snap.docs.map(d => unmarshal(d.data()));
+        list.sort((a, b) => (b.id || 0) - (a.id || 0));
+        return list;
+    }
+
+    // Usuario sin migrar: formato antiguo (documento único con list).
+    if (!legacy.exists) return [];
+    const list = unmarshal(legacy.data().list || []);
     return Array.isArray(list) ? list : [];
 }
 
@@ -79,24 +89,35 @@ export function deriveClients(history) {
 }
 
 /**
- * Añade un presupuesto al historial de forma transaccional: relee el documento
- * dentro de la transacción para no pisar presupuestos escritos entre medias.
+ * Añade un presupuesto al historial. Con el esquema moderno, cada presupuesto
+ * es su propio documento en la subcolección quotes: crearlo no puede pisar
+ * nada de lo que haya escrito la app. Si el usuario aún no está migrado, se
+ * escribe TAMBIÉN en el documento legacy (escritura doble) para que las apps
+ * con código antiguo lo vean; la migración une ambos sin duplicar (mismo id).
  *
  * @param {string} uid
  * @param {object} quote - Presupuesto con el mismo esquema que crea la app.
  */
 export async function appendQuote(uid, quote) {
     const { adminDb } = getAdmin();
-    const ref = adminDb.collection('users').doc(uid).collection('data').doc('history');
+    const userRef = adminDb.collection('users').doc(uid);
+    const legacyRef = userRef.collection('data').doc('history');
+    const quoteRef = userRef.collection('quotes').doc(String(quote.id));
 
     await adminDb.runTransaction(async tx => {
-        const snap = await tx.get(ref);
+        const snap = await tx.get(legacyRef);
         const data = snap.exists ? snap.data() : {};
-        const list = Array.isArray(data.list) ? data.list : [];
-        // Al principio, como hace la app (AppV30 usa [quote, ...history]):
-        // varios sitios asumen que la lista va de más nuevo a más antiguo.
-        list.unshift(marshal(quote));
-        tx.set(ref, { ...data, list });
+        const migrated = data.migratedToSubcollection === true;
+
+        tx.set(quoteRef, marshal(quote));
+
+        if (!migrated) {
+            const list = Array.isArray(data.list) ? data.list : [];
+            // Al principio, como hace la app (AppV30 usa [quote, ...history]):
+            // varios sitios asumen que la lista va de más nuevo a más antiguo.
+            list.unshift(marshal(quote));
+            tx.set(legacyRef, { ...data, list });
+        }
     });
 }
 
