@@ -1,4 +1,5 @@
-import React from 'react';
+'use client';
+import React, { useState } from 'react';
 import { Check, X, Minus } from 'lucide-react';
 
 /**
@@ -17,6 +18,12 @@ import { Check, X, Minus } from 'lucide-react';
  * está en pintar mal al resto, sino en ser la única columna entera en verde.
  * Por lo mismo, papel y Excel ganan algunas filas: una comparativa donde
  * ganamos TODO no se cree.
+ *
+ * Presentación en dos formatos:
+ *  - Escritorio (md+): tabla completa con las cuatro columnas.
+ *  - Móvil: un cara a cara de DOS columnas (rival elegido con pestañas
+ *    contra TuPresuListo). Una tabla de cuatro columnas a 375px obligaba
+ *    a un scroll lateral incómodo; el 1-contra-1 cabe entero en pantalla.
  */
 
 const SI = 'si';
@@ -63,9 +70,10 @@ const Marca = ({ valor }) => {
  *   las secciones vecinas de cada página.
  * @param {boolean} [props.compacto] - Tipografía y márgenes reducidos para
  *   las páginas de gremio, donde la tabla es apoyo y no protagonista.
- * @param {string} [props.claseFondoSticky] - Fondo de la columna fija. TIENE
- *   que ser el mismo color que la sección: es opaco para tapar las columnas
- *   que pasan por debajo al desplazar, y si no coincide se ve un escalón.
+ * @param {string} [props.claseFondoSticky] - Fondo de la columna fija de la
+ *   tabla de escritorio. TIENE que ser el mismo color que la sección: es
+ *   opaco para tapar las columnas que pasan por debajo al desplazar, y si
+ *   no coincide se ve un escalón.
  */
 const Comparison = ({
     titulo = 'Comparado con lo que haces ahora',
@@ -73,6 +81,10 @@ const Comparison = ({
     compacto = false,
     claseFondoSticky = 'bg-surface dark:bg-slate-950',
 }) => {
+    // Rival elegido en el cara a cara móvil (índice sobre COLUMNAS sin la nuestra).
+    const [rivalIdx, setRivalIdx] = useState(0);
+    const rivales = COLUMNAS.slice(0, -1);
+
     // Clases de la columna destacada (la nuestra), repetidas en cabecera,
     // celdas y pie para que se lea como una columna continua.
     const destacada = 'bg-blue-50/70 dark:bg-blue-500/10';
@@ -91,9 +103,58 @@ const Comparison = ({
                     </p>
                 </div>
 
-                {/* La tabla es ancha: scrollea DENTRO de su caja, nunca la página.
-                    La primera columna queda fija para no perder el criterio al desplazar. */}
-                <div className="overflow-x-auto -mx-4 px-4 pb-2">
+                {/* ============ MÓVIL: cara a cara de dos columnas ============ */}
+                <div className="md:hidden">
+                    {/* Pestañas para elegir el rival */}
+                    <div className="flex justify-center gap-2 mb-5" role="tablist" aria-label="Comparar TuPresuListo con">
+                        {rivales.map((rival, i) => (
+                            <button
+                                key={rival}
+                                role="tab"
+                                aria-selected={i === rivalIdx}
+                                onClick={() => setRivalIdx(i)}
+                                className={`px-3.5 py-2 rounded-full text-xs font-bold border transition-colors ${i === rivalIdx
+                                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white'
+                                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                                    }`}
+                            >
+                                {rival}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
+                        {/* Cabecera de las dos columnas comparadas */}
+                        <div className="grid grid-cols-[1fr_4.5rem_5.5rem] items-end gap-2 px-4 pt-4 pb-3 border-b border-slate-200 dark:border-slate-700">
+                            <span className="sr-only">Criterio</span>
+                            <span aria-hidden="true"></span>
+                            <span className="text-center text-[11px] font-black leading-tight text-slate-600 dark:text-slate-300">
+                                {rivales[rivalIdx]}
+                            </span>
+                            <span className={`text-center text-[11px] font-black leading-tight text-blue-700 dark:text-blue-300 ${destacada} rounded-t-lg py-1.5 -mb-3 pb-4`}>
+                                TuPresuListo
+                            </span>
+                        </div>
+
+                        {FILAS.map(fila => (
+                            <div key={fila.criterio} className="grid grid-cols-[1fr_4.5rem_5.5rem] items-center gap-2 px-4 py-2.5 border-b border-slate-100 dark:border-slate-800">
+                                <span className="text-[13px] font-bold text-slate-700 dark:text-slate-200 leading-snug">{fila.criterio}</span>
+                                <span className="text-center"><Marca valor={fila.valores[rivalIdx]} /></span>
+                                <span className={`text-center ${destacada} self-stretch flex items-center justify-center`}><Marca valor={fila.valores[fila.valores.length - 1]} /></span>
+                            </div>
+                        ))}
+
+                        {/* Precio */}
+                        <div className="grid grid-cols-[1fr_4.5rem_5.5rem] items-center gap-2 px-4 py-3">
+                            <span className="text-[13px] font-bold text-slate-700 dark:text-slate-200">Precio</span>
+                            <span className="text-center text-[11px] font-bold text-slate-500 dark:text-slate-400 leading-tight">{PRECIOS[rivalIdx]}</span>
+                            <span className={`text-center text-[11px] font-bold text-blue-700 dark:text-blue-300 leading-tight ${destacada} self-stretch flex items-center justify-center rounded-b-lg`}>{PRECIOS[PRECIOS.length - 1]}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ============ ESCRITORIO: tabla completa ============ */}
+                <div className="hidden md:block overflow-x-auto -mx-4 px-4 pb-2">
                     <table className="w-full min-w-[560px] border-separate border-spacing-0">
                         <caption className="sr-only">
                             Comparativa de formas de presupuestar: papel y boli, Excel, otros programas y TuPresuListo
