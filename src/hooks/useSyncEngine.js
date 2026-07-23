@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 const DEBUG = true;
@@ -106,6 +106,13 @@ export const useSyncEngine = (user) => {
     // Refs to track previous values for change detection
     const isFirstLoad = useRef(true);
     const saveTimeout = useRef(null);
+
+    // Espejos del estado actual para que el listener en tiempo real pueda
+    // compararlos sin re-suscribirse en cada render (evita closures obsoletos).
+    const historyRef = useRef([]);
+    const deletedRef = useRef([]);
+    historyRef.current = history;
+    deletedRef.current = deletedHistory;
 
     // 1. INITIAL LOAD
     useEffect(() => {
@@ -246,6 +253,35 @@ export const useSyncEngine = (user) => {
 
         return () => clearTimeout(saveTimeout.current);
     }, [products, categories, config, history, deletedHistory]); // Listen to ALL data changes
+
+    // 4. REALTIME: ESCUCHA DEL HISTORIAL
+    // El agente MCP (y otros dispositivos del mismo usuario) escriben presupuestos
+    // directamente en Firestore. Este listener los refleja en el panel sin recargar.
+    useEffect(() => {
+        if (!user) return;
+
+        const unsub = onSnapshot(doc(db, 'users', user.uid, 'data', 'history'), (snap) => {
+            // La carga inicial aún no terminó: ella es la responsable del primer estado.
+            if (isFirstLoad.current) return;
+            // Eco de un guardado hecho por esta misma pestaña: ignorar.
+            if (snap.metadata.hasPendingWrites) return;
+            if (!snap.exists()) return;
+
+            const remoteList = unmarshal(snap.data().list || []);
+            const remoteDeleted = unmarshal(snap.data().deleted || []);
+
+            // Si lo remoto coincide con lo que ya tenemos, no tocar el estado:
+            // romper aquí el ciclo evita el bucle listener -> auto-guardado -> listener.
+            if (JSON.stringify(remoteList) === JSON.stringify(historyRef.current) &&
+                JSON.stringify(remoteDeleted) === JSON.stringify(deletedRef.current)) return;
+
+            log('📡 Historial actualizado desde fuera (agente u otro dispositivo).');
+            setHistory(Array.isArray(remoteList) ? remoteList : []);
+            setDeletedHistory(Array.isArray(remoteDeleted) ? remoteDeleted : []);
+        });
+
+        return unsub;
+    }, [user]);
 
     return {
         // State
