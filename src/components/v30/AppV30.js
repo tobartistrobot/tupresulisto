@@ -4,6 +4,7 @@ import { ToastProvider, useToast } from '../../context/ToastContext';
 import { LayoutDashboard, ShoppingCart, Archive, Settings, LogOut, Users, Cloud, CloudOff, RefreshCw, Loader2, Calculator, Crown } from 'lucide-react';
 import ThemeToggle from '../ThemeToggle';
 import { useSyncEngine } from '../../hooks/useSyncEngine';
+import { clientKey } from '../../utils/clientKey';
 
 import Dashboard from './Dashboard';
 import QuoteConfigurator from './QuoteConfigurator';
@@ -57,21 +58,31 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
         categories, setCategories,
         config, setConfig,
         history, setHistory,
-        deletedHistory, setDeletedHistory
+        deletedHistory, setDeletedHistory,
+        clients, setClients
     } = useSyncEngine(user);
 
     // Map Sync Engine Status to UI Cloud Status
     const cloudStatus = status === 'SAVING' ? 'syncing' : (status === 'READY' ? 'idle' : (status === 'ERROR' ? 'error' : 'idle'));
     const cloudError = syncError;
 
-    // Derived clients from history
-    const clients = useMemo(() => {
-        const unique = new Map();
-        history.forEach(q => {
-            if (q.client && q.client.phone) unique.set(q.client.phone, q.client);
+    /**
+     * Guarda (o actualiza) la ficha de un cliente. Se llama al crear un
+     * presupuesto y también al borrarlo: así la ficha sobrevive aunque se
+     * quede sin presupuestos, y solo desaparece si se elimina a propósito.
+     */
+    const upsertClient = (cliente) => {
+        if (!cliente || !clientKey(cliente)) return;
+        setClients(prev => {
+            const k = clientKey(cliente);
+            const i = prev.findIndex(c => clientKey(c) === k);
+            if (i === -1) return [...prev, cliente];
+            // Datos de contacto más recientes, sin perder lo que ya hubiera.
+            const next = [...prev];
+            next[i] = { ...prev[i], ...cliente };
+            return next;
         });
-        return Array.from(unique.values());
-    }, [history]);
+    };
 
     // Temp state for editing
     const [editQuoteData, setEditQuoteData] = useState(null);
@@ -100,6 +111,8 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
         } else {
             setHistory([quote, ...history]);
         }
+        // La ficha del cliente se guarda aparte del presupuesto.
+        upsertClient(quote.client);
         // Keep user in editor with updated data
         setEditQuoteData(quote);
         toast("Presupuesto guardado correctamente", "success");
@@ -121,15 +134,21 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
     };
 
     const handleDeleteQuote = (quote) => {
+        // La ficha del cliente se conserva aunque este fuera su último
+        // presupuesto: nos aseguramos de que esté guardada antes de quitarlo.
+        upsertClient(quote.client);
         setHistory(history.filter(q => q.id !== quote.id));
         setDeletedHistory([{ type: 'quote', data: quote, deletedAt: new Date().toISOString() }, ...deletedHistory]);
         toast("Presupuesto movido a papelera", "info");
     };
 
     const handleDeleteClient = (client) => {
+        const k = clientKey(client);
         // Remove all quotes for this client
-        const clientQuotes = history.filter(q => (q.client.name + q.client.phone) === (client.name + client.phone));
-        setHistory(history.filter(q => (q.client.name + q.client.phone) !== (client.name + client.phone)));
+        const clientQuotes = history.filter(q => clientKey(q.client) === k);
+        setHistory(history.filter(q => clientKey(q.client) !== k));
+        // Y la ficha en sí: este es el ÚNICO sitio donde se borra un cliente.
+        setClients(prev => prev.filter(c => clientKey(c) !== k));
 
         // Add to deleted as a single client block or individual quotes? Let's do client block
         setDeletedHistory([{ type: 'client', data: { ...client, quotes: clientQuotes }, deletedAt: new Date().toISOString() }, ...deletedHistory]);
@@ -140,8 +159,12 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
         setDeletedHistory(deletedHistory.filter(d => d.deletedAt !== item.deletedAt));
         if (item.type === 'quote') {
             setHistory([item.data, ...history]);
+            upsertClient(item.data.client);
         } else if (item.type === 'client') {
-            setHistory([...item.data.quotes, ...history]);
+            setHistory([...(item.data.quotes || []), ...history]);
+            // Se recupera la ficha, no solo sus presupuestos.
+            const { quotes: _quotes, ...ficha } = item.data;
+            upsertClient(ficha);
         }
         toast("Elemento restaurado", "success");
     };
@@ -316,7 +339,7 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
                         onLimitReached={() => { setUpgradeMessage(null); setShowUpgradeModal(true); }}
                     />
                 </div>
-                <div className={view === 'clients' ? 'h-full' : 'hidden h-full'}><ClientManager quotesHistory={history} deletedHistory={deletedHistory} onLoadQuote={(q) => handleNavigate(q)} onDeleteClient={handleDeleteClient} onDeleteQuote={handleDeleteQuote} onRestoreItem={handleRestore} onNewQuoteForClient={(c) => { handleImportClient(c) }} onPermanentDelete={(it) => setDeletedHistory(d => d.filter(x => x.deletedAt !== it.deletedAt))} onUpdateStatus={(id, st) => setHistory(h => h.map(x => x.id === id ? { ...x, status: st } : x))} onImportClient={handleImportClient} className="h-full" /></div>
+                <div className={view === 'clients' ? 'h-full' : 'hidden h-full'}><ClientManager quotesHistory={history} savedClients={clients} deletedHistory={deletedHistory} onLoadQuote={(q) => handleNavigate(q)} onDeleteClient={handleDeleteClient} onDeleteQuote={handleDeleteQuote} onRestoreItem={handleRestore} onNewQuoteForClient={(c) => { handleImportClient(c) }} onPermanentDelete={(it) => setDeletedHistory(d => d.filter(x => x.deletedAt !== it.deletedAt))} onUpdateStatus={(id, st) => setHistory(h => h.map(x => x.id === id ? { ...x, status: st } : x))} onImportClient={handleImportClient} className="h-full" /></div>
                 <div className={view === 'config' ? 'h-full' : 'hidden h-full'}><SysConfig config={config} setConfig={setConfig} className="h-full" user={user} isPro={isPro} products={products} setProducts={setProducts} categories={categories} setCategories={setCategories} /></div>
             </main>
         </div>

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import posthog from 'posthog-js';
 import { useToast } from '../../context/ToastContext';
+import { useConfirm } from '../../context/ConfirmContext';
 import { Box, Edit, Trash, Plus, Percent, Wand, ArrowLeft, ArrowRight, List, GripVertical, Save } from 'lucide-react';
 import MatrixEditor from './MatrixEditor';
 import { DndContext, closestCenter, KeyboardSensor, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -111,6 +112,7 @@ const ProductManager = ({ products, setProducts, categories, setCategories, clas
     const [showCatManager, setShowCatManager] = useState(false);
     const [newCatName, setNewCatName] = useState('');
     const toast = useToast();
+    const confirmar = useConfirm();
 
     const handleCreateNew = () => {
         if (!canCreate) {
@@ -161,8 +163,12 @@ const ProductManager = ({ products, setProducts, categories, setCategories, clas
         }
     };
 
-    const confirmDelete = (id) => {
-        if (confirm("¿Seguro que deseas borrar este producto?")) {
+    const confirmDelete = async (id) => {
+        const producto = products.find(x => x.id === id);
+        if (await confirmar({
+            titulo: 'Eliminar producto',
+            mensaje: `Se quitará "${producto?.name || 'este producto'}" de tu catálogo, con su tarifa y sus extras. Los presupuestos ya hechos no cambian.`,
+        })) {
             setProducts(products.filter(x => x.id !== id));
         }
     };
@@ -249,7 +255,7 @@ const ProductManager = ({ products, setProducts, categories, setCategories, clas
     return (
         <div key="list-mode" className={`p-4 md:p-8 max-w-7xl mx-auto ${className} animate-fade-in app-tab overflow-y-auto h-full`}>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4"><div><h2 className="text-3xl font-black text-slate-800 dark:text-slate-100">Catálogo de Productos</h2><p className="text-slate-500 dark:text-slate-400 text-sm">Gestiona tus precios y referencias</p></div><div className="flex w-full md:w-auto gap-3"><button onClick={() => setShowCatManager(!showCatManager)} className="flex-1 justify-center md:flex-none px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 font-bold rounded-xl flex items-center gap-2 min-h-[48px] transition-colors"><List size={18} /> Categorías</button><button onClick={handleCreateNew} className="flex-1 justify-center md:flex-none px-4 py-3 bg-blue-600 text-white hover:bg-blue-700 font-bold rounded-xl shadow-lg flex items-center gap-2 min-h-[48px] transition-colors"><Plus size={18} /> <span className="whitespace-nowrap">Nuevo Producto</span></button></div></div>
-            {showCatManager && <div className="bg-white dark:bg-slate-800 border dark:border-slate-700 p-4 rounded-xl shadow-xl mb-8 animate-slide-up w-full md:max-w-md md:ml-auto"><div className="flex flex-col md:flex-row gap-2 mb-4"><input className="border dark:border-slate-700 p-3 min-h-[48px] rounded-xl flex-1 dark:bg-slate-900 dark:text-slate-100" placeholder="Nueva categoría..." value={newCatName} onChange={e => setNewCatName(e.target.value)} /><button onClick={addCategory} className="px-5 py-3 min-h-[48px] bg-blue-600 text-white rounded-xl font-bold">Añadir</button></div><div className="space-y-2 max-h-60 overflow-y-auto">{categories.map((c, i) => <div key={c} className="flex justify-between items-center bg-slate-50 dark:bg-slate-700 p-2 rounded-xl border border-slate-100 dark:border-slate-600"><span className="font-bold text-sm dark:text-slate-200 pl-2 truncate flex-1 mr-2">{c}</span><div className="flex gap-1 shrink-0"><button onClick={() => moveCategory(i, -1)} className="text-slate-400 hover:text-blue-600 p-2 min-h-[44px] min-w-[44px] flex justify-center items-center hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg">↑</button><button onClick={() => moveCategory(i, 1)} className="text-slate-400 hover:text-blue-600 p-2 min-h-[44px] min-w-[44px] flex justify-center items-center hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg">↓</button><button onClick={() => confirm("Borrar?") && setCategories(categories.filter(x => x !== c))} className="text-slate-400 hover:text-red-500 p-2 min-h-[44px] min-w-[44px] flex justify-center items-center hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"><Trash size={18} /></button></div></div>)}</div></div>}
+            {showCatManager && <div className="bg-white dark:bg-slate-800 border dark:border-slate-700 p-4 rounded-xl shadow-xl mb-8 animate-slide-up w-full md:max-w-md md:ml-auto"><div className="flex flex-col md:flex-row gap-2 mb-4"><input className="border dark:border-slate-700 p-3 min-h-[48px] rounded-xl flex-1 dark:bg-slate-900 dark:text-slate-100" placeholder="Nueva categoría..." value={newCatName} onChange={e => setNewCatName(e.target.value)} /><button onClick={addCategory} className="px-5 py-3 min-h-[48px] bg-blue-600 text-white rounded-xl font-bold">Añadir</button></div><div className="space-y-2 max-h-60 overflow-y-auto">{categories.map((c, i) => <div key={c} className="flex justify-between items-center bg-slate-50 dark:bg-slate-700 p-2 rounded-xl border border-slate-100 dark:border-slate-600"><span className="font-bold text-sm dark:text-slate-200 pl-2 truncate flex-1 mr-2">{c}</span><div className="flex gap-1 shrink-0"><button onClick={() => moveCategory(i, -1)} className="text-slate-400 hover:text-blue-600 p-2 min-h-[44px] min-w-[44px] flex justify-center items-center hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg">↑</button><button onClick={() => moveCategory(i, 1)} className="text-slate-400 hover:text-blue-600 p-2 min-h-[44px] min-w-[44px] flex justify-center items-center hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg">↓</button><button onClick={async () => { if (await confirmar({ titulo: 'Eliminar categoría', mensaje: `Se quitará la categoría "${c}". Los productos que la usaran se quedan sin categoría, pero no se borran.` })) setCategories(categories.filter(x => x !== c)) }} className="text-slate-400 hover:text-red-500 p-2 min-h-[44px] min-w-[44px] flex justify-center items-center hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"><Trash size={18} /></button></div></div>)}</div></div>}
             <div className="flex gap-3 overflow-x-auto pb-4 mb-2 no-scrollbar snap-x"><button onClick={() => setFilterCategory('Todas')} className={`flex-shrink-0 snap-start h-11 flex items-center px-6 rounded-full whitespace-nowrap text-sm font-bold transition-all ${filterCategory === 'Todas' ? 'bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 shadow-xl' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>Todas</button>{categories.map(c => (<button key={c} onClick={() => setFilterCategory(c)} className={`flex-shrink-0 snap-start h-11 flex items-center px-6 rounded-full whitespace-nowrap text-sm font-bold transition-all ${filterCategory === c ? 'bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 shadow-xl' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{c}</button>))}</div>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={filteredProducts.map(p => p.id)} strategy={rectSortingStrategy}>

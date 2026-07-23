@@ -130,19 +130,28 @@ body {
     }
 }
 
-/* 2. Minimum touch target size (44x44px) for all interactive elements */
-button,
-a,
-[role="button"] {
-    min-height: 44px;
-    min-width: 44px;
-    touch-action: manipulation;
-}
+/* 2. Minimum touch target size (44x44px) for all interactive elements.
+   VA EN @layer base A PROPÓSITO: sin capa, esta regla ganaba a las utilidades
+   de Tailwind (que viven en @layer utilities), porque en la cascada lo que
+   está fuera de capas gana SIEMPRE a lo que está dentro, sin mirar la
+   especificidad. El efecto era que cualquier min-h-[48px] de un botón se
+   quedaba silenciosamente en 44px. En base, es solo el suelo por defecto y
+   cualquier utilidad puede subirlo. */
+@layer base {
 
-/* Exception: icon-only or inline elements that are wrapped in larger containers */
-button.touch-sm {
-    min-height: unset;
-    min-width: unset;
+    button,
+    a,
+    [role="button"] {
+        min-height: 44px;
+        min-width: 44px;
+        touch-action: manipulation;
+    }
+
+    /* Exception: icon-only or inline elements that are wrapped in larger containers */
+    button.touch-sm {
+        min-height: unset;
+        min-width: unset;
+    }
 }
 
 /* 3. Safe scroll for fixed bottom nav (iOS safe area) */

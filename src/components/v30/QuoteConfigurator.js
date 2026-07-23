@@ -142,6 +142,28 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
         }
     }, [isSharing, printableDocRef, docType, quoteMeta.number, client.name, client.phone, grandTotal, config.name, toast]);
 
+    /**
+     * "Finalizar" lleva al documento imprimible, que es el paso previo a
+     * entregarlo. Como el carrito solo vive en memoria, salir de aquí sin
+     * guardar perdía el presupuesto entero; por eso se guarda solo, salvo que
+     * el usuario lo desactive en Configuración.
+     *
+     * Si falta el cliente o el carrito está vacío NO se guarda ni se avisa de
+     * nada: en ese caso solo se está echando un vistazo al documento, y saltar
+     * con un error sería ruido.
+     */
+    const handleFinalize = useCallback(() => {
+        if (config.autoSaveOnFinish !== false && client.name && cart.length > 0) {
+            handleSave();
+        }
+        // El guardado ya ha ocurrido (onSave es síncrono); estos temporizadores
+        // solo animaban el botón, que dejamos limpio para cuando se vuelva.
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+        setSaveStatus('idle');
+        setViewMode('print');
+    }, [config.autoSaveOnFinish, client.name, cart.length, handleSave, saveTimeoutRef, idleTimeoutRef, setSaveStatus]);
+
     if (viewMode === 'print') return (
         <div className={`fixed inset-0 z-[100] bg-slate-100 flex flex-col h-safe-screen w-full fixed-print-view smooth-scroll`}>
             <div className="absolute top-4 left-4 z-50 bg-white shadow-xl rounded-lg p-1 flex border border-slate-200 doc-type-switch"><button onClick={() => setDocType('quote')} className={`px-4 py-2 text-xs font-bold rounded-md transition-all ${docType === 'quote' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>PRESUPUESTO</button><button onClick={() => setDocType('invoice')} className={`px-4 py-2 text-xs font-bold rounded-md transition-all ${docType === 'invoice' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>FACTURA</button></div>
@@ -413,12 +435,7 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                                 </React.Fragment>
                             )}
                         </button>
-                        <button onClick={() => {
-                            setSaveStatus('idle');
-                            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-                            if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
-                            setViewMode('print');
-                        }} style={{ backgroundColor: '#3b82f6', color: '#ffffff' }} className="flex-1 h-12 md:h-14 rounded-lg font-black text-sm md:text-lg flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-xl shadow-md"><Printer size={20} className="shrink-0" /> <span>FINALIZAR</span></button>
+                        <button onClick={handleFinalize} style={{ backgroundColor: '#3b82f6', color: '#ffffff' }} className="flex-1 h-12 md:h-14 rounded-lg font-black text-sm md:text-lg flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-xl shadow-md"><Printer size={20} className="shrink-0" /> <span>FINALIZAR</span></button>
                     </div></div>
             </div>
         </div>

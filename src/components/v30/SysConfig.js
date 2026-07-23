@@ -45,8 +45,12 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
     const [securityLoading, setSecurityLoading] = useState(false);
 
-    // Check provider (google.com vs password)
-    const isGoogleUser = user?.providerData?.some(p => p.providerId === 'google.com');
+    // La pregunta correcta es "¿tiene contraseña?", no "¿tiene Google?": una
+    // cuenta puede tener AMBOS proveedores vinculados (entró alguna vez con
+    // Google y también tiene contraseña). Mirando solo google.com, a esos
+    // usuarios se les ocultaba el formulario de cambio de contraseña aunque
+    // iniciaran sesión con ella cada día.
+    const hasPasswordProvider = user?.providerData?.some(p => p.providerId === 'password');
 
     // AGENTES / CLAVES DE API — estado de la sección "Agentes y API"
     const [apiKeys, setApiKeys] = useState([]);
@@ -229,6 +233,40 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                             <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Por defecto: 21%</p>
                         </div>
                     </div>
+                </div>
+
+                {/* Presupuestos: comportamiento al entregar */}
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 md:p-6 shadow-sm overflow-hidden w-full">
+                    <h3 className="font-bold text-lg mb-4 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">Presupuestos</h3>
+                    {/* El interruptor entero es el label: en móvil se puede
+                        pulsar en cualquier parte de la fila, no solo la casilla. */}
+                    <label className="flex items-start gap-4 cursor-pointer select-none">
+                        {/* El input ocupa EL SITIO del interruptor y se hace
+                            invisible con opacity, en vez de usar sr-only. Con
+                            sr-only queda absoluto y de 1×1 px, y al pulsar la
+                            etiqueta el navegador lo enfocaba y hacía scroll
+                            hasta él: eso desplazaba <main> (que es
+                            overflow-hidden) ~980 px, dejaba el panel fuera de
+                            vista y solo se veía el fondo oscuro. Parecía que la
+                            pestaña se ponía en negro y no había forma de volver
+                            salvo cambiando de pestaña. */}
+                        <span className="relative mt-0.5 shrink-0 w-12 h-7">
+                            <input
+                                type="checkbox"
+                                className="peer absolute inset-0 w-full h-full opacity-0 cursor-pointer m-0"
+                                checked={config.autoSaveOnFinish !== false}
+                                onChange={e => setConfig({ ...config, autoSaveOnFinish: e.target.checked })}
+                            />
+                            <span className="pointer-events-none absolute inset-0 rounded-full bg-slate-200 dark:bg-slate-600 peer-checked:bg-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2 dark:peer-focus-visible:ring-offset-slate-800 transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-5 after:h-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"></span>
+                        </span>
+                        <span className="min-w-0">
+                            <span className="block font-bold text-slate-800 dark:text-slate-100">Guardar también al pulsar Finalizar</span>
+                            <span className="block text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                                Al pulsar Finalizar el presupuesto se guarda solo en tu historial, para que no se te pierda si se te olvida darle a Guardar.
+                                Desactívalo si sueles montar varias versiones para enseñárselas al cliente y no quieres que se guarden todas.
+                            </span>
+                        </span>
+                    </label>
                 </div>
 
                 {/* Suscripción y Licencia */}
@@ -504,7 +542,7 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                         <Shield className="text-red-600" size={20} /> Seguridad
                     </h3>
 
-                    {isGoogleUser ? (
+                    {!hasPasswordProvider ? (
                         <div className="flex items-start gap-3 p-4 bg-white dark:bg-slate-800 rounded-lg border border-red-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm">
                             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5 shrink-0 mt-0.5" alt="Google" />
                             <div>

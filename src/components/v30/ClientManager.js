@@ -1,6 +1,8 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useToast } from '../../context/ToastContext';
+import { useConfirm } from '../../context/ConfirmContext';
+import { clientKey } from '../../utils/clientKey';
 import { Search, Upload, Trash, ArrowLeft, Download, Plus, Edit, Users, Undo, Phone, Mail } from 'lucide-react';
 
 import StatusSelector from './StatusSelector';
@@ -8,24 +10,41 @@ import StatusSelector from './StatusSelector';
 const formatCurrency = (amount) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount || 0);
 const safeStr = (s) => String(s || '').trim().toLowerCase();
 
-const ClientManager = ({ quotesHistory, deletedHistory, onLoadQuote, onDeleteClient, onDeleteQuote, onRestoreItem, onNewQuoteForClient, onPermanentDelete, onUpdateStatus, onImportClient, className }) => {
+const ClientManager = ({ quotesHistory, savedClients = [], deletedHistory, onLoadQuote, onDeleteClient, onDeleteQuote, onRestoreItem, onNewQuoteForClient, onPermanentDelete, onUpdateStatus, onImportClient, className }) => {
     const [search, setSearch] = useState('');
     const [selKey, setSelKey] = useState(null);
     const [showTrash, setShowTrash] = useState(false);
     const toast = useToast();
+    const confirmar = useConfirm();
 
     const clients = useMemo(() => {
         const map = {};
+        // Primero las fichas guardadas: existen aunque no tengan ni un
+        // presupuesto (p. ej. tras borrar el último, o si se importó la ficha).
+        savedClients.forEach(c => {
+            const k = clientKey(c);
+            if (k) map[k] = { ...c, key: k, quotes: [], total: 0 };
+        });
+        // Y encima, lo que diga el historial. Se sigue mirando por si hay
+        // presupuestos cuyo cliente aún no tuviera ficha guardada.
         quotesHistory.forEach(q => {
-            const k = (q.client.name + q.client.phone).trim();
+            const k = clientKey(q.client);
             if (!map[k]) map[k] = { ...q.client, key: k, quotes: [], total: 0 };
             map[k].quotes.push(q);
             map[k].total += q.grandTotal;
         });
         return Object.values(map).sort((a, b) => b.total - a.total);
-    }, [quotesHistory]);
+    }, [quotesHistory, savedClients]);
 
     const activeClient = useMemo(() => clients.find(c => c.key === selKey), [clients, selKey]);
+
+    // Si el cliente seleccionado deja de existir (p. ej. al borrar su último
+    // presupuesto: la ficha se deriva del historial), volvemos a la lista.
+    // Sin esto, en móvil la lista queda oculta por selKey y el detalle muestra
+    // el hueco vacío, que no tiene botón VOLVER: la pantalla se queda atascada.
+    useEffect(() => {
+        if (selKey && !activeClient) setSelKey(null);
+    }, [selKey, activeClient]);
     const filtered = clients.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search));
 
     const handleExportClient = (c) => {
@@ -62,7 +81,7 @@ const ClientManager = ({ quotesHistory, deletedHistory, onLoadQuote, onDeleteCli
                                 <td className="p-4 text-right">
                                     <div className="flex justify-end gap-2">
                                         <button onClick={() => onRestoreItem(it)} className="py-1 px-3 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 flex items-center gap-1"><Undo size={14} /> Recuperar</button>
-                                        <button onClick={() => { if (confirm("Irreversible")) onPermanentDelete(it) }} className="py-1 px-3 text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/40 rounded hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center gap-1"><Trash size={14} /> Eliminar</button>
+                                        <button onClick={async () => { if (await confirmar({ titulo: 'Eliminar para siempre', mensaje: 'Esto ya no se puede deshacer: saldrá de la papelera y no habrá forma de recuperarlo.' })) onPermanentDelete(it) }} className="py-1 px-3 text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/40 rounded hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center gap-1"><Trash size={14} /> Eliminar</button>
                                     </div>
                                 </td>
                             </tr>
@@ -133,7 +152,7 @@ const ClientManager = ({ quotesHistory, deletedHistory, onLoadQuote, onDeleteCli
                             <div className="mt-3 flex gap-2 relative z-10 w-full min-w-0">
                                 <button onClick={() => onNewQuoteForClient(activeClient)} className="btn-primary flex-1 !px-3 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 py-3"><Plus size={20} className="shrink-0" /> <span className="truncate">Nuevo Presupuesto</span></button>
                                 <button onClick={() => handleExportClient(activeClient)} title="Exportar ficha" className="shrink-0 w-12 min-h-[48px] flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"><Download size={18} /></button>
-                                <button onClick={() => { if (confirm('¿Eliminar toda la ficha de cliente y sus presupuestos?')) { onDeleteClient(activeClient); setSelKey(null); } }} title="Eliminar ficha" className="shrink-0 w-12 min-h-[48px] flex items-center justify-center bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"><Trash size={18} /></button>
+                                <button onClick={async () => { if (await confirmar({ titulo: 'Eliminar ficha de cliente', mensaje: `Se moverán a la papelera ${activeClient.name} y todos sus presupuestos. Podrás recuperarlos desde ahí.` })) { onDeleteClient(activeClient); setSelKey(null); } }} title="Eliminar ficha" className="shrink-0 w-12 min-h-[48px] flex items-center justify-center bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"><Trash size={18} /></button>
                             </div>
 
                             {/* Decorative Blur Background */}
@@ -164,7 +183,7 @@ const ClientManager = ({ quotesHistory, deletedHistory, onLoadQuote, onDeleteCli
                                                 <button onClick={() => onLoadQuote(q)} className="h-[44px] w-[44px] flex items-center justify-center text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors shrink-0" title="Editar">
                                                     <Edit size={18} />
                                                 </button>
-                                                <button onClick={(e) => { e.stopPropagation(); if (confirm("¿Borrar presupuesto definitivo?")) onDeleteQuote(q); }} className="h-[44px] w-[44px] flex items-center justify-center text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl transition-colors shrink-0" title="Borrar">
+                                                <button onClick={async (e) => { e.stopPropagation(); if (await confirmar({ titulo: 'Eliminar presupuesto', mensaje: `El presupuesto #${q.number} se moverá a la papelera. Podrás recuperarlo desde ahí.` })) onDeleteQuote(q); }} className="h-[44px] w-[44px] flex items-center justify-center text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl transition-colors shrink-0" title="Borrar">
                                                     <Trash size={18} />
                                                 </button>
                                             </div>
@@ -178,6 +197,10 @@ const ClientManager = ({ quotesHistory, deletedHistory, onLoadQuote, onDeleteCli
                     <div className="flex-1 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 p-10 text-center">
                         <div className="bg-slate-50 dark:bg-slate-700/50 p-6 rounded-3xl md:rounded-full mb-4 shadow-sm"><Users size={48} className="opacity-50" /></div>
                         <p className="font-medium dark:text-slate-500">Selecciona un cliente para ver su historial</p>
+                        {/* Salida de emergencia en móvil: si por lo que sea se
+                            llega aquí con la lista oculta, que siempre se pueda
+                            volver sin recargar la página. */}
+                        <button onClick={() => setSelKey(null)} className="md:hidden mt-5 text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-full shadow-sm"><ArrowLeft className="mr-1" size={14} /> VER MIS CLIENTES</button>
                     </div>
                 )}
             </div>
