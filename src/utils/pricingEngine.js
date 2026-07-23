@@ -17,7 +17,10 @@ import { round2, sanitizeFloat } from './mathUtils';
  * @param {number} q - Cantidad.
  * @param {Array<object>} extras - Extras seleccionados: [{ id, type, value, qty }].
  * @param {Record<string, string|number>} dropdowns - Selecciones de desplegables: { [extraId]: índiceOpción }.
- * @returns {{ price: number | null, error: string | null }} Precio redondeado a 2 decimales, o error de validación.
+ * @returns {{ price: number | null, error: string | null, desglose?: { base: number, extras: number, margen: number } }}
+ *   Precio redondeado a 2 decimales (o error de validación). `desglose` da los
+ *   componentes de la línea completa (ya multiplicados por la cantidad) para
+ *   poder explicar el total: base de tarifa, extras y margen del producto.
  */
 export const calcPrice = (product, w, h, q, extras, dropdowns) => {
     let base = 0;
@@ -77,5 +80,13 @@ export const calcPrice = (product, w, h, q, extras, dropdowns) => {
         marginAmount = sanitizeFloat(product.marginValue);
     }
 
-    return { price: round2((priceBeforeMargin + marginAmount) * q), error: null };
+    return {
+        price: round2((priceBeforeMargin + marginAmount) * q),
+        error: null,
+        desglose: {
+            base: round2(base * q),
+            extras: round2(extraTotal * q),
+            margen: round2(marginAmount * q),
+        },
+    };
 };

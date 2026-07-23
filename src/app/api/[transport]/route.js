@@ -63,22 +63,40 @@ function resolveProduct(products, ref) {
     };
 }
 
-/** Vista de un producto para el agente: sin imagen (base64 enorme) ni margen interno. */
+/** Cómo se le indican las medidas al agente según el tipo de cálculo. */
+const COMO_PRESUPUESTAR = {
+    matrix: 'Indica ancho y alto en mm.',
+    simple_area: 'Indica ancho y alto en mm (se cobra por m²).',
+    simple_linear: "Indica la longitud en metros con el campo 'metros'.",
+    unit: 'Indica solo la cantidad (no lleva medidas).',
+};
+
+/** Vista de un producto para el agente: sin imagen (base64 enorme). */
 function productView(p) {
     const view = {
         id: p.id,
         nombre: p.name,
         categoria: p.category || null,
         tipoCalculo: p.priceType, // matrix | unit | simple_area | simple_linear
+        comoPresupuestar: COMO_PRESUPUESTAR[p.priceType] || COMO_PRESUPUESTAR.matrix,
     };
     if (p.priceType === 'matrix' && p.matrix) {
         view.medidasMaximasMm = {
             ancho: p.matrix.widths?.[p.matrix.widths.length - 1] ?? null,
             alto: p.matrix.heights?.[p.matrix.heights.length - 1] ?? null,
         };
+    } else if (p.priceType === 'simple_linear') {
+        view.precioPorMetro = p.unitPrice ?? null;
+    } else if (p.priceType === 'simple_area') {
+        view.precioPorM2 = p.unitPrice ?? null;
     } else {
         view.precioUnitario = p.unitPrice ?? null;
     }
+    // Margen del propio dueño: se muestra para que el agente pueda explicar el
+    // total (base + margen), no darlo por un error como pasó antes.
+    if (p.marginType === 'fixed' && Number(p.marginValue)) view.margen = `+${p.marginValue} € por unidad`;
+    else if (p.marginType === 'percent' && Number(p.marginValue)) view.margen = `+${p.marginValue} %`;
+
     if (Array.isArray(p.extras) && p.extras.length > 0) {
         view.extras = p.extras.map(e => e.optionsList
             ? {
@@ -219,7 +237,7 @@ const handler = createMcpHandler(
             {
                 title: 'Crear un presupuesto',
                 description:
-                    'Crea un presupuesto calculado con las tarifas, extras, margen e IVA reales del usuario, y lo guarda como pendiente en su historial. El envío al cliente final lo hace el usuario desde la app tras revisarlo. Consulta antes listar_productos para usar los nombres/ids y extras exactos. Las medidas van en milímetros.',
+                    'Crea un presupuesto calculado con las tarifas, extras, margen e IVA reales del usuario, y lo guarda como pendiente en su historial. El envío al cliente final lo hace el usuario desde la app tras revisarlo. Consulta antes listar_productos: cada producto trae "comoPresupuestar" indicando qué medidas necesita. Por tipo: matrix y simple_area necesitan ancho y alto en mm; simple_linear necesita metros (campo "metros"); unit solo cantidad. El total puede incluir el margen del producto: fíjate en el campo "margen" y en el desglose que devuelve esta herramienta para explicarlo, no lo tomes por un error.',
                 inputSchema: {
                     cliente: z.object({
                         nombre: z.string().min(1).describe('Nombre del cliente (obligatorio)'),
@@ -230,8 +248,9 @@ const handler = createMcpHandler(
                     }),
                     lineas: z.array(z.object({
                         producto: z.string().describe('Nombre o id del producto del catálogo'),
-                        ancho: z.number().positive().optional().describe('Ancho en mm (obligatorio salvo productos por unidad)'),
-                        alto: z.number().positive().optional().describe('Alto en mm (obligatorio salvo productos por unidad)'),
+                        metros: z.number().positive().optional().describe('Longitud en metros lineales. SOLO para productos por metro lineal (simple_linear).'),
+                        ancho: z.number().positive().optional().describe('Ancho en mm. Para productos matrix y por m² (simple_area).'),
+                        alto: z.number().positive().optional().describe('Alto en mm. Para productos matrix y por m² (simple_area).'),
                         cantidad: z.number().int().min(1).default(1),
                         ubicacion: z.string().optional().describe("Etiqueta de ubicación, p. ej. 'Salón' o 'Baño planta 1'"),
                         extras: z.array(z.object({
@@ -264,12 +283,23 @@ const handler = createMcpHandler(
                     if (res.error) return fail(`Línea ${i + 1}: ${res.error}`);
                     const product = res.product;
 
-                    const needsDims = product.priceType !== 'unit';
-                    if (needsDims && (!linea.ancho || !linea.alto)) {
-                        return fail(`Línea ${i + 1}: "${product.name}" se calcula por medidas y faltan ancho y/o alto (en mm).`);
+                    // Medidas según el tipo de cálculo (el motor trabaja en mm):
+                    //  - unit: sin medidas
+                    //  - simple_linear: una sola longitud → 'metros' (o ancho en mm)
+                    //  - matrix / simple_area: ancho y alto en mm
+                    let w, h;
+                    if (product.priceType === 'unit') {
+                        w = 0; h = 0;
+                    } else if (product.priceType === 'simple_linear') {
+                        const mm = linea.metros != null ? linea.metros * 1000 : linea.ancho;
+                        if (!mm) return fail(`Línea ${i + 1}: "${product.name}" se cobra por metro lineal; indica la longitud en "metros".`);
+                        w = mm; h = 0; // el cálculo lineal usa solo la longitud
+                    } else {
+                        if (!linea.ancho || !linea.alto) {
+                            return fail(`Línea ${i + 1}: "${product.name}" se calcula por medidas; indica ancho y alto en mm.`);
+                        }
+                        w = linea.ancho; h = linea.alto;
                     }
-                    const w = linea.ancho ?? 1000;
-                    const h = linea.alto ?? 1000;
                     const q = linea.cantidad ?? 1;
 
                     // Extras sueltos (no desplegables)
@@ -303,7 +333,7 @@ const handler = createMcpHandler(
                         dropdownSelections[def.id] = String(idx);
                     }
 
-                    const { price, error } = calcPrice(product, w, h, q, selectedExtras, dropdownSelections);
+                    const { price, error, desglose } = calcPrice(product, w, h, q, selectedExtras, dropdownSelections);
                     if (error) {
                         const limites = product.priceType === 'matrix' && product.matrix
                             ? ` Máximos de tarifa: ${product.matrix.widths?.at(-1)} × ${product.matrix.heights?.at(-1)} mm.`
@@ -320,6 +350,7 @@ const handler = createMcpHandler(
                         dropdownSelections,
                         price,
                         unitPriceCalc: price / q,
+                        _desglose: desglose, // solo para la respuesta al agente; no se guarda
                     });
                 }
 
@@ -343,7 +374,8 @@ const handler = createMcpHandler(
                         source: 'agente',
                     },
                     financials: { discountPercent: descuentoPorcentaje, deposit: entregaACuenta },
-                    items,
+                    // _desglose es solo para explicar el precio al agente: no se guarda.
+                    items: items.map(({ _desglose, ...it }) => it),
                     grandTotal,
                 };
 
@@ -355,7 +387,20 @@ const handler = createMcpHandler(
                     id: quote.id,
                     fecha: quote.date,
                     cliente: quote.client.name,
-                    lineas: items.map(it => ({ producto: it.product.name, medidas: `${it.width}×${it.height} mm`, cantidad: it.quantity, precio: it.price })),
+                    lineas: items.map(it => ({
+                        producto: it.product.name,
+                        medida: it.product.priceType === 'simple_linear'
+                            ? `${it.width / 1000} m`
+                            : it.product.priceType === 'unit'
+                                ? `${it.quantity} ud`
+                                : `${it.width}×${it.height} mm`,
+                        cantidad: it.quantity,
+                        // Desglose para que el agente EXPLIQUE el total en vez de dudar
+                        desglose: it._desglose
+                            ? { base: it._desglose.base, extras: it._desglose.extras, margen: it._desglose.margen }
+                            : undefined,
+                        precio: it.price,
+                    })),
                     totales: {
                         bruto: Math.round(grossTotal * 100) / 100,
                         descuento: Math.round(discountAmount * 100) / 100,
