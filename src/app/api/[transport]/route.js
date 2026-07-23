@@ -15,10 +15,16 @@ export const maxDuration = 60;
  * Servidor MCP de TuPresuListo (fase 1) — https://www.tupresulisto.com/api/mcp
  *
  * Permite que un agente de IA trabaje sobre la cuenta del dueño de la clave
- * como un oficinista: consultar catálogo, clientes e historial, y CREAR
- * presupuestos calculados con el motor de precios real (tarifas, extras,
- * margen e IVA del usuario). El envío al cliente final queda en manos del
- * humano desde la app: el agente prepara, el usuario aprueba.
+ * como un oficinista: consultar catálogo, clientes e historial, CALCULAR
+ * precios sin guardar nada (para que un cliente tantee) y CREAR presupuestos
+ * calculados con el motor de precios real (tarifas, extras, margen e IVA del
+ * usuario). El envío al cliente final queda en manos del humano desde la
+ * app: el agente prepara, el usuario aprueba.
+ *
+ * calcular_precio y crear_presupuesto comparten el mismo motor de resolución
+ * de líneas (buildQuoteItems) y de totales (calcTotales), así que dan
+ * siempre el mismo número para las mismas líneas — la única diferencia es
+ * que crear_presupuesto además persiste con appendQuote.
  *
  * Autenticación: Bearer con clave de API (`tpl_...`) creada en Configuración →
  * Agentes y API. Cada clave da acceso únicamente a los datos de su cuenta.
@@ -60,6 +66,140 @@ function resolveProduct(products, ref) {
         error: partial.length > 1
             ? `"${ref}" coincide con varios productos: ${nombres.join(' | ')}. Usa el nombre completo o el id de listar_productos.`
             : `No existe el producto "${ref}". Productos disponibles: ${nombres.join(' | ')}. Usa listar_productos para ver el catálogo completo.`,
+    };
+}
+
+/** Esquema de una línea de presupuesto, compartido por calcular_precio y crear_presupuesto. */
+const lineaSchema = z.object({
+    producto: z.string().describe('Nombre o id del producto del catálogo'),
+    metros: z.number().positive().optional().describe('Longitud en metros lineales. SOLO para productos por metro lineal (simple_linear).'),
+    ancho: z.number().positive().optional().describe('Ancho en mm. Para productos matrix y por m² (simple_area).'),
+    alto: z.number().positive().optional().describe('Alto en mm. Para productos matrix y por m² (simple_area).'),
+    cantidad: z.number().int().min(1).default(1),
+    ubicacion: z.string().optional().describe("Etiqueta de ubicación, p. ej. 'Salón' o 'Baño planta 1'"),
+    extras: z.array(z.object({
+        extra: z.string().describe('Nombre o id del extra (no desplegable)'),
+        cantidad: z.number().int().min(1).default(1),
+    })).optional(),
+    opciones: z.array(z.object({
+        extra: z.string().describe('Nombre o id del extra desplegable'),
+        opcion: z.string().describe('Nombre de la opción o su índice'),
+    })).optional(),
+});
+
+/**
+ * Resuelve las líneas de un presupuesto contra el catálogo y calcula cada
+ * precio con el motor real (calcPrice, el mismo que usa la app). Compartido
+ * por calcular_precio (no persiste) y crear_presupuesto (sí persiste): así
+ * los dos caminos dan SIEMPRE el mismo número para las mismas líneas.
+ *
+ * @returns {{ items: Array<object> } | { error: string }}
+ */
+function buildQuoteItems(products, lineas) {
+    const items = [];
+    for (let i = 0; i < lineas.length; i++) {
+        const linea = lineas[i];
+        const res = resolveProduct(products, linea.producto);
+        if (res.error) return { error: `Línea ${i + 1}: ${res.error}` };
+        const product = res.product;
+
+        // Medidas según el tipo de cálculo (el motor trabaja en mm):
+        //  - unit: sin medidas
+        //  - simple_linear: una sola longitud → 'metros' (o ancho en mm)
+        //  - matrix / simple_area: ancho y alto en mm
+        let w, h;
+        if (product.priceType === 'unit') {
+            w = 0; h = 0;
+        } else if (product.priceType === 'simple_linear') {
+            const mm = linea.metros != null ? linea.metros * 1000 : linea.ancho;
+            if (!mm) return { error: `Línea ${i + 1}: "${product.name}" se cobra por metro lineal; indica la longitud en "metros".` };
+            w = mm; h = 0; // el cálculo lineal usa solo la longitud
+        } else {
+            if (!linea.ancho || !linea.alto) {
+                return { error: `Línea ${i + 1}: "${product.name}" se calcula por medidas; indica ancho y alto en mm.` };
+            }
+            w = linea.ancho; h = linea.alto;
+        }
+        const q = linea.cantidad ?? 1;
+
+        // Extras sueltos (no desplegables)
+        const selectedExtras = [];
+        for (const sel of linea.extras || []) {
+            const def = (product.extras || []).find(e =>
+                String(e.id) === String(sel.extra) || norm(e.name) === norm(sel.extra));
+            if (!def) {
+                const disponibles = (product.extras || []).map(e => e.name).join(' | ') || 'ninguno';
+                return { error: `Línea ${i + 1}: el extra "${sel.extra}" no existe en "${product.name}". Extras disponibles: ${disponibles}.` };
+            }
+            if (def.optionsList) {
+                return { error: `Línea ${i + 1}: "${def.name}" es un desplegable; selecciónalo con "opciones" indicando la opción elegida.` };
+            }
+            selectedExtras.push({ ...def, qty: sel.cantidad ?? 1 });
+        }
+
+        // Desplegables → dropdownSelections { [extraId]: índice }
+        const dropdownSelections = {};
+        for (const sel of linea.opciones || []) {
+            const def = (product.extras || []).find(e =>
+                (String(e.id) === String(sel.extra) || norm(e.name) === norm(sel.extra)) && e.optionsList);
+            if (!def) {
+                const desplegables = (product.extras || []).filter(e => e.optionsList).map(e => e.name).join(' | ') || 'ninguno';
+                return { error: `Línea ${i + 1}: el desplegable "${sel.extra}" no existe en "${product.name}". Desplegables disponibles: ${desplegables}.` };
+            }
+            let idx = /^\d+$/.test(sel.opcion.trim()) ? parseInt(sel.opcion.trim()) : def.optionsList.findIndex(o => norm(o.name) === norm(sel.opcion));
+            if (idx < 0 || idx >= def.optionsList.length) {
+                return { error: `Línea ${i + 1}: la opción "${sel.opcion}" no existe en "${def.name}". Opciones: ${def.optionsList.map((o, j) => `${j}=${o.name}`).join(' | ')}.` };
+            }
+            dropdownSelections[def.id] = String(idx);
+        }
+
+        const { price, error, desglose } = calcPrice(product, w, h, q, selectedExtras, dropdownSelections);
+        if (error) {
+            const limites = product.priceType === 'matrix' && product.matrix
+                ? ` Máximos de tarifa: ${product.matrix.widths?.at(-1)} × ${product.matrix.heights?.at(-1)} mm.`
+                : '';
+            return { error: `Línea ${i + 1} ("${product.name}", ${w}×${h} mm): ${error}${limites}` };
+        }
+
+        items.push({
+            id: Date.now() + i,
+            product,
+            width: w, height: h, quantity: q,
+            locationLabel: linea.ubicacion || '',
+            selectedExtras,
+            dropdownSelections,
+            price,
+            unitPriceCalc: price / q,
+            _desglose: desglose, // solo para la respuesta al agente; no se guarda
+        });
+    }
+    return { items };
+}
+
+/** Totales a partir de las líneas ya calculadas, con la misma aritmética que la app (useQuoteLogic). */
+function calcTotales(items, iva, descuentoPorcentaje) {
+    const grossTotal = items.reduce((s, it) => s + it.price, 0);
+    const discountAmount = grossTotal * (descuentoPorcentaje / 100);
+    const netTotal = grossTotal - discountAmount;
+    const grandTotal = netTotal * (1 + iva / 100);
+    return { grossTotal, discountAmount, netTotal, grandTotal };
+}
+
+/** Formato de línea para la respuesta al agente (compartido por ambas herramientas). */
+function lineaView(it) {
+    return {
+        producto: it.product.name,
+        medida: it.product.priceType === 'simple_linear'
+            ? `${it.width / 1000} m`
+            : it.product.priceType === 'unit'
+                ? `${it.quantity} ud`
+                : `${it.width}×${it.height} mm`,
+        cantidad: it.quantity,
+        // Desglose para que el agente EXPLIQUE el total en vez de dudar
+        desglose: it._desglose
+            ? { base: it._desglose.base, extras: it._desglose.extras, margen: it._desglose.margen }
+            : undefined,
+        precio: it.price,
     };
 }
 
@@ -233,11 +373,50 @@ const handler = createMcpHandler(
         );
 
         server.registerTool(
+            'calcular_precio',
+            {
+                title: 'Calcular un precio (sin guardar nada)',
+                description:
+                    'Calcula el precio de una o varias líneas con las tarifas, extras, margen e IVA reales del usuario, SIN crear ni guardar ningún presupuesto. Úsala para responder "¿cuánto costaría...?" o para que el cliente tantee precios antes de decidirse. Cuando el cliente ya quiera el documento formal para aceptar, usa crear_presupuesto con los mismos datos. Mismo formato de líneas que crear_presupuesto: consulta antes listar_productos, cada producto trae "comoPresupuestar" indicando qué medidas necesita.',
+                inputSchema: {
+                    lineas: z.array(lineaSchema).min(1),
+                    descuentoPorcentaje: z.number().min(0).max(100).default(0),
+                },
+                annotations: { readOnlyHint: true },
+            },
+            async ({ lineas, descuentoPorcentaje }, extra) => {
+                const uid = uidFrom(extra);
+                if (!uid) return fail('Clave de API no válida.');
+
+                const [products, iva] = await Promise.all([loadProducts(uid), loadIva(uid)]);
+                if (products.length === 0) return fail('El catálogo está vacío: no hay productos con los que presupuestar.');
+
+                const { items, error } = buildQuoteItems(products, lineas);
+                if (error) return fail(error);
+
+                const { grossTotal, discountAmount, netTotal, grandTotal } = calcTotales(items, iva, descuentoPorcentaje);
+
+                return ok({
+                    calculado: true,
+                    lineas: items.map(lineaView),
+                    totales: {
+                        bruto: Math.round(grossTotal * 100) / 100,
+                        descuento: Math.round(discountAmount * 100) / 100,
+                        neto: Math.round(netTotal * 100) / 100,
+                        ivaPorcentaje: iva,
+                        total: Math.round(grandTotal * 100) / 100,
+                    },
+                    nota: 'Cálculo informativo, NO guardado. Si el cliente quiere el presupuesto formal, usa crear_presupuesto.',
+                });
+            }
+        );
+
+        server.registerTool(
             'crear_presupuesto',
             {
                 title: 'Crear un presupuesto',
                 description:
-                    'Crea un presupuesto calculado con las tarifas, extras, margen e IVA reales del usuario, y lo guarda como pendiente en su historial. El envío al cliente final lo hace el usuario desde la app tras revisarlo. Consulta antes listar_productos: cada producto trae "comoPresupuestar" indicando qué medidas necesita. Por tipo: matrix y simple_area necesitan ancho y alto en mm; simple_linear necesita metros (campo "metros"); unit solo cantidad. El total puede incluir el margen del producto: fíjate en el campo "margen" y en el desglose que devuelve esta herramienta para explicarlo, no lo tomes por un error.',
+                    'Crea un presupuesto calculado con las tarifas, extras, margen e IVA reales del usuario, y lo guarda como pendiente en su historial. Úsala solo cuando el cliente ya quiere el documento formal (para revisarlo y enviarlo desde la app); si solo está tanteando precio, usa calcular_precio en su lugar para no llenar el historial de presupuestos que nadie va a aceptar. Consulta antes listar_productos: cada producto trae "comoPresupuestar" indicando qué medidas necesita. Por tipo: matrix y simple_area necesitan ancho y alto en mm; simple_linear necesita metros (campo "metros"); unit solo cantidad. El total puede incluir el margen del producto: fíjate en el campo "margen" y en el desglose que devuelve esta herramienta para explicarlo, no lo tomes por un error.',
                 inputSchema: {
                     cliente: z.object({
                         nombre: z.string().min(1).describe('Nombre del cliente (obligatorio)'),
@@ -246,22 +425,7 @@ const handler = createMcpHandler(
                         direccion: z.string().optional(),
                         ciudad: z.string().optional(),
                     }),
-                    lineas: z.array(z.object({
-                        producto: z.string().describe('Nombre o id del producto del catálogo'),
-                        metros: z.number().positive().optional().describe('Longitud en metros lineales. SOLO para productos por metro lineal (simple_linear).'),
-                        ancho: z.number().positive().optional().describe('Ancho en mm. Para productos matrix y por m² (simple_area).'),
-                        alto: z.number().positive().optional().describe('Alto en mm. Para productos matrix y por m² (simple_area).'),
-                        cantidad: z.number().int().min(1).default(1),
-                        ubicacion: z.string().optional().describe("Etiqueta de ubicación, p. ej. 'Salón' o 'Baño planta 1'"),
-                        extras: z.array(z.object({
-                            extra: z.string().describe('Nombre o id del extra (no desplegable)'),
-                            cantidad: z.number().int().min(1).default(1),
-                        })).optional(),
-                        opciones: z.array(z.object({
-                            extra: z.string().describe('Nombre o id del extra desplegable'),
-                            opcion: z.string().describe('Nombre de la opción o su índice'),
-                        })).optional(),
-                    })).min(1),
+                    lineas: z.array(lineaSchema).min(1),
                     descuentoPorcentaje: z.number().min(0).max(100).default(0),
                     entregaACuenta: z.number().min(0).default(0),
                 },
@@ -276,89 +440,11 @@ const handler = createMcpHandler(
                 ]);
                 if (products.length === 0) return fail('El catálogo está vacío: no hay productos con los que presupuestar.');
 
-                const items = [];
-                for (let i = 0; i < lineas.length; i++) {
-                    const linea = lineas[i];
-                    const res = resolveProduct(products, linea.producto);
-                    if (res.error) return fail(`Línea ${i + 1}: ${res.error}`);
-                    const product = res.product;
-
-                    // Medidas según el tipo de cálculo (el motor trabaja en mm):
-                    //  - unit: sin medidas
-                    //  - simple_linear: una sola longitud → 'metros' (o ancho en mm)
-                    //  - matrix / simple_area: ancho y alto en mm
-                    let w, h;
-                    if (product.priceType === 'unit') {
-                        w = 0; h = 0;
-                    } else if (product.priceType === 'simple_linear') {
-                        const mm = linea.metros != null ? linea.metros * 1000 : linea.ancho;
-                        if (!mm) return fail(`Línea ${i + 1}: "${product.name}" se cobra por metro lineal; indica la longitud en "metros".`);
-                        w = mm; h = 0; // el cálculo lineal usa solo la longitud
-                    } else {
-                        if (!linea.ancho || !linea.alto) {
-                            return fail(`Línea ${i + 1}: "${product.name}" se calcula por medidas; indica ancho y alto en mm.`);
-                        }
-                        w = linea.ancho; h = linea.alto;
-                    }
-                    const q = linea.cantidad ?? 1;
-
-                    // Extras sueltos (no desplegables)
-                    const selectedExtras = [];
-                    for (const sel of linea.extras || []) {
-                        const def = (product.extras || []).find(e =>
-                            String(e.id) === String(sel.extra) || norm(e.name) === norm(sel.extra));
-                        if (!def) {
-                            const disponibles = (product.extras || []).map(e => e.name).join(' | ') || 'ninguno';
-                            return fail(`Línea ${i + 1}: el extra "${sel.extra}" no existe en "${product.name}". Extras disponibles: ${disponibles}.`);
-                        }
-                        if (def.optionsList) {
-                            return fail(`Línea ${i + 1}: "${def.name}" es un desplegable; selecciónalo con "opciones" indicando la opción elegida.`);
-                        }
-                        selectedExtras.push({ ...def, qty: sel.cantidad ?? 1 });
-                    }
-
-                    // Desplegables → dropdownSelections { [extraId]: índice }
-                    const dropdownSelections = {};
-                    for (const sel of linea.opciones || []) {
-                        const def = (product.extras || []).find(e =>
-                            (String(e.id) === String(sel.extra) || norm(e.name) === norm(sel.extra)) && e.optionsList);
-                        if (!def) {
-                            const desplegables = (product.extras || []).filter(e => e.optionsList).map(e => e.name).join(' | ') || 'ninguno';
-                            return fail(`Línea ${i + 1}: el desplegable "${sel.extra}" no existe en "${product.name}". Desplegables disponibles: ${desplegables}.`);
-                        }
-                        let idx = /^\d+$/.test(sel.opcion.trim()) ? parseInt(sel.opcion.trim()) : def.optionsList.findIndex(o => norm(o.name) === norm(sel.opcion));
-                        if (idx < 0 || idx >= def.optionsList.length) {
-                            return fail(`Línea ${i + 1}: la opción "${sel.opcion}" no existe en "${def.name}". Opciones: ${def.optionsList.map((o, j) => `${j}=${o.name}`).join(' | ')}.`);
-                        }
-                        dropdownSelections[def.id] = String(idx);
-                    }
-
-                    const { price, error, desglose } = calcPrice(product, w, h, q, selectedExtras, dropdownSelections);
-                    if (error) {
-                        const limites = product.priceType === 'matrix' && product.matrix
-                            ? ` Máximos de tarifa: ${product.matrix.widths?.at(-1)} × ${product.matrix.heights?.at(-1)} mm.`
-                            : '';
-                        return fail(`Línea ${i + 1} ("${product.name}", ${w}×${h} mm): ${error}${limites}`);
-                    }
-
-                    items.push({
-                        id: Date.now() + i,
-                        product,
-                        width: w, height: h, quantity: q,
-                        locationLabel: linea.ubicacion || '',
-                        selectedExtras,
-                        dropdownSelections,
-                        price,
-                        unitPriceCalc: price / q,
-                        _desglose: desglose, // solo para la respuesta al agente; no se guarda
-                    });
-                }
+                const { items, error } = buildQuoteItems(products, lineas);
+                if (error) return fail(error);
 
                 // Totales con la misma aritmética que la app (useQuoteLogic)
-                const grossTotal = items.reduce((s, it) => s + it.price, 0);
-                const discountAmount = grossTotal * (descuentoPorcentaje / 100);
-                const netTotal = grossTotal - discountAmount;
-                const grandTotal = netTotal * (1 + iva / 100);
+                const { grossTotal, discountAmount, netTotal, grandTotal } = calcTotales(items, iva, descuentoPorcentaje);
 
                 const quote = {
                     id: Date.now(),
@@ -387,20 +473,7 @@ const handler = createMcpHandler(
                     id: quote.id,
                     fecha: quote.date,
                     cliente: quote.client.name,
-                    lineas: items.map(it => ({
-                        producto: it.product.name,
-                        medida: it.product.priceType === 'simple_linear'
-                            ? `${it.width / 1000} m`
-                            : it.product.priceType === 'unit'
-                                ? `${it.quantity} ud`
-                                : `${it.width}×${it.height} mm`,
-                        cantidad: it.quantity,
-                        // Desglose para que el agente EXPLIQUE el total en vez de dudar
-                        desglose: it._desglose
-                            ? { base: it._desglose.base, extras: it._desglose.extras, margen: it._desglose.margen }
-                            : undefined,
-                        precio: it.price,
-                    })),
+                    lineas: items.map(lineaView),
                     totales: {
                         bruto: Math.round(grossTotal * 100) / 100,
                         descuento: Math.round(discountAmount * 100) / 100,
