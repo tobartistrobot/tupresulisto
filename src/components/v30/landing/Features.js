@@ -9,22 +9,23 @@ const Features = ({ onShowTour }) => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid lg:grid-cols-2 gap-16 items-center">
                         <div>
-                            <span className="text-blue-600 dark:text-blue-400 font-black tracking-widest uppercase text-sm border-l-4 border-blue-600 dark:border-blue-400 pl-4 mb-6 block">Catálogo incluido</span>
+                            <span className="text-blue-600 dark:text-blue-400 font-black tracking-widest uppercase text-sm border-l-4 border-blue-600 dark:border-blue-400 pl-4 mb-6 block">Empezar es fácil</span>
                             <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6 leading-tight">
-                                No empiezas con la<br />
-                                <span className="text-slate-400 dark:text-slate-500">pantalla en blanco.</span>
+                                Con tres productos<br />
+                                <span className="text-slate-400 dark:text-slate-500">ya sales a medir.</span>
                             </h2>
                             <p className="text-lg text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
-                                Te damos un catálogo de tu gremio ya montado, para que puedas presupuestar el primer día.
-                                Luego lo ajustas a tus precios y añades lo tuyo <span className="text-slate-900 dark:text-white font-bold">en menos de un minuto por producto.</span>
+                                No hace falta cargar todo tu tarifario para empezar: con los tres o cuatro productos
+                                que más presupuestas ya cubres la mayoría de tus visitas.
+                                El resto lo añades cuando te haga falta, <span className="text-slate-900 dark:text-white font-bold">incluso desde el móvil.</span>
                             </p>
 
                             <ul className="space-y-4 mb-10">
                                 <li className="flex items-start gap-4">
                                     <div className="p-1 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 rounded-full mt-1"><Check size={16} strokeWidth={3} /></div>
                                     <div>
-                                        <strong className="text-slate-900 dark:text-white block">Catálogos ya preparados</strong>
-                                        <span className="text-slate-500 dark:text-slate-400 text-sm">Cristalería, toldos y carpintería metálica, listos para usar.</span>
+                                        <strong className="text-slate-900 dark:text-white block">Cada producto, en unos minutos</strong>
+                                        <span className="text-slate-500 dark:text-slate-400 text-sm">Nombre, foto, tu forma de cobrar y a la calle. La tabla de medidas se rellena sola.</span>
                                     </div>
                                 </li>
                                 <li className="flex items-start gap-4">

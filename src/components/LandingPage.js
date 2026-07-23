@@ -6,6 +6,7 @@ import Problem from './v30/landing/Problem';
 import HowItWorks from './v30/landing/HowItWorks';
 import Features from './v30/landing/Features';
 import Pricing from './v30/landing/Pricing';
+import Comparison from './v30/landing/Comparison';
 import Plans from './v30/landing/Plans';
 import FAQ from './v30/landing/FAQ';
 import FinalCTA from './v30/landing/FinalCTA';
@@ -51,6 +52,7 @@ const LandingPage = ({ onLogin, onRegister, onShowTour }) => {
                 <HowItWorks onRegister={registrarDesde('como_funciona')} />
                 <Features onShowTour={onShowTour} />
                 <Pricing onRegister={registrarDesde('cta_tipos_calculo')} />
+                <Comparison />
                 <Plans onRegister={registrarDesde('precios')} />
                 <FAQ />
                 <FinalCTA onRegister={registrarDesde('cierre')} />

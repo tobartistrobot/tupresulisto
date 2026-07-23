@@ -62,7 +62,7 @@ export const GREMIOS = {
         faq: [
             {
                 p: '¿Sirve para muebles a medida o solo para estándar?',
-                r: 'Está pensada justo para lo contrario del mueble estándar. Defines tu tabla de precios por tramos de medidas y la app interpola el precio del hueco exacto que midas. Los extras (lacados, interiores, herrajes) se suman aparte, cada uno con su precio.',
+                r: 'Está pensada justo para lo contrario del mueble estándar. Defines tu tabla de precios por tramos de medidas y la app aplica al hueco que midas el tramo que le corresponde, igual que harías tú con la tarifa en papel. Los extras (lacados, interiores, herrajes) se suman aparte, cada uno con su precio.',
             },
             {
                 p: '¿Tengo que meter todo mi catálogo antes de empezar?',
@@ -128,7 +128,7 @@ export const GREMIOS = {
             },
         ],
         beneficios: [
-            'Tabla de precios ancho × alto por serie: la app interpola el precio del hueco exacto',
+            'Tabla de precios ancho × alto por serie: precio al instante para cualquier medida de hueco',
             'Extras con precio propio: vidrio bajo emisivo, persiana, mosquitera, color especial',
             'Presupuesto de obra completa: suma todas las ventanas de la vivienda en un documento',
             'PDF con tu marca y desglose de IVA, enviado por WhatsApp desde la misma visita',
@@ -150,7 +150,7 @@ export const GREMIOS = {
             },
             {
                 p: '¿Y si el cliente quiere comparar PVC y aluminio?',
-                r: 'Puedes duplicar el presupuesto y cambiar la serie en un par de toques, o presupuestar las dos opciones en documentos separados y que el cliente elija con los números delante.',
+                r: 'Presupuesta las dos opciones en documentos separados: con las tarifas ya cargadas, repetir los mismos huecos con la otra serie lleva un par de minutos, y el cliente elige con los números delante.',
             },
             {
                 p: '¿Sirve estando en una obra sin cobertura?',

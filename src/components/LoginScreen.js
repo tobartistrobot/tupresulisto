@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useToast } from '../context/ToastContext';
 import { Lock, AlertCircle, Calculator } from 'lucide-react';
 import { auth, db } from '../lib/firebase';
@@ -139,18 +140,22 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
 
             <div className="w-full max-w-md relative z-10 animate-slide-up">
 
-                {/* Logo and Branding Header */}
+                {/* Logo and Branding Header. El logo enlaza al inicio: sin él,
+                    la única salida de esta pantalla era iniciar sesión o el
+                    botón "atrás" del navegador. */}
                 <div className="flex flex-col items-center mb-8 gap-4">
-                    <div className="relative group">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-brand-600 to-sky-500 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                        <div className="relative w-16 h-16 bg-gradient-to-br from-brand-700 to-brand-900 rounded-2xl flex items-center justify-center shadow-2xl transform group-hover:scale-105 transition-all duration-300 border border-brand-500/30">
-                            <Calculator className="text-white drop-shadow-md" size={32} />
+                    <Link href="/" aria-label="Volver al inicio de TuPresuListo" className="flex flex-col items-center gap-4 group cursor-pointer">
+                        <div className="relative">
+                            <div className="absolute -inset-1 bg-gradient-to-r from-brand-600 to-sky-500 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                            <div className="relative w-16 h-16 bg-gradient-to-br from-brand-700 to-brand-900 rounded-2xl flex items-center justify-center shadow-2xl transform group-hover:scale-105 transition-all duration-300 border border-brand-500/30">
+                                <Calculator className="text-white drop-shadow-md" size={32} />
+                            </div>
                         </div>
-                    </div>
-                    <div className="text-center">
                         <h1 className="font-extrabold text-3xl tracking-tight text-slate-900 dark:text-white flex items-center justify-center gap-1">
                             tupresulisto<span className="text-brand-600 dark:text-brand-400">.com</span>
                         </h1>
+                    </Link>
+                    <div className="text-center">
                         <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
                             {mode === 'login' ? 'Bienvenido de nuevo, profesional' : 'Comienza a presupuestar como un experto'}
                         </p>

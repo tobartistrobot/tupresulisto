@@ -9,6 +9,7 @@ import {
 import { track, EVENTS } from '../../lib/analytics';
 import { LISTA_GREMIOS } from '../../lib/gremios';
 import Footer from '../v30/landing/Footer';
+import Comparison from '../v30/landing/Comparison';
 
 /**
  * Plantilla de la página SEO de un gremio (p. ej. /presupuestos-para-carpinteros).
@@ -87,7 +88,7 @@ const GremioSeoPage = ({ gremio }) => {
                         </Link>
                     </div>
                     <p className="text-slate-400 dark:text-slate-500 text-sm mt-5">
-                        Sin tarjeta · Sin permanencia · Catálogo de ejemplo incluido
+                        Sin tarjeta · Sin permanencia · Empiezas con 3 productos gratis
                     </p>
                 </section>
 
@@ -179,6 +180,17 @@ const GremioSeoPage = ({ gremio }) => {
                         </ul>
                     </div>
                 </section>
+
+                {/* COMPARATIVA por formas de trabajar (sin marcas: ver el
+                    comentario de cabecera de Comparison.js). Va después de los
+                    beneficios: primero entiende qué gana, y entonces por qué
+                    esto y no lo que hace ahora. */}
+                <Comparison
+                    titulo="Comparado con lo que usas ahora"
+                    claseSeccion="py-14 sm:py-20 bg-slate-50 dark:bg-slate-950"
+                    claseFondoSticky="bg-slate-50 dark:bg-slate-950"
+                    compacto
+                />
 
                 {/* TESTIMONIOS — hoy no se renderizan: están comentados en la
                     config hasta tener testimonios reales. Al rellenar el campo
