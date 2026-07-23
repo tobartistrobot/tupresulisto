@@ -13,7 +13,9 @@
  *  - Estáticos (/_next/static, imágenes, fuentes): caché primero → arranque
  *    instantáneo. Son inmutables (llevan hash en el nombre).
  */
-const CACHE = 'tupresulisto-v1';
+// v2: historial migrado a subcolección — conviene que los clientes instalados
+// recojan el código nuevo cuanto antes para no escribir en el formato antiguo.
+const CACHE = 'tupresulisto-v2';
 const FALLBACK_PAGE = '/dashboard';
 
 self.addEventListener('install', () => {

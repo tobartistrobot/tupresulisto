@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { marshal, unmarshal } from '../lib/firestoreMarshal';
 
@@ -16,6 +16,28 @@ const NETWORK_ERROR_CODES = new Set(['unavailable', 'deadline-exceeded', 'cancel
 
 // El marshal/unmarshal de Firestore vive en src/lib/firestoreMarshal.js,
 // compartido con el servidor MCP para que ambos escriban el mismo formato.
+
+// --- HISTORIAL EN SUBCOLECCIÓN ---
+// Cada presupuesto vive en users/{uid}/quotes/{id} y cada elemento de la
+// papelera en users/{uid}/trash/{deletedAt}. Así la app y los agentes
+// escriben documentos sueltos y nadie pisa el trabajo de nadie. El documento
+// único legacy (data/history) queda congelado como copia de seguridad tras
+// la migración, con la marca migratedToSubcollection.
+
+const byNewest = (a, b) => (b.id || 0) - (a.id || 0);
+
+// Huella estable del contenido de un objeto ya pasado por marshal, para
+// detectar qué documentos cambiaron de verdad y escribir solo esos.
+const contentKey = (marshaled) => JSON.stringify(marshaled);
+
+// Ejecuta operaciones set/delete en lotes (Firestore admite 500 por batch).
+const commitOps = async (ops) => {
+    for (let i = 0; i < ops.length; i += 400) {
+        const batch = writeBatch(db);
+        ops.slice(i, i + 400).forEach(op => op.remove ? batch.delete(op.ref) : batch.set(op.ref, op.data));
+        await batch.commit();
+    }
+};
 
 export const useSyncEngine = (user) => {
     // STATE MACHINE: 'IDLE' | 'LOADING' | 'READY' | 'SAVING' | 'ERROR'
@@ -43,6 +65,16 @@ export const useSyncEngine = (user) => {
     // Cuenta fallos de RED consecutivos; solo eso justifica el aviso de "sin conexión"
     const consecutiveNetworkErrors = useRef(0);
 
+    // Espejo del estado actual para que el listener en tiempo real pueda
+    // compararlo sin re-suscribirse en cada render (evita closures obsoletos).
+    const historyRef = useRef([]);
+    historyRef.current = history;
+
+    // Última versión persistida de cada documento (clave -> huella del
+    // contenido). El auto-guardado solo escribe los que difieren de esto.
+    const persistedQuotes = useRef(new Map());
+    const persistedTrash = useRef(new Map());
+
     // 1. INITIAL LOAD
     useEffect(() => {
         if (!user) {
@@ -57,11 +89,13 @@ export const useSyncEngine = (user) => {
 
             try {
                 // Fetch all docs in parallel
-                const [userRoot, productsSub, configSub, historySub] = await Promise.all([
+                const [userRoot, productsSub, configSub, historySub, quotesSnap, trashSnap] = await Promise.all([
                     getDoc(doc(db, "users", user.uid)),
                     getDoc(doc(db, "users", user.uid, "data", "products")),
                     getDoc(doc(db, "users", user.uid, "data", "config")),
-                    getDoc(doc(db, "users", user.uid, "data", "history"))
+                    getDoc(doc(db, "users", user.uid, "data", "history")),
+                    getDocs(collection(db, "users", user.uid, "quotes")),
+                    getDocs(collection(db, "users", user.uid, "trash"))
                 ]);
 
                 // 1. Products Strategy (Root > Subcollection)
@@ -107,12 +141,67 @@ export const useSyncEngine = (user) => {
                     log('Configuración cargada.');
                 }
 
-                // 3. History
-                if (historySub.exists()) {
-                    setHistory(unmarshal(historySub.data().list || []));
-                    setDeletedHistory(unmarshal(historySub.data().deleted || []));
-                    log(`Historial cargado: ${historySub.data().list?.length || 0} items.`);
+                // 3. Historial: subcolección quotes/trash (moderno), con
+                // migración automática desde el documento único (legacy).
+                const legacyData = historySub.exists() ? historySub.data() : null;
+                const migratedAt = legacyData?.migratedToSubcollection === true ? (legacyData.migratedAt || 0) : null;
+
+                let quotes = quotesSnap.docs.map(d => unmarshal(d.data()));
+                let trash = trashSnap.docs.map(d => unmarshal(d.data()));
+
+                if (migratedAt === null && legacyData) {
+                    // MIGRACIÓN: copiar cada presupuesto y cada elemento de
+                    // papelera a su propio documento. El doc legacy NO se
+                    // borra: queda congelado como copia de seguridad.
+                    const legacyList = unmarshal(legacyData.list || []) || [];
+                    const legacyDeleted = unmarshal(legacyData.deleted || []) || [];
+
+                    // Unión por id (idempotente): si un agente ya escribió en
+                    // la subcolección, no se duplica; si la migración anterior
+                    // se cortó a medias, se completa.
+                    const seen = new Set(quotes.map(q => String(q.id)));
+                    quotes = [...quotes, ...legacyList.filter(q => q && !seen.has(String(q.id)))];
+                    const seenTrash = new Set(trash.map(t => String(t.deletedAt)));
+                    trash = [...trash, ...legacyDeleted.filter(t => t && !seenTrash.has(String(t.deletedAt)))];
+
+                    // No resucitar lo que ya está en la papelera nueva.
+                    const trashedIds = new Set();
+                    trash.forEach(t => {
+                        if (t.type === 'quote' && t.data) trashedIds.add(String(t.data.id));
+                        if (t.type === 'client' && Array.isArray(t.data?.quotes)) t.data.quotes.forEach(q => trashedIds.add(String(q.id)));
+                    });
+                    quotes = quotes.filter(q => !trashedIds.has(String(q.id)));
+
+                    log(`⏫ Migrando historial a subcolección: ${quotes.length} presupuestos, ${trash.length} en papelera...`);
+                    await commitOps([
+                        ...quotes.map(q => ({ ref: doc(db, 'users', user.uid, 'quotes', String(q.id)), data: marshal(q) })),
+                        ...trash.map(t => ({ ref: doc(db, 'users', user.uid, 'trash', String(t.deletedAt)), data: marshal(t) })),
+                    ]);
+                    // La marca va al final: si algo falla antes, la próxima
+                    // carga reintenta la migración completa.
+                    await setDoc(doc(db, 'users', user.uid, 'data', 'history'), { migratedToSubcollection: true, migratedAt: Date.now() }, { merge: true });
+                    log('✅ Migración completada. El doc legacy queda como copia de seguridad.');
+                } else if (migratedAt !== null && legacyData) {
+                    // ADOPCIÓN DE HUÉRFANOS: un escritor con código antiguo
+                    // (PWA cacheada, MCP sin redesplegar) puede seguir metiendo
+                    // presupuestos NUEVOS en el doc legacy. Los detectamos por
+                    // id (timestamp) posterior a la migración y los adoptamos.
+                    const legacyList = unmarshal(legacyData.list || []) || [];
+                    const subIds = new Set(quotes.map(q => String(q.id)));
+                    const strays = (Array.isArray(legacyList) ? legacyList : []).filter(q => q && (q.id || 0) > migratedAt && !subIds.has(String(q.id)));
+                    if (strays.length > 0) {
+                        log(`🧹 Adoptando ${strays.length} presupuesto(s) huérfano(s) del doc legacy.`);
+                        await commitOps(strays.map(q => ({ ref: doc(db, 'users', user.uid, 'quotes', String(q.id)), data: marshal(q) })));
+                        quotes = [...quotes, ...strays];
+                    }
                 }
+
+                quotes.sort(byNewest);
+                setHistory(quotes);
+                setDeletedHistory(trash);
+                persistedQuotes.current = new Map(quotes.map(q => [String(q.id), contentKey(marshal(q))]));
+                persistedTrash.current = new Map(trash.map(t => [String(t.deletedAt), contentKey(marshal(t))]));
+                log(`Historial cargado: ${quotes.length} presupuestos, ${trash.length} en papelera.`);
 
                 setStatus('READY');
                 log('✅ Estado: READY. Auto-guardado activado.');
@@ -140,7 +229,6 @@ export const useSyncEngine = (user) => {
             // MARSHALLING (Sanitize + Nested Array Fix)
             const cleanProducts = marshal(products);
             const cleanConfig = marshal(config);
-            const cleanHistory = marshal({ list: history, deleted: deletedHistory });
 
             // BATCH OR PARALLEL WRITES?
             // Let's do parallel for speed, but unrelated errors imply partial success.
@@ -152,7 +240,34 @@ export const useSyncEngine = (user) => {
 
             // Subcollections
             await setDoc(doc(db, 'users', user.uid, 'data', 'config'), cleanConfig);
-            await setDoc(doc(db, 'users', user.uid, 'data', 'history'), cleanHistory);
+
+            // Historial: SOLO los documentos que cambiaron (nunca el
+            // historial entero, para no pisar lo que escriban los agentes).
+            const ops = [];
+            const diffInto = (items, keyOf, persisted, colName) => {
+                const next = new Map();
+                items.forEach(item => {
+                    const key = String(keyOf(item));
+                    const clean = marshal(item);
+                    const fingerprint = contentKey(clean);
+                    next.set(key, fingerprint);
+                    if (persisted.current.get(key) !== fingerprint) {
+                        ops.push({ ref: doc(db, 'users', user.uid, colName, key), data: clean });
+                    }
+                });
+                persisted.current.forEach((_, key) => {
+                    if (!next.has(key)) ops.push({ ref: doc(db, 'users', user.uid, colName, key), remove: true });
+                });
+                return next;
+            };
+            const nextQuotes = diffInto(history, q => q.id, persistedQuotes, 'quotes');
+            const nextTrash = diffInto(deletedHistory, t => t.deletedAt, persistedTrash, 'trash');
+            if (ops.length > 0) {
+                await commitOps(ops);
+                log(`Historial: ${ops.length} documento(s) escritos/borrados.`);
+            }
+            persistedQuotes.current = nextQuotes;
+            persistedTrash.current = nextTrash;
 
             setStatus('READY'); // Return to ready
             consecutiveNetworkErrors.current = 0;
@@ -196,6 +311,36 @@ export const useSyncEngine = (user) => {
 
         return () => clearTimeout(saveTimeout.current);
     }, [products, categories, config, history, deletedHistory]); // Listen to ALL data changes
+
+    // 4. REALTIME: ESCUCHA DEL HISTORIAL
+    // El agente MCP (y otros dispositivos del mismo usuario) escriben presupuestos
+    // como documentos sueltos en la subcolección. Este listener los refleja
+    // en el panel sin recargar.
+    useEffect(() => {
+        if (!user) return;
+
+        const unsub = onSnapshot(collection(db, 'users', user.uid, 'quotes'), (snap) => {
+            // La carga inicial aún no terminó: ella es la responsable del primer estado.
+            if (isFirstLoad.current) return;
+            // Eco de un guardado hecho por esta misma pestaña: ignorar.
+            if (snap.metadata.hasPendingWrites) return;
+
+            const remote = snap.docs.map(d => unmarshal(d.data()));
+            remote.sort(byNewest);
+
+            // Si lo remoto coincide con lo que ya tenemos, no tocar el estado:
+            // romper aquí el ciclo evita el bucle listener -> auto-guardado -> listener.
+            if (JSON.stringify(remote) === JSON.stringify(historyRef.current)) return;
+
+            log('📡 Historial actualizado desde fuera (agente u otro dispositivo).');
+            // Registrar lo recibido como "persistido" para que el próximo
+            // auto-guardado no reescriba documentos que no han cambiado.
+            persistedQuotes.current = new Map(remote.map(q => [String(q.id), contentKey(marshal(q))]));
+            setHistory(remote);
+        });
+
+        return unsub;
+    }, [user]);
 
     return {
         // State

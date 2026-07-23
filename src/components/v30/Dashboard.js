@@ -139,7 +139,7 @@ const Dashboard = ({ history, products, clients, onNavigate, config }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="md:col-span-2 space-y-4">
                     <h3 className="font-bold text-lg text-slate-700 dark:text-slate-200">Recientes</h3>
-                    {history.length === 0 ? <div className="text-center py-10 text-slate-400 dark:text-slate-500 border-2 border-dashed dark:border-slate-700 rounded-xl">No hay actividad reciente.</div> : history.slice(0, recentLimit).map(q => (
+                    {history.length === 0 ? <div className="text-center py-10 text-slate-400 dark:text-slate-500 border-2 border-dashed dark:border-slate-700 rounded-xl">No hay actividad reciente.</div> : [...history].sort((a, b) => (b.id || 0) - (a.id || 0)).slice(0, recentLimit).map(q => (
                         <div key={q.id} onClick={() => onNavigate(q)} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-md dark:hover:shadow-black/30 cursor-pointer transition-all flex justify-between items-center group">
                             <div className="flex items-center gap-4">
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${q.status === 'accepted' ? 'bg-emerald-500' : q.status === 'rejected' ? 'bg-red-400' : 'bg-slate-400'}`}>{q.client.name.charAt(0)}</div>
