@@ -1,7 +1,8 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { useConfirm } from '../../context/ConfirmContext';
+import { clientKey } from '../../utils/clientKey';
 import { Search, Upload, Trash, ArrowLeft, Download, Plus, Edit, Users, Undo, Phone, Mail } from 'lucide-react';
 
 import StatusSelector from './StatusSelector';
@@ -9,7 +10,7 @@ import StatusSelector from './StatusSelector';
 const formatCurrency = (amount) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount || 0);
 const safeStr = (s) => String(s || '').trim().toLowerCase();
 
-const ClientManager = ({ quotesHistory, deletedHistory, onLoadQuote, onDeleteClient, onDeleteQuote, onRestoreItem, onNewQuoteForClient, onPermanentDelete, onUpdateStatus, onImportClient, className }) => {
+const ClientManager = ({ quotesHistory, savedClients = [], deletedHistory, onLoadQuote, onDeleteClient, onDeleteQuote, onRestoreItem, onNewQuoteForClient, onPermanentDelete, onUpdateStatus, onImportClient, className }) => {
     const [search, setSearch] = useState('');
     const [selKey, setSelKey] = useState(null);
     const [showTrash, setShowTrash] = useState(false);
@@ -18,16 +19,32 @@ const ClientManager = ({ quotesHistory, deletedHistory, onLoadQuote, onDeleteCli
 
     const clients = useMemo(() => {
         const map = {};
+        // Primero las fichas guardadas: existen aunque no tengan ni un
+        // presupuesto (p. ej. tras borrar el último, o si se importó la ficha).
+        savedClients.forEach(c => {
+            const k = clientKey(c);
+            if (k) map[k] = { ...c, key: k, quotes: [], total: 0 };
+        });
+        // Y encima, lo que diga el historial. Se sigue mirando por si hay
+        // presupuestos cuyo cliente aún no tuviera ficha guardada.
         quotesHistory.forEach(q => {
-            const k = (q.client.name + q.client.phone).trim();
+            const k = clientKey(q.client);
             if (!map[k]) map[k] = { ...q.client, key: k, quotes: [], total: 0 };
             map[k].quotes.push(q);
             map[k].total += q.grandTotal;
         });
         return Object.values(map).sort((a, b) => b.total - a.total);
-    }, [quotesHistory]);
+    }, [quotesHistory, savedClients]);
 
     const activeClient = useMemo(() => clients.find(c => c.key === selKey), [clients, selKey]);
+
+    // Si el cliente seleccionado deja de existir (p. ej. al borrar su último
+    // presupuesto: la ficha se deriva del historial), volvemos a la lista.
+    // Sin esto, en móvil la lista queda oculta por selKey y el detalle muestra
+    // el hueco vacío, que no tiene botón VOLVER: la pantalla se queda atascada.
+    useEffect(() => {
+        if (selKey && !activeClient) setSelKey(null);
+    }, [selKey, activeClient]);
     const filtered = clients.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search));
 
     const handleExportClient = (c) => {
@@ -180,6 +197,10 @@ const ClientManager = ({ quotesHistory, deletedHistory, onLoadQuote, onDeleteCli
                     <div className="flex-1 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 p-10 text-center">
                         <div className="bg-slate-50 dark:bg-slate-700/50 p-6 rounded-3xl md:rounded-full mb-4 shadow-sm"><Users size={48} className="opacity-50" /></div>
                         <p className="font-medium dark:text-slate-500">Selecciona un cliente para ver su historial</p>
+                        {/* Salida de emergencia en móvil: si por lo que sea se
+                            llega aquí con la lista oculta, que siempre se pueda
+                            volver sin recargar la página. */}
+                        <button onClick={() => setSelKey(null)} className="md:hidden mt-5 text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-full shadow-sm"><ArrowLeft className="mr-1" size={14} /> VER MIS CLIENTES</button>
                     </div>
                 )}
             </div>

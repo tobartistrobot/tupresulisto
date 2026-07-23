@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { marshal, unmarshal } from '../lib/firestoreMarshal';
+import { clientDocId } from '../utils/clientKey';
 
 const DEBUG = true;
 
@@ -58,6 +59,10 @@ export const useSyncEngine = (user) => {
     });
     const [history, setHistory] = useState([]);
     const [deletedHistory, setDeletedHistory] = useState([]);
+    // Fichas de cliente guardadas: existen por sí mismas, no se deducen del
+    // historial. Así borrar el último presupuesto de alguien no le borra la
+    // ficha; solo desaparece si se elimina la ficha a propósito.
+    const [clients, setClients] = useState([]);
 
     // Refs to track previous values for change detection
     const isFirstLoad = useRef(true);
@@ -74,6 +79,7 @@ export const useSyncEngine = (user) => {
     // contenido). El auto-guardado solo escribe los que difieren de esto.
     const persistedQuotes = useRef(new Map());
     const persistedTrash = useRef(new Map());
+    const persistedClients = useRef(new Map());
 
     // 1. INITIAL LOAD
     useEffect(() => {
@@ -89,13 +95,14 @@ export const useSyncEngine = (user) => {
 
             try {
                 // Fetch all docs in parallel
-                const [userRoot, productsSub, configSub, historySub, quotesSnap, trashSnap] = await Promise.all([
+                const [userRoot, productsSub, configSub, historySub, quotesSnap, trashSnap, clientsSnap] = await Promise.all([
                     getDoc(doc(db, "users", user.uid)),
                     getDoc(doc(db, "users", user.uid, "data", "products")),
                     getDoc(doc(db, "users", user.uid, "data", "config")),
                     getDoc(doc(db, "users", user.uid, "data", "history")),
                     getDocs(collection(db, "users", user.uid, "quotes")),
-                    getDocs(collection(db, "users", user.uid, "trash"))
+                    getDocs(collection(db, "users", user.uid, "trash")),
+                    getDocs(collection(db, "users", user.uid, "clients"))
                 ]);
 
                 // 1. Products Strategy (Root > Subcollection)
@@ -179,7 +186,7 @@ export const useSyncEngine = (user) => {
                     ]);
                     // La marca va al final: si algo falla antes, la próxima
                     // carga reintenta la migración completa.
-                    await setDoc(doc(db, 'users', user.uid, 'data', 'history'), { migratedToSubcollection: true, migratedAt: Date.now(), adoptedIds: [] }, { merge: true });
+                    await setDoc(doc(db, 'users', user.uid, 'data', 'history'), { migratedToSubcollection: true, migratedAt: Date.now(), legacyResolvedIds: [] }, { merge: true });
                     log('✅ Migración completada. El doc legacy queda como copia de seguridad.');
                 } else if (migratedAt !== null && legacyData) {
                     // ADOPCIÓN DE HUÉRFANOS: un escritor con código antiguo
@@ -187,31 +194,48 @@ export const useSyncEngine = (user) => {
                     // presupuestos NUEVOS en el doc legacy. Los detectamos por
                     // id (timestamp) posterior a la migración y los adoptamos.
                     //
-                    // CADA HUÉRFANO SE ADOPTA UNA SOLA VEZ y queda anotado en
-                    // adoptedIds. Sin ese registro, la condición "está en legacy
-                    // y no en la subcolección" volvía a cumplirse en cuanto el
-                    // usuario BORRABA el presupuesto, así que la siguiente carga
-                    // lo resucitaba — y con él, su cliente. Borrar no servía de
-                    // nada.
+                    // CADA CANDIDATO SE MIRA UNA SOLA VEZ y queda anotado en
+                    // legacyResolvedIds. Sin ese registro, la condición "está en
+                    // legacy y no en la subcolección" volvía a cumplirse en
+                    // cuanto el usuario BORRABA el presupuesto, así que la
+                    // siguiente carga lo resucitaba — y con él, su cliente.
+                    //
+                    // Se anotan TODOS los candidatos, estén o no en la
+                    // subcolección: un candidato presente hoy también está
+                    // resuelto, y si solo anotáramos los ausentes volvería a
+                    // resucitar en cuanto lo borraran. (El campo se llama
+                    // legacyResolvedIds y no adoptedIds justamente para que las
+                    // cuentas que guardaron el registro incompleto anterior
+                    // rehagan el censo entero y queden reparadas.)
                     const legacyList = unmarshal(legacyData.list || []) || [];
-                    const adoptados = Array.isArray(legacyData.adoptedIds) ? legacyData.adoptedIds.map(String) : null;
-                    const yaResueltos = new Set([...quotes.map(q => String(q.id)), ...(adoptados || [])]);
-                    const strays = (Array.isArray(legacyList) ? legacyList : [])
-                        .filter(q => q && (q.id || 0) > migratedAt && !yaResueltos.has(String(q.id)));
                     const historyRef = doc(db, 'users', user.uid, 'data', 'history');
+                    // Lo que un escritor antiguo haya metido en el doc legacy
+                    // DESPUÉS de migrar; lo anterior ya lo trajo la migración.
+                    const candidatos = (Array.isArray(legacyList) ? legacyList : [])
+                        .filter(q => q && (q.id || 0) > migratedAt);
+                    const resueltos = Array.isArray(legacyData.legacyResolvedIds)
+                        ? new Set(legacyData.legacyResolvedIds.map(String))
+                        : null;
 
-                    if (adoptados === null) {
-                        // Primera carga con el registro: la subcolección YA es la
-                        // verdad (el usuario ha podido borrar cosas a conciencia).
-                        // Damos por resueltos los pendientes SIN resucitarlos,
-                        // para no deshacerle borrados que hizo a propósito.
-                        await setDoc(historyRef, { adoptedIds: strays.map(q => String(q.id)) }, { merge: true });
-                        if (strays.length > 0) log(`Anotados ${strays.length} huérfano(s) como ya resueltos: no se resucitan.`);
-                    } else if (strays.length > 0) {
-                        log(`🧹 Adoptando ${strays.length} presupuesto(s) huérfano(s) del doc legacy.`);
-                        await commitOps(strays.map(q => ({ ref: doc(db, 'users', user.uid, 'quotes', String(q.id)), data: marshal(q) })));
-                        await setDoc(historyRef, { adoptedIds: [...adoptados, ...strays.map(q => String(q.id))] }, { merge: true });
-                        quotes = [...quotes, ...strays];
+                    if (resueltos === null) {
+                        // Primer censo: la subcolección YA es la verdad (el
+                        // usuario ha podido borrar cosas a conciencia). Damos
+                        // por resueltos todos los candidatos SIN resucitar
+                        // ninguno, para no deshacerle borrados hechos aposta.
+                        await setDoc(historyRef, { legacyResolvedIds: candidatos.map(q => String(q.id)) }, { merge: true });
+                        if (candidatos.length > 0) log(`Censados ${candidatos.length} presupuesto(s) del doc legacy como ya resueltos: no se resucitan.`);
+                    } else {
+                        const subIds = new Set(quotes.map(q => String(q.id)));
+                        const nuevos = candidatos.filter(q => !resueltos.has(String(q.id)));
+                        const aAdoptar = nuevos.filter(q => !subIds.has(String(q.id)));
+                        if (aAdoptar.length > 0) {
+                            log(`🧹 Adoptando ${aAdoptar.length} presupuesto(s) huérfano(s) del doc legacy.`);
+                            await commitOps(aAdoptar.map(q => ({ ref: doc(db, 'users', user.uid, 'quotes', String(q.id)), data: marshal(q) })));
+                            quotes = [...quotes, ...aAdoptar];
+                        }
+                        if (nuevos.length > 0) {
+                            await setDoc(historyRef, { legacyResolvedIds: [...resueltos, ...nuevos.map(q => String(q.id))] }, { merge: true });
+                        }
                     }
                 }
 
@@ -220,7 +244,16 @@ export const useSyncEngine = (user) => {
                 setDeletedHistory(trash);
                 persistedQuotes.current = new Map(quotes.map(q => [String(q.id), contentKey(marshal(q))]));
                 persistedTrash.current = new Map(trash.map(t => [String(t.deletedAt), contentKey(marshal(t))]));
-                log(`Historial cargado: ${quotes.length} presupuestos, ${trash.length} en papelera.`);
+
+                // 4. Fichas de cliente guardadas. No se siembran desde el
+                // historial: la app las va guardando al crear o borrar
+                // presupuestos, así que las de siempre se conservan sin
+                // necesidad de una migración masiva.
+                const fichas = clientsSnap.docs.map(d => unmarshal(d.data()));
+                setClients(fichas);
+                persistedClients.current = new Map(fichas.map(c => [clientDocId(c), contentKey(marshal(c))]));
+
+                log(`Historial cargado: ${quotes.length} presupuestos, ${trash.length} en papelera, ${fichas.length} fichas de cliente.`);
 
                 setStatus('READY');
                 log('✅ Estado: READY. Auto-guardado activado.');
@@ -281,12 +314,14 @@ export const useSyncEngine = (user) => {
             };
             const nextQuotes = diffInto(history, q => q.id, persistedQuotes, 'quotes');
             const nextTrash = diffInto(deletedHistory, t => t.deletedAt, persistedTrash, 'trash');
+            const nextClients = diffInto(clients, c => clientDocId(c), persistedClients, 'clients');
             if (ops.length > 0) {
                 await commitOps(ops);
                 log(`Historial: ${ops.length} documento(s) escritos/borrados.`);
             }
             persistedQuotes.current = nextQuotes;
             persistedTrash.current = nextTrash;
+            persistedClients.current = nextClients;
 
             setStatus('READY'); // Return to ready
             consecutiveNetworkErrors.current = 0;
@@ -313,7 +348,7 @@ export const useSyncEngine = (user) => {
                 setStatus('READY');
             }
         }
-    }, [user, status, products, config, history, deletedHistory]);
+    }, [user, status, products, config, history, deletedHistory, clients]);
 
     // 3. TRIGGER LISTENERS (Debounce)
     useEffect(() => {
@@ -329,7 +364,7 @@ export const useSyncEngine = (user) => {
         }, 2000); // 2s debounce
 
         return () => clearTimeout(saveTimeout.current);
-    }, [products, categories, config, history, deletedHistory]); // Listen to ALL data changes
+    }, [products, categories, config, history, deletedHistory, clients]); // Listen to ALL data changes
 
     // 4. REALTIME: ESCUCHA DEL HISTORIAL
     // El agente MCP (y otros dispositivos del mismo usuario) escriben presupuestos
@@ -372,12 +407,14 @@ export const useSyncEngine = (user) => {
         config,
         history,
         deletedHistory,
+        clients,
 
         // Data Setters
         setProducts,
         setCategories,
         setConfig,
         setHistory,
-        setDeletedHistory
+        setDeletedHistory,
+        setClients
     };
 };
