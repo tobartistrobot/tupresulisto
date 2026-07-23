@@ -31,9 +31,45 @@ No introduzcas aquí particularidades de GOVA — sus proveedores, sus flujos o 
 - **Next.js 16** (App Router, Turbopack) + **React 19**
 - **Tailwind v4** — configurado en `src/app/globals.css` con `@theme`, y modo oscuro por clase vía `@custom-variant dark`
 - **Firebase** Auth + Firestore (cliente) y Admin SDK en las rutas de API
-- **Lemon Squeezy** para pagos (webhooks), **PostHog** analítica, despliegue en **Vercel**
+- **Lemon Squeezy** para pagos (webhook en `/api/webhooks/lemon`, con firma verificada), **PostHog** analítica, despliegue en **Vercel** (los merges a `main` despliegan solos)
+- **Gemini** (REST, sin SDK) para el agente IA
 
 La app vive en `src/components/v30/`. `AppV30.js` orquesta las vistas (dashboard, quote, prods, clients, config). Hay componentes antiguos fuera de `v30/` que ya no se usan; no los tomes como referencia.
+
+## Arquitectura de datos (Firestore)
+
+Por usuario (`users/{uid}`):
+
+- **Documento raíz**: perfil + facturación (campos protegidos por reglas) + **productos y categorías**. ⚠️ Los productos llevan la imagen en base64 dentro del propio doc: es la misma bomba del límite de 1 MB que ya explotó con el historial. Migrarlos a subcolección es la deuda técnica número 1.
+- **`quotes/{id}`**: un documento por presupuesto (id = timestamp). El guardado escribe SOLO los que cambian (diff por huella JSON en `useSyncEngine`), y un `onSnapshot` sobre la colección refleja en tiempo real lo que escriban agentes u otros dispositivos.
+- **`trash/{deletedAt}`**: papelera, mismo esquema de diffs.
+- **`clients/{clave}`**: fichas de cliente CON VIDA PROPIA (no se deducen del historial; borrar el último presupuesto no borra la ficha). La identidad es nombre+teléfono, centralizada en `src/utils/clientKey.js` — no inventes otra.
+- **`data/config`**: configuración. Todo campo que edite `SysConfig` debe tener valor inicial en `useSyncEngine` (input `undefined` = no controlado para React).
+- **`data/history`**: el documento ÚNICO legacy, congelado como copia de seguridad tras la migración (marca `migratedToSubcollection` + `migratedAt` + censo `legacyResolvedIds`). No escribir en él; la app "adopta" una sola vez los presupuestos que escritores antiguos dejen ahí (censados para no resucitar lo borrado).
+- **`data/agentUsage`**: tope diario del chat del agente.
+
+`api_keys` (colección raíz): claves `tpl_...` de agentes, docId = SHA-256 de la clave. Las reglas de Firestore niegan por defecto todo lo no listado; el Admin SDK las salta (por eso las rutas de API DEBEN autenticar por su cuenta).
+
+El marshal/unmarshal de Firestore (arrays anidados prohibidos) vive en `src/lib/firestoreMarshal.js`, compartido entre app y servidor.
+
+## Agentes de IA (dos puertas, un cerebro)
+
+- **MCP** (`/api/mcp`, código en `src/app/api/[transport]/route.js`): para agentes externos, Bearer `tpl_...`. 6 herramientas.
+- **Chat en la app** (`/api/agent/chat` + `AgentChat.js`): función PRO con dictado por voz (Web Speech API es-ES; en iOS Safari no existe y el botón se oculta). Autentica con el ID token de Firebase.
+- **Ambos comparten `src/lib/agentQuoting.js`** (resolución de productos/extras, cálculo de líneas y totales sobre `pricingEngine.js`). Si tocas la lógica de precios, tócala AHÍ, nunca en una de las dos puertas.
+- Filosofía fase 1: el agente prepara, el humano aprueba y envía. `calcular_precio` NO persiste (para tanteos); `crear_presupuesto` sí.
+- Regla de oro heredada del agente de Telegram que hubo que matar en mayo: **el uid sale SIEMPRE del token verificado, jamás del cuerpo de la petición**.
+
+## Variables de entorno
+
+| Variable | Dónde | Nota |
+|---|---|---|
+| `NEXT_PUBLIC_FIREBASE_*` | .env.local + Vercel | Config pública del cliente |
+| `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PROJECT_ID` | **SOLO Vercel** | Admin SDK. En local NO están → las rutas que lo usan dan 503; se prueban en producción |
+| `GEMINI_API_KEY` | Vercel | **Nivel de pago obligatorio** (el gratuito entrena con los datos → RGPD). `GEMINI_MODEL` opcional (por defecto `gemini-flash-latest`) |
+| `LEMONSQUEEZY_WEBHOOK_SECRET`, `COUPON_CODES`, `ADMIN_EMAILS` | Vercel | Pagos, cupones, admins extra |
+
+Al borrar código que usaba credenciales, **revocar la credencial además** (lección de las variables huérfanas del bot de Telegram).
 
 ## Reglas de interfaz
 
@@ -55,66 +91,81 @@ b.bottom > nav.top  // true = está tapado
 
 ### Claro y oscuro, ambos
 
-Cada superficie con `bg-*` necesita su `dark:bg-*`, y cada texto su `dark:text-*`. Cuando falta uno de los dos aparece el fallo clásico de este proyecto: **texto blanco sobre fondo blanco**.
+Cada superficie con `bg-*` necesita su `dark:bg-*`, y cada texto su `dark:text-*`. Cuando falta uno de los dos aparece el fallo clásico de este proyecto: **texto blanco sobre fondo blanco**. Si tocas un componente, comprueba también el contenedor que lo envuelve.
 
-Ya ha pasado dos veces —en los modales del panel y en la landing entera— y en ambos casos el origen fue el mismo: un componente adaptado a medias mientras sus vecinos no. Si tocas un componente, comprueba también el contenedor que lo envuelve.
-
-Para comprobarlo rápido sin cambiar la configuración del sistema:
-
-```js
-document.documentElement.classList.toggle('dark')
-```
+Para comprobarlo rápido: `document.documentElement.classList.toggle('dark')`.
 
 ### `h-full` en paneles flex hermanos: casi siempre es un error
 
-Si un panel comparte espacio vertical con otro elemento (una barra de pestañas, una cabecera), `h-full` le hace reclamar el 100% del contenedor **ignorando a su hermano**, y se desborda por abajo.
-
-Lo correcto es `flex-1 min-h-0`. El `min-h-0` es la parte que casi nadie recuerda: sin él, un elemento flex se niega a encogerse por debajo de su contenido y el desbordamiento vuelve.
+Lo correcto es `flex-1 min-h-0`. Sin el `min-h-0`, un elemento flex se niega a encogerse por debajo de su contenido y el desbordamiento vuelve.
 
 ### Pies de página fijos: que solo lleven acciones
 
-Las barras inferiores de acciones crecen sin control cuando se les mete contenido variable (resúmenes, totales, campos plegables). Ese contenido va en la zona con scroll; en el pie fijo, solo los botones. Así no puede volver a tapar nada.
-
-Para el margen inferior en móviles con notch, `pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]` — con `max`, no sumando, para no acumular espacio de más.
+El contenido variable va en la zona con scroll; en el pie fijo, solo botones. Margen inferior con notch: `pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]`.
 
 ### Secciones plegables
 
-Cuando pliegues algo que el usuario ha rellenado, **deja siempre un resumen visible** (el nombre del cliente, un badge con el descuento). Esconder información sin rastro hace que se olvide que está puesta.
+Cuando pliegues algo que el usuario ha rellenado, **deja siempre un resumen visible**.
+
+### Maestro-detalle en móvil: toda pantalla necesita salida
+
+Si la lista se oculta al seleccionar un elemento, el detalle DEBE tener vuelta atrás **en todos sus estados, incluido el vacío** — y si el elemento seleccionado deja de existir, se vuelve a la lista solo (`ClientManager` ya lo hace; imítalo).
 
 ## Trampas conocidas
 
+### `confirm()` / `alert()` nativos: prohibidos
+
+En la PWA instalada el navegador puede ignorarlos EN SILENCIO: la función devuelve false y el botón "no hace nada". Usa `useConfirm()` de `src/context/ConfirmContext.js` (devuelve promesa, explica consecuencias) y `useToast()` para avisos.
+
+### Checkbox `sr-only` en interruptores: nunca
+
+`sr-only` deja el input absoluto y de 1×1 px; al pulsar la etiqueta el navegador lo enfoca y hace scroll hasta él — y si un ancestro tiene `overflow-hidden` (como el `<main>` de la app), desplaza el contenido fuera de la vista sin vuelta atrás ("la pestaña se pone en negro"). El input debe OCUPAR el sitio del control con `opacity-0` (ver el interruptor de `SysConfig`).
+
+### La regla global de área táctil vive en `@layer base`
+
+`button, a { min-height: 44px }` está en `@layer base` A PROPÓSITO: fuera de capas, lo no-capado gana a cualquier utilidad de Tailwind (que viven en `@layer utilities`) sin mirar especificidad, y anulaba todos los `min-h-*` de botones en silencio. Si añades CSS global, dentro de una capa.
+
+### `useRef(true)` + cleanup = bomba con StrictMode
+
+Un ref `isMounted` que el cleanup pone a `false` debe volver a `true` DENTRO del efecto: en desarrollo React monta→desmonta→remonta y si solo se inicializa en el `useRef` queda `false` para siempre (el botón Guardar se quedó "Guardando..." por esto).
+
+### Estado deducido: registra la intención
+
+"No está en X" no distingue "nunca llegó" de "lo borraron a propósito" — deducirlo resucitó presupuestos borrados. Si una migración/sincronización decide por ausencia, guarda un censo explícito de lo ya resuelto. Y al arreglar lógica de estado, cubre TODOS los estados, no solo el que viste fallar.
+
 ### `html2canvas-pro`, nunca `html2canvas`
 
-Tailwind v4 genera los colores en `oklch()`. El `html2canvas` clásico no sabe interpretar ese formato y **falla al generar el PDF**. Usa siempre `html2canvas-pro`, que sí lo soporta.
-
-Vale para cualquier librería que tenga que leer colores calculados del DOM: compruébalo antes de instalarla.
+Tailwind v4 genera colores `oklch()` que el clásico no sabe parsear y revienta el PDF. Vale para cualquier librería que lea colores computados del DOM.
 
 ### El service worker solo se registra en producción
 
-`src/components/ServiceWorkerRegister.js` no hace nada en desarrollo, a propósito: serviría código cacheado y rompería el refresco en caliente. Para probar la PWA o el modo sin conexión hace falta un build de producción — hay una configuración `prod` en `.claude/launch.json` que lo levanta en el puerto 3001.
-
-Si cambias el cascarón de la app y necesitas que los usuarios existentes recojan la versión nueva, sube la versión de la caché (`tupresulisto-v1` → `-v2`) en `public/sw.js`.
+Para probar PWA/offline: build de producción (config `prod` de `.claude/launch.json`, puerto 3001). Si cambias el cascarón, sube la versión de caché en `public/sw.js` (`tupresulisto-vN`) para que los clientes instalados se actualicen pronto.
 
 ### Firestore ya guarda datos sin conexión
 
-`src/lib/firebase.js` inicializa Firestore con caché persistente en IndexedDB, porque el autónomo puede estar en un sótano sin cobertura. Se usa `initializeFirestore` (no `getFirestore`) y hay un `try/catch` a propósito: con el refresco en caliente puede intentar inicializarse dos veces.
+`initializeFirestore` con caché persistente y try/catch a propósito (HMR). No lo "simplifiques".
 
 ### Datos del usuario: nunca confíes en el cuerpo de la petición
 
-Las rutas de API deben verificar el ID token de Firebase y usar **el uid del token**, no un id que venga en el cuerpo. Ya hubo un fallo así en `redeem-coupon`: aceptaba cualquier `userId` y permitía canjear cupones sobre cuentas ajenas.
+Verificar el ID token y usar el uid del token. Admins centralizados en `src/lib/adminEmails.js`.
 
-Los emails con permisos de administración están centralizados en `src/lib/adminEmails.js` (`isAdminEmail()`), ampliables con la variable de entorno `ADMIN_EMAILS`. No los repitas por las rutas.
+## Flujo de trabajo que funciona aquí
+
+- **Páginas sonda**: para verificar componentes que viven tras el login, crea `src/app/probe-X/page.js` montándolos con datos falsos, verifica con el navegador (medidas del DOM, no capturas) y BÓRRALA antes de commitear. Ojo: las carpetas `_privadas` de Next no generan ruta.
+- **PowerShell rompe las comillas** en argumentos multilínea a git/gh: mensajes de commit con `git commit -F fichero` y cuerpos de PR con `--body-file`.
+- **Verificar despliegues de Vercel**: `vercel ls` lista también despliegues VIEJOS en Ready — espera a que no quede ninguno "Building" y mira el más reciente. Para confirmar que producción sirve el código nuevo, busca un texto tuyo en los chunks JS (`/_next/static/chunks/`) del dominio real; el HTML servido no contiene lo que se renderiza tras el login.
+- **Probar el agente/MCP en producción**: los clientes MCP cachean la lista de herramientas al conectar; tras añadir una herramienta hay que reconectar (chat nuevo). La nota que devuelven las herramientas sirve de "huella de versión" del servidor.
 
 ## Antes de dar algo por terminado
 
-1. **Compila en producción** (`npm run build`). Es más estricto que el modo desarrollo y ha cazado errores de JSX que el servidor de desarrollo dejaba pasar.
+1. **Compila en producción** (`npm run build`). Es más estricto que el modo desarrollo.
 2. **Míralo en el navegador**, a 375px y en escritorio, en claro y en oscuro.
-3. **Mide, no estimes.** Cuando el problema sea de espacio o de solapamiento, saca números del DOM (`getBoundingClientRect`) en vez de juzgar por una captura. Las capturas del panel se quedan congeladas a veces y llevan a conclusiones falsas.
-
-Si un comprobador automático da un resultado que contradice lo que se ve claramente en pantalla, sospecha del comprobador antes que de la pantalla — y dilo, en vez de reportar datos en los que no confías.
+3. **Mide, no estimes.** `getBoundingClientRect` antes que capturas. Si un comprobador contradice lo que se ve en pantalla, sospecha del comprobador — y dilo, en vez de reportar datos en los que no confías.
 
 ## Al escribir en la interfaz
 
-Todo de cara al usuario va **en español de España**, con el tono de alguien que habla con un profesional de gremio: directo y sin jerga técnica. "Presupuesto", no "quote". "Enviar al cliente", no "compartir documento".
+Todo de cara al usuario va **en español de España**, tono directo de profesional de gremio, sin jerga. "Presupuesto", no "quote". Los textos de confirmación explican la consecuencia ("se moverá a la papelera, podrás recuperarlo"), no solo preguntan.
+
+**El copy solo afirma lo que el producto hace HOY** — verificado contra el código, no contra el recuerdo. Ya hubo que retirar "interpola el precio" (aplica tramos), "duplicar presupuesto" (no existe) y "catálogo de ejemplo incluido" (no hay siembra). Los testimonios de las páginas de gremio son inventados y están desactivados hasta tener reales.
 
 Los mensajes de commit también en español, describiendo **qué problema resuelve el cambio y por qué**, no solo qué se tocó.
