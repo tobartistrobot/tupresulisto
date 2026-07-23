@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { ToastProvider, useToast } from '../../context/ToastContext';
-import { LayoutDashboard, ShoppingCart, Archive, Settings, LogOut, Users, Cloud, CloudOff, RefreshCw, Loader2, Calculator, Crown } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Archive, Settings, LogOut, Users, Cloud, CloudOff, RefreshCw, Loader2, Calculator, Crown, Bot } from 'lucide-react';
 import ThemeToggle from '../ThemeToggle';
 import { useSyncEngine } from '../../hooks/useSyncEngine';
 import { clientKey } from '../../utils/clientKey';
@@ -11,6 +11,7 @@ import QuoteConfigurator from './QuoteConfigurator';
 import ProductManager from './ProductManager';
 import ClientManager from './ClientManager';
 import SysConfig from './SysConfig';
+import AgentChat from './AgentChat';
 import UpgradeModal from '../UpgradeModal';
 import VerificationPending from '../VerificationPending';
 
@@ -42,6 +43,16 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
     const [view, setView] = useState('dashboard'); // dashboard, quote, prods, clients, config
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [upgradeMessage, setUpgradeMessage] = useState(null);
+    const [showAgent, setShowAgent] = useState(false);
+
+    // El chat del agente es función PRO: a los demás se les enseña el porqué.
+    const handleOpenAgent = () => {
+        if (isPro) setShowAgent(true);
+        else {
+            setUpgradeMessage('El Agente IA es una función del plan PRO: consulta, calcula y crea presupuestos por chat o dictando por voz.');
+            setShowUpgradeModal(true);
+        }
+    };
 
     // GATE: Email Verification
     // Google Auth users usually have emailVerified: true automatically.
@@ -207,6 +218,7 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
 
     return (
         <div className="flex h-[100dvh] w-full bg-slate-100 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-100 overflow-hidden relative isolate">
+            {showAgent && <AgentChat user={user} onClose={() => setShowAgent(false)} />}
             {showUpgradeModal && (
                 <UpgradeModal
                     onClose={() => { setShowUpgradeModal(false); setUpgradeMessage(null); }}
@@ -262,6 +274,9 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
                     <span className="font-black text-lg text-white tracking-tight">tupresulisto<span className="text-blue-400">.com</span></span>
                 </div>
                 <div className="flex items-center gap-1">
+                    <button onClick={handleOpenAgent} aria-label="Abrir el Agente IA" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-blue-400 hover:text-blue-300 transition-colors">
+                        <Bot size={20} />
+                    </button>
                     <ThemeToggle className="dark:hover:bg-slate-800" />
                     <button onClick={onLogout} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-white transition-colors">
                         <LogOut size={20} />
@@ -304,6 +319,9 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
                 <div className="p-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
                     <button onClick={() => setView('config')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${view === 'config' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'}`}>
                         <Settings size={20} /> <span className="hidden lg:block font-bold text-sm">Configuración</span>
+                    </button>
+                    <button onClick={handleOpenAgent} className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                        <Bot size={20} /> <span className="hidden lg:block font-bold text-sm">Agente IA</span>
                     </button>
                     <div className="flex items-center justify-center lg:justify-between px-3 py-1">
                         <span className="hidden lg:block text-xs text-slate-400 dark:text-slate-500 font-medium">Tema</span>
