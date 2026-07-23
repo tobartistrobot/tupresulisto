@@ -48,12 +48,20 @@ export const useSyncEngine = (user) => {
     // DATA STORES
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState(['General', 'Cocinas', 'Armarios']);
+    // Todos los campos que edita Configuración DEBEN tener valor inicial:
+    // un input cuyo value empieza en undefined es "no controlado" para React
+    // y se vuelve controlado al llegar el dato — con aviso en consola y
+    // parpadeo del valor. email/address/website/bankAccount faltaban.
     const [config, setConfig] = useState({
         name: 'Tu Carpintería',
         color: '#2563eb',
         logo: null,
         cif: '',
         phone: '',
+        email: '',
+        address: '',
+        website: '',
+        bankAccount: '',
         legalText: 'Presupuesto válido por 15 días.',
         iva: 21
     });
