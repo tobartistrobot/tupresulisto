@@ -87,7 +87,7 @@ const GremioSeoPage = ({ gremio }) => {
                         </Link>
                     </div>
                     <p className="text-slate-400 dark:text-slate-500 text-sm mt-5">
-                        Sin tarjeta · Sin permanencia · Catálogo de ejemplo incluido
+                        Sin tarjeta · Sin permanencia · Empiezas con 3 productos gratis
                     </p>
                 </section>
 

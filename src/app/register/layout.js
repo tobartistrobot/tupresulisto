@@ -8,7 +8,7 @@
 export const metadata = {
     title: 'Crea tu cuenta gratis',
     description:
-        'Empieza a presupuestar en minutos. Sin tarjeta y con un catálogo de tu gremio ya preparado.',
+        'Empieza a presupuestar en minutos. Sin tarjeta: monta tus tres primeros productos y sal a medir con el móvil.',
     alternates: { canonical: '/register' },
 };
 
