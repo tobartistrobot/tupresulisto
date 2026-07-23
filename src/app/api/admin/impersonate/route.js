@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdmin } from '@/lib/firebaseAdmin';
-import { isAdminEmail } from '@/lib/adminEmails';
+import { isVerifiedAdmin } from '@/lib/adminEmails';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,11 +20,11 @@ export async function POST(request) {
         }
 
         const token = authHeader.substring(7);
-        const { admin } = getAdmin();
+        const { adminDb, admin } = getAdmin();
 
-        // Verify the caller is a real admin
+        // Verify the caller is a real admin (email en la lista Y verificado)
         const decodedToken = await admin.auth().verifyIdToken(token);
-        if (!isAdminEmail(decodedToken.email)) {
+        if (!isVerifiedAdmin(decodedToken)) {
             console.warn(`Unauthorized impersonation attempt by: ${decodedToken.email}`);
             return NextResponse.json({ error: 'Forbidden - Admin access only' }, { status: 403 });
         }
@@ -47,6 +47,23 @@ export async function POST(request) {
         });
 
         console.info(`[IMPERSONATION] Admin ${decodedToken.email} accessing user ${targetUserId} (${targetUserEmail})`);
+
+        // Rastro de auditoría persistente: los logs de Vercel son efímeros y
+        // "quién entró como quién y cuándo" es justo lo que conviene poder
+        // responder meses después. Si la escritura falla no se bloquea el
+        // acceso, pero queda registrado el fallo en los logs.
+        try {
+            await adminDb.collection('admin_audit').add({
+                action: 'impersonation',
+                adminEmail: decodedToken.email,
+                adminUid: decodedToken.uid,
+                targetUserId,
+                targetUserEmail: targetUserEmail || null,
+                at: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        } catch (auditError) {
+            console.error('[IMPERSONATION] Audit write failed:', auditError);
+        }
 
         return NextResponse.json({ customToken });
 

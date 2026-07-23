@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
+import { SITE_URL } from '../lib/site';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +18,9 @@ const DESCRIPCION =
   'Haz presupuestos de ventanas, toldos, carpintería y cristalería en el móvil y envíalos por WhatsApp al momento, desde casa del cliente. Prueba gratis, sin tarjeta.';
 
 export const metadata = {
-  metadataBase: new URL('https://tupresulisto.com'),
+  // La base con www: es el dominio que se sirve de verdad. Con esto, todos
+  // los canonical/OG relativos del sitio se resuelven contra el dominio bueno.
+  metadataBase: new URL(SITE_URL),
   // `template` deja que cada página ponga su propio título ("Login | TuPresuListo")
   // sin repetir la marca a mano. `default` es el de la home.
   title: {
@@ -46,7 +49,7 @@ export const metadata = {
   openGraph: {
     title: TITULO,
     description: DESCRIPCION,
-    url: 'https://tupresulisto.com',
+    url: SITE_URL,
     siteName: 'TuPresuListo',
     locale: 'es_ES',
     type: 'website',

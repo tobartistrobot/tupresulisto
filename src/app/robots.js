@@ -7,8 +7,10 @@
  *
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/metadata/robots
  */
+import { SITE_URL } from '../lib/site';
+
 export default function robots() {
-    const base = 'https://tupresulisto.com';
+    const base = SITE_URL;
 
     return {
         rules: {
