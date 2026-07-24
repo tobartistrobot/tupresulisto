@@ -43,7 +43,13 @@ Reglas:
 - Usa crear_presupuesto SOLO cuando pida claramente crear/guardar el presupuesto. Antes de crearlo, si falta el nombre del cliente, pídeselo.
 - Los totales pueden incluir el margen del producto y el IVA: explícalo con el desglose en vez de dudar del número.
 - Si una herramienta devuelve error, corrige con la información del error (nombres de productos disponibles, límites de medidas...) en vez de rendirte.
-- No inventes precios ni productos JAMÁS: todo sale de las herramientas.`;
+- No inventes precios ni productos JAMÁS: todo sale de las herramientas.
+- Si el usuario adjunta fotos (a menudo anotaciones manuscritas de obra) o PDF, extrae de ahí lo útil para el presupuesto: medidas, cantidades, productos, ubicaciones y datos del cliente. Resume SIEMPRE lo que has entendido (lista corta: producto, medidas, cantidad) para que lo confirme antes de calcular o crear nada. Si algo no se lee bien o es ambiguo, pregunta por esa parte en concreto en vez de adivinar. Casa lo extraído con el catálogo real usando listar_productos.`;
+
+/** Adjuntos que aceptamos del cliente (fotos de notas y PDF). */
+const ALLOWED_ATTACHMENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
+const MAX_ATTACHMENTS = 3;
+const MAX_ATTACHMENTS_BASE64 = 4_000_000; // caracteres base64 en total
 
 /** Declaración de línea de presupuesto para Gemini (subset OpenAPI). */
 const LINEA_SCHEMA = {
@@ -310,6 +316,32 @@ export async function POST(req) {
     const contents = mensajes
         .filter(m => (m.role === 'user' || m.role === 'model') && typeof m.text === 'string' && m.text.trim())
         .map(m => ({ role: m.role, parts: [{ text: m.text.slice(0, 4000) }] }));
+
+    // 2b. Adjuntos (fotos de anotaciones, PDF): van como inline_data en el
+    // ÚLTIMO mensaje del usuario — solo el turno actual los lleva; el cliente
+    // marca en texto los de turnos anteriores. Validación estricta: tipos en
+    // lista blanca, tope de cantidad y de peso, y base64 saneado.
+    const adjuntosRaw = Array.isArray(body?.attachments) ? body.attachments.slice(0, MAX_ATTACHMENTS) : [];
+    if (adjuntosRaw.length > 0) {
+        const validos = [];
+        let totalChars = 0;
+        for (const a of adjuntosRaw) {
+            if (!a || !ALLOWED_ATTACHMENT_TYPES.has(a.mimeType) || typeof a.data !== 'string') continue;
+            const data = a.data.replace(/^data:[^,]+,/, '').replace(/\s/g, '');
+            if (!data || !/^[A-Za-z0-9+/=]+$/.test(data)) continue;
+            totalChars += data.length;
+            if (totalChars > MAX_ATTACHMENTS_BASE64) {
+                return NextResponse.json({ error: 'Los archivos adjuntos pesan demasiado. Envíalos por separado.' }, { status: 413 });
+            }
+            validos.push({ inline_data: { mime_type: a.mimeType, data } });
+        }
+        const lastUser = contents.findLast?.(c => c.role === 'user') ?? [...contents].reverse().find(c => c.role === 'user');
+        if (validos.length > 0 && lastUser) {
+            // Los archivos delante del texto: el modelo lee primero el material
+            // y después la instrucción sobre qué hacer con él.
+            lastUser.parts = [...validos, ...lastUser.parts];
+        }
+    }
 
     // 3. Bucle de herramientas.
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
