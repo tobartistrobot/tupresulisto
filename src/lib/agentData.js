@@ -19,7 +19,16 @@ import { marshal, unmarshal } from './firestoreMarshal';
 /** @returns {Promise<Array<object>>} Catálogo de productos del usuario, desmarshalizado. */
 export async function loadProducts(uid) {
     const { adminDb } = getAdmin();
-    const root = await adminDb.collection('users').doc(uid).get();
+    const userRef = adminDb.collection('users').doc(uid);
+    const root = await userRef.get();
+
+    // Esquema moderno: un documento por producto en la subcolección. El array
+    // del documento raíz queda congelado como copia de seguridad, así que si
+    // hay marca de migración NO se mira (tendría datos viejos).
+    if (root.exists && root.data().productsMigratedAt) {
+        const snap = await userRef.collection('products').get();
+        return snap.docs.map(d => unmarshal(d.data()));
+    }
 
     if (root.exists && root.data().products) {
         let raw = root.data().products;
