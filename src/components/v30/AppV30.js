@@ -61,6 +61,8 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [upgradeMessage, setUpgradeMessage] = useState(null);
     const [showAgent, setShowAgent] = useState(false);
+    // Conversación compartida desde otra app, para abrir el agente ya cargado.
+    const [agentInitialText, setAgentInitialText] = useState(null);
 
     // El chat del agente es función PRO: a los demás se les enseña el porqué.
     const handleOpenAgent = () => {
@@ -120,6 +122,25 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [view]);
+
+    // Conversación compartida vía share_target (la dejó el dashboard en
+    // sessionStorage): se consume UNA vez y se abre el agente con ella. La
+    // puerta PRO es la misma que la del botón del agente; si no lo es, el
+    // texto se descarta y se explica el porqué con el modal de mejora.
+    useEffect(() => {
+        let compartido = null;
+        try { compartido = sessionStorage.getItem('tpl-shared-text'); } catch { /* sin storage */ }
+        if (!compartido) return;
+        try { sessionStorage.removeItem('tpl-shared-text'); } catch { /* sin storage */ }
+        if (isPro) {
+            setAgentInitialText(compartido);
+            setShowAgent(true);
+        } else {
+            setUpgradeMessage('Compartir conversaciones con el Agente IA es una función del plan PRO: te extrae las medidas y los datos del cliente y prepara el presupuesto.');
+            setShowUpgradeModal(true);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Espejo del historial para el botón "abrir presupuesto" del agente: sus
     // reintentos son asíncronos y un closure sobre `history` se quedaría con
@@ -297,7 +318,7 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
 
     return (
         <div className="flex h-[100dvh] w-full bg-slate-100 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-100 overflow-hidden relative isolate">
-            {showAgent && <AgentChat user={user} onClose={() => setShowAgent(false)} onOpenQuote={openQuoteFromAgent} />}
+            {showAgent && <AgentChat user={user} onClose={() => { setShowAgent(false); setAgentInitialText(null); }} onOpenQuote={openQuoteFromAgent} initialInput={agentInitialText} />}
             {showUpgradeModal && (
                 <UpgradeModal
                     onClose={() => { setShowUpgradeModal(false); setUpgradeMessage(null); }}

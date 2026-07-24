@@ -16,6 +16,20 @@ export default function DashboardPage() {
         }
     }, [user, loading, router]);
 
+    // Texto compartido desde otra app (share_target del manifest): WhatsApp o
+    // el correo abren /dashboard?share_text=... Lo apartamos a sessionStorage
+    // ANTES de cualquier redirección (si hace falta pasar por el login, la URL
+    // con los parámetros se pierde) y limpiamos la URL; AppV30 lo consume y
+    // abre el agente con la conversación cargada.
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const compartido = [params.get('share_title'), params.get('share_text'), params.get('share_url')]
+            .filter(Boolean).join('\n').trim();
+        if (!compartido) return;
+        try { sessionStorage.setItem('tpl-shared-text', compartido); } catch { /* modo privado sin cuota */ }
+        window.history.replaceState(null, '', window.location.pathname);
+    }, []);
+
     if (loading) {
         return (
             <div className="h-screen w-full flex items-center justify-center bg-slate-50">

@@ -23,6 +23,22 @@ export default function manifest() {
         theme_color: '#2563eb',
         lang: 'es-ES',
         categories: ['business', 'productivity'],
+        // Destino de compartir: desde WhatsApp/Gmail → Compartir → TuPresuListo,
+        // y la conversación aterriza en el agente IA, que extrae medidas, datos
+        // del cliente y prepara el presupuesto. Es la alternativa deliberada a
+        // "monitorizar" los canales: sin credenciales de terceros, sin APIs no
+        // oficiales (Meta banea números por usarlas) y con el usuario eligiendo
+        // qué comparte. GET con parámetros: el texto llega en la URL y el
+        // dashboard lo recoge al abrirse.
+        share_target: {
+            action: '/dashboard',
+            method: 'GET',
+            params: {
+                title: 'share_title',
+                text: 'share_text',
+                url: 'share_url',
+            },
+        },
         icons: [
             {
                 src: '/icon-192.png',

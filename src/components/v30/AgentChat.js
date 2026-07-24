@@ -67,10 +67,12 @@ const readPdf = (file) => new Promise((resolve, reject) => {
     reader.readAsDataURL(file);
 });
 
-const AgentChat = ({ user, onClose, onOpenQuote }) => {
+const AgentChat = ({ user, onClose, onOpenQuote, initialInput }) => {
     const toast = useToast();
     const [messages, setMessages] = useState([]);
-    const [input, setInput] = useState('');
+    // initialInput: conversación compartida desde otra app (share_target);
+    // llega ya puesta en el cuadro para que el usuario la revise y envíe.
+    const [input, setInput] = useState(initialInput || '');
     const [busy, setBusy] = useState(false);
     const [listening, setListening] = useState(false);
     const [attachments, setAttachments] = useState([]); // { name, mimeType, data, previewUrl }
@@ -282,7 +284,7 @@ const AgentChat = ({ user, onClose, onOpenQuote }) => {
                             </div>
                             <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                                 Pregúntame por tu catálogo, calcula precios o dicta un presupuesto mientras mides.
-                                También puedes adjuntarme una foto de tus anotaciones o un PDF y saco de ahí las medidas.
+                                También puedes pegarme una conversación de WhatsApp o del correo, o adjuntarme una foto de tus anotaciones o un PDF, y saco de ahí las medidas.
                             </p>
                             <div className="flex flex-col gap-2 w-full">
                                 {SUGERENCIAS.map(s => (
@@ -405,7 +407,7 @@ const AgentChat = ({ user, onClose, onOpenQuote }) => {
                             value={input}
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-                            placeholder="Escribe o dicta tu consulta…"
+                            placeholder="Escribe, dicta o pega una conversación…"
                             className="flex-1 resize-none max-h-32 min-h-[48px] px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500/40 text-sm"
                         />
                         {SpeechRecognition && (
