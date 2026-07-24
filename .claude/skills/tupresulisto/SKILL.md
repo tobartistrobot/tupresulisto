@@ -48,6 +48,8 @@ Por usuario (`users/{uid}`):
 - **`data/history`**: el documento ÚNICO legacy, congelado como copia de seguridad tras la migración (marca `migratedToSubcollection` + `migratedAt` + censo `legacyResolvedIds`). No escribir en él; la app "adopta" una sola vez los presupuestos que escritores antiguos dejen ahí (censados para no resucitar lo borrado).
 - **`data/agentUsage`**: tope diario del chat del agente.
 
+**Las fotos de producto van en base64 dentro de su documento, y NO deben moverse a Firebase Storage** (analizado y descartado, jul 2026). Dos motivos de código, no de opinión: el service worker ignora a propósito los orígenes ajenos (`sw.js`: *"nunca Firebase/PostHog/Lemon"*), así que las URLs de Storage no se cachearían y el catálogo saldría con fotos rotas sin cobertura — el escenario para el que existe la app; y la foto se dibuja en el PDF que recibe el cliente, generado con html2canvas sobre el DOM, donde una imagen de otro origen contamina el canvas salvo configurando CORS del bucket. Si algún día se hace, hay que resolver ambas cosas primero. Se guardan a **600 px** (el uso más exigente son ~510 px de la ficha en móvil a 3x; en el PDF salen a 64 px con captura al doble).
+
 `api_keys` (colección raíz): claves `tpl_...` de agentes, docId = SHA-256 de la clave. Las reglas de Firestore niegan por defecto todo lo no listado; el Admin SDK las salta (por eso las rutas de API DEBEN autenticar por su cuenta).
 
 El marshal/unmarshal de Firestore (arrays anidados prohibidos) vive en `src/lib/firestoreMarshal.js`, compartido entre app y servidor.
@@ -57,6 +59,7 @@ El marshal/unmarshal de Firestore (arrays anidados prohibidos) vive en `src/lib/
 - **MCP** (`/api/mcp`, código en `src/app/api/[transport]/route.js`): para agentes externos, Bearer `tpl_...`. 6 herramientas.
 - **Chat en la app** (`/api/agent/chat` + `AgentChat.js`): función PRO con dictado por voz (Web Speech API es-ES; en iOS Safari no existe y el botón se oculta). Autentica con el ID token de Firebase.
 - **Ambos comparten `src/lib/agentQuoting.js`** (resolución de productos/extras, cálculo de líneas y totales sobre `pricingEngine.js`). Si tocas la lógica de precios, tócala AHÍ, nunca en una de las dos puertas.
+- **`loadProducts(uid, { conFoto })`**: por defecto trae la foto, pero consultar y calcular NO la necesitan y pesa ~40-100 KB por producto. Usa `conFoto: false` (hace `select()` en Firestore, así que el ahorro es de red) en todo salvo `crear_presupuesto`, que sí la necesita porque la foto se guarda dentro de la línea y sale en el PDF del cliente.
 - Filosofía fase 1: el agente prepara, el humano aprueba y envía. `calcular_precio` NO persiste (para tanteos); `crear_presupuesto` sí.
 - Regla de oro heredada del agente de Telegram que hubo que matar en mayo: **el uid sale SIEMPRE del token verificado, jamás del cuerpo de la petición**.
 
