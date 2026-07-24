@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
-import { Box, Save, Crown, Ticket, Shield, AlertTriangle, Bot, Copy, Trash2 } from 'lucide-react';
+import { Box, Save, Crown, Ticket, Shield, AlertTriangle, Bot, Copy, Trash2, Building2, Phone, Percent, FileText, ChevronDown } from 'lucide-react';
 import { SITE_URL } from '../../lib/site';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'; // Import auth methods
 import { track, EVENTS } from '../../lib/analytics';
@@ -26,6 +26,38 @@ const processImage = (file) => new Promise((resolve, reject) => {
     }
     reader.readAsDataURL(file);
 });
+
+/**
+ * Tarjeta plegable del acordeón de Configuración. La cabecera enseña SIEMPRE
+ * un resumen de lo que hay dentro (regla de la casa: nunca plegar datos que
+ * el usuario rellenó sin dejar un resumen a la vista), así la pestaña se
+ * recorre de un vistazo y solo se abre lo que se va a tocar.
+ */
+const ConfigSection = ({ icon, iconClass, title, badge, summary, defaultOpen = false, children }) => {
+    const [open, setOpen] = useState(defaultOpen);
+    return (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden w-full">
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                aria-expanded={open}
+                className="w-full flex items-center gap-3 p-4 md:p-5 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors"
+            >
+                <span className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${iconClass}`}>{icon}</span>
+                <span className="flex-1 min-w-0">
+                    <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">{title}{badge}</span>
+                    <span className="block text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{summary}</span>
+                </span>
+                <ChevronDown size={18} className={`shrink-0 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+            </button>
+            {open && (
+                <div className="px-4 md:px-6 pb-5 pt-4 border-t border-slate-100 dark:border-slate-700 animate-fade-in">
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+};
 
 const SysConfig = ({ config, setConfig, className, user, isPro, products = [], setProducts, categories = [], setCategories }) => {
     const toast = useToast();
@@ -190,12 +222,18 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
         }
     };
 
+    const activeKeyCount = apiKeys.filter(k => !k.revoked).length;
+
     return (
         <div className={`p-4 md:p-8 max-w-4xl mx-auto h-full overflow-y-auto animate-fade-in ${className}`}>
             <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 mb-6">Configuración de Negocio</h2>
-            <div className="space-y-6">
-                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 md:p-6 shadow-sm overflow-hidden w-full">
-                    <h3 className="font-bold text-lg mb-4 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">Identidad Corporativa</h3>
+            <div className="space-y-3">
+                <ConfigSection
+                    icon={<Building2 size={20} />}
+                    iconClass="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                    title="Identidad Corporativa"
+                    summary={<><span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5 align-middle border border-slate-200 dark:border-slate-600" style={{ backgroundColor: config.color }}></span>{config.name || 'Sin nombre'}{config.cif ? ` · ${config.cif}` : ''} · {config.logo ? 'logo cargado' : 'sin logo'}</>}
+                >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full min-w-0">
                         <div className="space-y-4 w-full min-w-0 flex flex-col items-center">
                             <div className="w-full"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Nombre Comercial</label><input className="input-saas" value={config.name} onChange={e => setConfig({ ...config, name: e.target.value })} /></div>
@@ -210,10 +248,14 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                             </div>
                         </div>
                     </div>
-                </div>
+                </ConfigSection>
 
-                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 md:p-6 shadow-sm overflow-hidden w-full">
-                    <h3 className="font-bold text-lg mb-4 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">Contacto y Legal</h3>
+                <ConfigSection
+                    icon={<Phone size={20} />}
+                    iconClass="bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400"
+                    title="Contacto y Legal"
+                    summary={config.phone || config.email ? [config.phone, config.email].filter(Boolean).join(' · ') : 'Sin datos de contacto'}
+                >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 w-full min-w-0">
                         <div className="w-full"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Teléfono</label><input className="input-saas" value={config.phone} onChange={e => setConfig({ ...config, phone: e.target.value })} /></div>
                         <div className="w-full"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Email</label><input className="input-saas" value={config.email} onChange={e => setConfig({ ...config, email: e.target.value })} /></div>
@@ -222,10 +264,14 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                     </div>
                     <div className="w-full min-w-0"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Cuenta Bancaria (para Presupuestos)</label><textarea className="input-saas h-20 min-h-[80px] text-sm py-2" value={config.bankAccount} onChange={e => setConfig({ ...config, bankAccount: e.target.value })} /></div>
                     <div className="mt-4 w-full min-w-0"><label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">Términos Legales (Pie de página)</label><textarea className="input-saas h-32 min-h-[120px] text-xs py-2" value={config.legalText} onChange={e => setConfig({ ...config, legalText: e.target.value })} /></div>
-                </div>
+                </ConfigSection>
 
-                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 md:p-6 shadow-sm overflow-hidden w-full">
-                    <h3 className="font-bold text-lg mb-4 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">Fiscalidad</h3>
+                <ConfigSection
+                    icon={<Percent size={20} />}
+                    iconClass="bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
+                    title="Fiscalidad"
+                    summary={`IVA ${config.iva !== undefined ? config.iva : 21}%`}
+                >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full min-w-0">
                         <div className="w-full">
                             <label className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 block mb-1">IVA Global (%)</label>
@@ -233,11 +279,15 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                             <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Por defecto: 21%</p>
                         </div>
                     </div>
-                </div>
+                </ConfigSection>
 
-                {/* Presupuestos: comportamiento al entregar */}
-                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 md:p-6 shadow-sm overflow-hidden w-full">
-                    <h3 className="font-bold text-lg mb-4 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">Presupuestos</h3>
+                {/* Presupuestos: comportamiento al entregar y caducidad de pendientes */}
+                <ConfigSection
+                    icon={<FileText size={20} />}
+                    iconClass="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                    title="Presupuestos"
+                    summary={`Guardar al finalizar: ${config.autoSaveOnFinish !== false ? 'sí' : 'no'} · Caducidad de pendientes: ${config.autoRejectEnabled === true ? `${config.autoRejectDays || 30} días` : 'desactivada'}`}
+                >
                     {/* El interruptor entero es el label: en móvil se puede
                         pulsar en cualquier parte de la fila, no solo la casilla. */}
                     <label className="flex items-start gap-4 cursor-pointer select-none">
@@ -267,11 +317,51 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                             </span>
                         </span>
                     </label>
-                </div>
+
+                    {/* Caducidad automática: los pendientes eternos no son
+                        pendientes, son ventas perdidas sin registrar. */}
+                    <div className="border-t border-slate-100 dark:border-slate-700 mt-5 pt-5">
+                        <label className="flex items-start gap-4 cursor-pointer select-none">
+                            <span className="relative mt-0.5 shrink-0 w-12 h-7">
+                                <input
+                                    type="checkbox"
+                                    className="peer absolute inset-0 w-full h-full opacity-0 cursor-pointer m-0"
+                                    checked={config.autoRejectEnabled === true}
+                                    onChange={e => setConfig({ ...config, autoRejectEnabled: e.target.checked })}
+                                />
+                                <span className="pointer-events-none absolute inset-0 rounded-full bg-slate-200 dark:bg-slate-600 peer-checked:bg-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2 dark:peer-focus-visible:ring-offset-slate-800 transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-5 after:h-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"></span>
+                            </span>
+                            <span className="min-w-0">
+                                <span className="block font-bold text-slate-800 dark:text-slate-100">Caducar presupuestos pendientes</span>
+                                <span className="block text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                                    Los presupuestos en PENDIENTE pasan solos a RECHAZADO cuando llevan demasiado tiempo sin respuesta, para que tu historial refleje la realidad sin repasarlo a mano.
+                                    Si vuelves a poner uno en pendiente, su plazo cuenta desde ese momento.
+                                </span>
+                            </span>
+                        </label>
+                        {config.autoRejectEnabled === true && (
+                            <div className="mt-3 pl-16 flex items-center gap-3 animate-fade-in">
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="365"
+                                    className="input-saas w-24 text-center"
+                                    value={config.autoRejectDays !== undefined ? config.autoRejectDays : 30}
+                                    onChange={e => setConfig({ ...config, autoRejectDays: e.target.value })}
+                                />
+                                <span className="text-sm font-bold text-slate-600 dark:text-slate-300">días sin respuesta</span>
+                            </div>
+                        )}
+                    </div>
+                </ConfigSection>
 
                 {/* Suscripción y Licencia */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm animate-fade-in">
-                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2"><Crown className={isPro ? "text-yellow-500" : "text-slate-400"} /> Suscripción y Licencia</h3>
+                <ConfigSection
+                    icon={<Crown size={20} />}
+                    iconClass="bg-yellow-50 dark:bg-yellow-900/30 text-yellow-500 dark:text-yellow-400"
+                    title="Suscripción y Licencia"
+                    summary={isPro ? 'Plan PRO activo' : 'Plan gratuito — hasta 3 productos'}
+                >
                     <div className="flex flex-col md:flex-row gap-6 items-start">
                         <div className="flex-1">
                             <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-1">Plan Actual</p>
@@ -382,11 +472,15 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                             </div>
                         )}
                     </div>
-                </div>
+                </ConfigSection>
 
                 {/* GESTIÓN DE CATÁLOGO (IMPORTAR / EXPORTAR) */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm animate-fade-in">
-                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2"><Box className="text-purple-600" /> Gestión de Catálogo</h3>
+                <ConfigSection
+                    icon={<Box size={20} />}
+                    iconClass="bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
+                    title="Gestión de Catálogo"
+                    summary={`${products.length} producto${products.length === 1 ? '' : 's'} · ${categories.length} categoría${categories.length === 1 ? '' : 's'}`}
+                >
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl border border-purple-100 dark:border-purple-800/40">
                             <h4 className="font-bold text-purple-900 dark:text-purple-200 mb-2">Exportar Catálogo</h4>
@@ -454,14 +548,16 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                             </label>
                         </div>
                     </div>
-                </div>
+                </ConfigSection>
 
                 {/* AGENTES Y API (BETA): claves para que agentes de IA trabajen sobre esta cuenta vía MCP */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm animate-fade-in">
-                    <h3 className="font-bold text-lg mb-1 flex items-center gap-2 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">
-                        <Bot className="text-emerald-600" /> Agentes y API
-                        <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full uppercase tracking-wider">Beta</span>
-                    </h3>
+                <ConfigSection
+                    icon={<Bot size={20} />}
+                    iconClass="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+                    title="Agentes y API"
+                    badge={<span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full uppercase tracking-wider">Beta</span>}
+                    summary={apiKeysLoading ? 'Cargando claves…' : activeKeyCount === 0 ? 'Sin claves — conecta tu primer agente' : activeKeyCount === 1 ? '1 clave activa' : `${activeKeyCount} claves activas`}
+                >
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
                         Conecta un asistente de IA (Claude u otro compatible con MCP) para que te haga los presupuestos como si fuera tu oficinista.
                         Cada clave da acceso <span className="font-bold">solo a tu cuenta</span> y puedes revocarla cuando quieras.
@@ -531,16 +627,15 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                             ))}
                         </ul>
                     )}
-                </div>
+                </ConfigSection>
 
                 {/* SEGURIDAD / CAMBIAR CONTRASEÑA */}
-                <div className="bg-red-50/50 dark:bg-red-950/20 rounded-xl border border-red-100 dark:border-red-900/40 p-6 shadow-sm animate-fade-in relative overflow-hidden">
-                    {/* Decorative accent */}
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-red-100/50 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-
-                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-red-800 dark:text-red-300 border-b border-red-100 dark:border-red-900/50 pb-2 relative z-10">
-                        <Shield className="text-red-600" size={20} /> Seguridad
-                    </h3>
+                <ConfigSection
+                    icon={<Shield size={20} />}
+                    iconClass="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                    title="Seguridad"
+                    summary={hasPasswordProvider ? 'Cambiar tu contraseña' : 'Cuenta gestionada por Google'}
+                >
 
                     {!hasPasswordProvider ? (
                         <div className="flex items-start gap-3 p-4 bg-white dark:bg-slate-800 rounded-lg border border-red-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm">
@@ -598,7 +693,7 @@ const SysConfig = ({ config, setConfig, className, user, isPro, products = [], s
                             </div>
                         </div>
                     )}
-                </div>
+                </ConfigSection>
 
                 <div className="flex justify-end pb-8">
                     <button onClick={() => toast("Configuración guardada", "success")} className="px-8 py-3 bg-slate-800 dark:bg-slate-700 text-white font-bold rounded-xl shadow-lg flex items-center gap-2 hover:bg-slate-900 dark:hover:bg-slate-600 transition-colors"><Save size={18} /> Guardar Configuración</button>

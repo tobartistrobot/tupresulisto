@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useToast } from '../context/ToastContext';
-import { Lock, AlertCircle, Calculator } from 'lucide-react';
+import { Lock, AlertCircle, Calculator, Eye, EyeOff } from 'lucide-react';
 import { auth, db } from '../lib/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
@@ -13,6 +13,8 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [error, setError] = useState('');
@@ -202,14 +204,25 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
                             </div>
                             <div className="group">
                                 <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wide">Contraseña</label>
-                                <input
-                                    type="password"
-                                    required
-                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-slate-900 dark:text-white font-medium focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all duration-300 placeholder:text-slate-400"
-                                    placeholder={mode === 'register' ? "Crea una clave segura" : "••••••••"}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        required
+                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 pr-12 text-slate-900 dark:text-white font-medium focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all duration-300 placeholder:text-slate-400"
+                                        placeholder={mode === 'register' ? "Crea una clave segura" : "••••••••"}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(v => !v)}
+                                        aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                        title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors touch-sm"
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
                                 {mode === 'login' && (
                                     <div className="flex justify-end mt-2">
                                         <button
@@ -226,14 +239,25 @@ const LoginScreen = ({ onLoginSuccess, mode = 'login', onSwitchToRegister, onSwi
                             {mode === 'register' && (
                                 <div className="group">
                                     <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wide">Repetir Contraseña</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        className={`w-full bg-slate-50 dark:bg-slate-800 border ${password !== confirmPassword && confirmPassword ? 'border-red-400 focus:ring-red-500/20' : 'border-slate-200 dark:border-slate-700 focus:border-brand-500 focus:ring-brand-500/20'} rounded-xl p-3.5 text-slate-900 dark:text-white font-medium focus:bg-white dark:focus:bg-slate-900 focus:ring-4 outline-none transition-all duration-300 placeholder:text-slate-400`}
-                                        placeholder="Repite tu clave"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type={showConfirmPassword ? 'text' : 'password'}
+                                            required
+                                            className={`w-full bg-slate-50 dark:bg-slate-800 border ${password !== confirmPassword && confirmPassword ? 'border-red-400 focus:ring-red-500/20' : 'border-slate-200 dark:border-slate-700 focus:border-brand-500 focus:ring-brand-500/20'} rounded-xl p-3.5 pr-12 text-slate-900 dark:text-white font-medium focus:bg-white dark:focus:bg-slate-900 focus:ring-4 outline-none transition-all duration-300 placeholder:text-slate-400`}
+                                            placeholder="Repite tu clave"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConfirmPassword(v => !v)}
+                                            aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                            title={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors touch-sm"
+                                        >
+                                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                             <div className="pt-2">
