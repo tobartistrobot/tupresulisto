@@ -79,7 +79,7 @@ const handler = createMcpHandler(
             async (_args, extra) => {
                 const uid = uidFrom(extra);
                 if (!uid) return fail('Clave de API no válida.');
-                const products = await loadProducts(uid);
+                const products = await loadProducts(uid, { conFoto: false });
                 if (products.length === 0) return fail('El catálogo está vacío. El usuario debe crear productos en la app antes de poder presupuestar.');
                 return ok({ unidadMedidas: 'mm', productos: products.map(productView) });
             }
@@ -205,7 +205,8 @@ const handler = createMcpHandler(
                 const uid = uidFrom(extra);
                 if (!uid) return fail('Clave de API no válida.');
 
-                const [products, iva] = await Promise.all([loadProducts(uid), loadIva(uid)]);
+                // Sin fotos: aquí solo se calcula, no se guarda nada.
+                const [products, iva] = await Promise.all([loadProducts(uid, { conFoto: false }), loadIva(uid)]);
                 if (products.length === 0) return fail('El catálogo está vacío: no hay productos con los que presupuestar.');
 
                 const { items, error } = buildQuoteItems(products, lineas);
@@ -252,8 +253,10 @@ const handler = createMcpHandler(
                 const uid = uidFrom(extra);
                 if (!uid) return fail('Clave de API no válida.');
 
+                // CON fotos: el presupuesto guarda el producto dentro de cada
+                // línea y la foto sale en el PDF que recibe el cliente.
                 const [products, iva, history] = await Promise.all([
-                    loadProducts(uid), loadIva(uid), loadHistory(uid),
+                    loadProducts(uid, { conFoto: true }), loadIva(uid), loadHistory(uid),
                 ]);
                 if (products.length === 0) return fail('El catálogo está vacío: no hay productos con los que presupuestar.');
 

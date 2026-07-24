@@ -16,8 +16,23 @@ import { marshal, unmarshal } from './firestoreMarshal';
  * durante la transición.
  */
 
-/** @returns {Promise<Array<object>>} Catálogo de productos del usuario, desmarshalizado. */
-export async function loadProducts(uid) {
+/**
+ * Campos que necesita un agente para consultar el catálogo y calcular
+ * precios. Deja fuera `image`, que es la foto en base64 (~40-100 KB por
+ * producto): sin esto, cada llamada a una herramienta se descargaba el
+ * catálogo entero con fotos para acabar tirándolas.
+ */
+const CAMPOS_SIN_FOTO = ['id', 'name', 'category', 'priceType', 'matrix', 'unitPrice', 'marginType', 'marginValue', 'extras'];
+
+/**
+ * @param {string} uid
+ * @param {{ conFoto?: boolean }} [opciones] - `conFoto` solo hace falta al
+ *   CREAR un presupuesto, porque la foto del producto se guarda dentro de la
+ *   línea y sale en el PDF que recibe el cliente. Para consultar y calcular,
+ *   déjalo en false.
+ * @returns {Promise<Array<object>>} Catálogo de productos, desmarshalizado.
+ */
+export async function loadProducts(uid, { conFoto = true } = {}) {
     const { adminDb } = getAdmin();
     const userRef = adminDb.collection('users').doc(uid);
     const root = await userRef.get();
@@ -26,7 +41,10 @@ export async function loadProducts(uid) {
     // del documento raíz queda congelado como copia de seguridad, así que si
     // hay marca de migración NO se mira (tendría datos viejos).
     if (root.exists && root.data().productsMigratedAt) {
-        const snap = await userRef.collection('products').get();
+        const col = userRef.collection('products');
+        // select() pide a Firestore que ni siquiera envíe los campos que no
+        // vamos a usar: el ahorro es de red, no solo de memoria.
+        const snap = await (conFoto ? col.get() : col.select(...CAMPOS_SIN_FOTO).get());
         return snap.docs.map(d => unmarshal(d.data()));
     }
 
@@ -34,7 +52,9 @@ export async function loadProducts(uid) {
         let raw = root.data().products;
         if (!Array.isArray(raw) && raw.list) raw = raw.list;
         const products = unmarshal(raw);
-        if (Array.isArray(products)) return products;
+        // En el esquema legacy todo viene en un único documento y no hay forma
+        // de pedir menos: al menos no se arrastran las fotos más allá de aquí.
+        if (Array.isArray(products)) return conFoto ? products : products.map(({ image, ...p }) => p);
     }
 
     // Esquema antiguo: subcolección data/products
