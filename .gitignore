@@ -50,7 +50,6 @@ firebase-debug.log
 firebase-debug.*.log
 
 # Archivos gigantes a ignorar
-.firebase/
 .tmp.driveupload/
 node_modules/
 **/node_modules/

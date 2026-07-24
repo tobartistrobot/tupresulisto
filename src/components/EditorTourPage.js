@@ -15,21 +15,21 @@ const EditorTourPage = ({ onBack, onRegister }) => {
             number: "01",
             title: "1. Define el producto",
             description: "Sube tu foto y clasifica tu catálogo fácilmente.",
-            image: "/captura-editor-paso1.png",
+            image: "/captura-editor-paso1.webp",
             align: "left"
         },
         {
             number: "02",
             title: "2. Configura tu regla de precio",
             description: "Elige entre Matriz v30, m², ml o Unidad. Precisión absoluta en cada presupuesto.",
-            image: "/captura-editor-paso2-precios.png",
+            image: "/captura-editor-paso2-precios.webp",
             align: "right"
         },
         {
             number: "03",
             title: "3. Personaliza y finaliza",
             description: "Añade extras, acabados y márgenes comerciales en segundos.",
-            image: "/captura-editor-paso3.png",
+            image: "/captura-editor-paso3.webp",
             align: "left"
         }
     ];
