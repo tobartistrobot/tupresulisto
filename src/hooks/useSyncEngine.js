@@ -27,17 +27,48 @@ const NETWORK_ERROR_CODES = new Set(['unavailable', 'deadline-exceeded', 'cancel
 
 const byNewest = (a, b) => (b.id || 0) - (a.id || 0);
 
+/**
+ * Id de documento seguro a partir del id de un objeto. Firestore prohíbe '/'
+ * en los ids (de ahí el encode) y rechaza '.' y '..' como id COMPLETO: el
+ * prefijo los desactiva de paso, sin necesidad de casos especiales.
+ */
+const safeDocId = (id) => `p_${encodeURIComponent(String(id ?? ''))}`;
+
 // Huella estable del contenido de un objeto ya pasado por marshal, para
 // detectar qué documentos cambiaron de verdad y escribir solo esos.
 const contentKey = (marshaled) => JSON.stringify(marshaled);
 
-// Ejecuta operaciones set/delete en lotes (Firestore admite 500 por batch).
+/**
+ * Ejecuta operaciones set/delete en lotes.
+ *
+ * Se corta por DOS motivos, no solo por número: Firestore admite 500
+ * operaciones por lote, pero también limita el tamaño de la petición. Los
+ * productos llevan la foto en base64 (~200 KB cada uno), así que contar solo
+ * operaciones haría lotes de decenas de megas que el servidor rechaza.
+ */
+const MAX_OPS_POR_LOTE = 400;
+const MAX_BYTES_POR_LOTE = 4 * 1024 * 1024; // margen amplio bajo el límite real
+
 const commitOps = async (ops) => {
-    for (let i = 0; i < ops.length; i += 400) {
-        const batch = writeBatch(db);
-        ops.slice(i, i + 400).forEach(op => op.remove ? batch.delete(op.ref) : batch.set(op.ref, op.data));
-        await batch.commit();
+    let lote = writeBatch(db);
+    let n = 0;
+    let bytes = 0;
+
+    const cerrar = async () => {
+        if (n > 0) await lote.commit();
+        lote = writeBatch(db);
+        n = 0;
+        bytes = 0;
+    };
+
+    for (const op of ops) {
+        const peso = op.remove ? 0 : contentKey(op.data).length;
+        if (n > 0 && (n >= MAX_OPS_POR_LOTE || bytes + peso > MAX_BYTES_POR_LOTE)) await cerrar();
+        if (op.remove) lote.delete(op.ref); else lote.set(op.ref, op.data);
+        n++;
+        bytes += peso;
     }
+    await cerrar();
 };
 
 export const useSyncEngine = (user) => {
@@ -88,6 +119,11 @@ export const useSyncEngine = (user) => {
     const persistedQuotes = useRef(new Map());
     const persistedTrash = useRef(new Map());
     const persistedClients = useRef(new Map());
+    const persistedProducts = useRef(new Map());
+    // Una vez migrados los productos a subcolección, el auto-guardado deja de
+    // escribir el array en el documento raíz: si siguiera haciéndolo, el
+    // documento volvería a crecer y el límite de 1 MB seguiría acechando.
+    const productsMigrated = useRef(false);
 
     // 1. INITIAL LOAD
     useEffect(() => {
@@ -103,51 +139,84 @@ export const useSyncEngine = (user) => {
 
             try {
                 // Fetch all docs in parallel
-                const [userRoot, productsSub, configSub, historySub, quotesSnap, trashSnap, clientsSnap] = await Promise.all([
+                const [userRoot, productsSub, configSub, historySub, quotesSnap, trashSnap, clientsSnap, productsSnap] = await Promise.all([
                     getDoc(doc(db, "users", user.uid)),
                     getDoc(doc(db, "users", user.uid, "data", "products")),
                     getDoc(doc(db, "users", user.uid, "data", "config")),
                     getDoc(doc(db, "users", user.uid, "data", "history")),
                     getDocs(collection(db, "users", user.uid, "quotes")),
                     getDocs(collection(db, "users", user.uid, "trash")),
-                    getDocs(collection(db, "users", user.uid, "clients"))
+                    getDocs(collection(db, "users", user.uid, "clients")),
+                    getDocs(collection(db, "users", user.uid, "products"))
                 ]);
 
-                // 1. Products Strategy (Root > Subcollection)
-                let productsLoaded = false;
-                if (userRoot.exists()) {
-                    const data = userRoot.data();
-                    if (data.products) {
-                        // UNMARSHAL HERE for modern schema
-                        let rawProducts = data.products;
+                const rootData = userRoot.exists() ? userRoot.data() : {};
 
-                        if (!Array.isArray(rawProducts) && rawProducts.list) {
-                            rawProducts = rawProducts.list;
-                        }
+                // Las categorías se quedan en el documento raíz: son cuatro
+                // cadenas, no engordan nada.
+                if (Array.isArray(rootData.categories)) setCategories(rootData.categories);
 
-                        const unmarshaledProducts = unmarshal(rawProducts);
-
-                        if (Array.isArray(unmarshaledProducts)) {
-                            setProducts(unmarshaledProducts);
-                            productsLoaded = true;
-                        }
-                    }
-                    // Load Categories from Root if available
-                    if (data.categories && Array.isArray(data.categories)) {
-                        setCategories(data.categories);
-                    }
-                }
-
-                if (!productsLoaded && productsSub.exists()) {
-                    const data = productsSub.data();
-                    const list = unmarshal(data.list || []);
-                    setProducts(list);
-                    setCategories(data.categories || ['General']);
-                    log('Productos cargados desde subcolección antigua (Legacy).');
-                } else if (productsLoaded) {
-                    log('Productos cargados desde Root (Modern).');
+                // 1. PRODUCTOS: un documento por producto en la subcolección
+                // users/{uid}/products.
+                //
+                // Antes vivían TODOS en un array del documento raíz, y como
+                // cada uno lleva su foto en base64 (~150-200 KB), bastaban
+                // cinco o seis para acercarse al límite de 1 MB por documento
+                // de Firestore: a partir de ahí la cuenta dejaba de guardar.
+                // Con un documento por producto, ese límite pasa a ser por
+                // producto — inalcanzable — en vez de para el catálogo entero.
+                if (rootData.productsMigratedAt) {
+                    const lista = productsSnap.docs.map(d => unmarshal(d.data()));
+                    setProducts(lista);
+                    persistedProducts.current = new Map(lista.map(p => [safeDocId(p.id), contentKey(marshal(p))]));
+                    productsMigrated.current = true;
+                    log(`Productos cargados desde subcolección: ${lista.length}.`);
                 } else {
-                    log('No se encontraron productos. Iniciando vacío.');
+                    // Origen legacy: array del raíz o, más antiguo aún, el
+                    // documento data/products.
+                    let legacy = [];
+                    if (rootData.products) {
+                        let raw = rootData.products;
+                        if (!Array.isArray(raw) && raw.list) raw = raw.list;
+                        const desmarshalado = unmarshal(raw);
+                        if (Array.isArray(desmarshalado)) legacy = desmarshalado;
+                    }
+                    if (legacy.length === 0 && productsSub.exists()) {
+                        const data = productsSub.data();
+                        legacy = unmarshal(data.list || []) || [];
+                        if (Array.isArray(data.categories)) setCategories(data.categories);
+                        log('Productos encontrados en el esquema antiguo data/products.');
+                    }
+
+                    // Unión por id con lo que ya hubiera en la subcolección:
+                    // idempotente si una migración anterior se quedó a medias.
+                    const yaEnSub = productsSnap.docs.map(d => unmarshal(d.data()));
+                    const vistos = new Set(yaEnSub.map(p => safeDocId(p.id)));
+                    const lista = [...yaEnSub, ...legacy.filter(p => p && !vistos.has(safeDocId(p.id)))]
+                        // Un producto sin id daría el mismo nombre de documento
+                        // que otro igual de roto, y uno pisaría al otro sin
+                        // avisar. Se le pone uno antes de escribir.
+                        .map((p, i) => (p.id === undefined || p.id === null || String(p.id).trim() === '')
+                            ? { ...p, id: `${Date.now()}-${i}` }
+                            : p);
+
+                    if (lista.length > 0) {
+                        log(`⏫ Migrando ${lista.length} producto(s) a subcolección...`);
+                        await commitOps(lista.map(p => ({
+                            ref: doc(db, 'users', user.uid, 'products', safeDocId(p.id)),
+                            data: marshal(p),
+                        })));
+                    }
+                    // La marca va al final: si algo falla antes, la próxima
+                    // carga reintenta la migración entera. El array del raíz NO
+                    // se borra: queda congelado como copia de seguridad y, al
+                    // dejar de escribirse, el documento deja de crecer.
+                    await setDoc(doc(db, 'users', user.uid), { productsMigratedAt: Date.now() }, { merge: true });
+
+                    setProducts(lista);
+                    persistedProducts.current = new Map(lista.map(p => [safeDocId(p.id), contentKey(marshal(p))]));
+                    productsMigrated.current = true;
+                    log('✅ Productos migrados. El array del documento raíz queda como copia de seguridad.');
                 }
 
                 // 2. Config
@@ -287,16 +356,13 @@ export const useSyncEngine = (user) => {
 
         try {
             // MARSHALLING (Sanitize + Nested Array Fix)
-            const cleanProducts = marshal(products);
             const cleanConfig = marshal(config);
 
-            // BATCH OR PARALLEL WRITES?
-            // Let's do parallel for speed, but unrelated errors imply partial success.
-            // Critical: Products and Categories on Root
-            await setDoc(doc(db, 'users', user.uid), {
-                products: cleanProducts,
-                categories: categories
-            }, { merge: true });
+            // En el documento raíz ya SOLO van las categorías. Los productos
+            // viven en su subcolección desde la migración; volver a escribir
+            // aquí el array entero (con las fotos en base64) es justo lo que
+            // hacía crecer el documento hasta el límite de 1 MB.
+            await setDoc(doc(db, 'users', user.uid), { categories }, { merge: true });
 
             // Subcollections
             await setDoc(doc(db, 'users', user.uid, 'data', 'config'), cleanConfig);
@@ -323,13 +389,19 @@ export const useSyncEngine = (user) => {
             const nextQuotes = diffInto(history, q => q.id, persistedQuotes, 'quotes');
             const nextTrash = diffInto(deletedHistory, t => t.deletedAt, persistedTrash, 'trash');
             const nextClients = diffInto(clients, c => clientDocId(c), persistedClients, 'clients');
+            // Los productos solo se escriben en la subcolección una vez
+            // migrados; si la migración aún no ha corrido, no tocarlos.
+            const nextProducts = productsMigrated.current
+                ? diffInto(products, p => safeDocId(p.id), persistedProducts, 'products')
+                : persistedProducts.current;
             if (ops.length > 0) {
                 await commitOps(ops);
-                log(`Historial: ${ops.length} documento(s) escritos/borrados.`);
+                log(`${ops.length} documento(s) escritos/borrados.`);
             }
             persistedQuotes.current = nextQuotes;
             persistedTrash.current = nextTrash;
             persistedClients.current = nextClients;
+            persistedProducts.current = nextProducts;
 
             setStatus('READY'); // Return to ready
             consecutiveNetworkErrors.current = 0;
