@@ -246,11 +246,12 @@ async function executeTool(uid, name, args = {}) {
         await appendQuote(uid, quote);
         return {
             creado: true,
+            id: quote.id, // la interfaz lo usa para el botón "abrir en el presupuestador"
             numero: quote.number,
             cliente: quote.client.name,
             lineas: items.map(lineaView),
             totales: { bruto: eur(grossTotal), descuento: eur(discountAmount), neto: eur(netTotal), ivaPorcentaje: iva, total: eur(grandTotal) },
-            nota: 'Guardado como PENDIENTE; aparece en el historial de la app en unos segundos. El envío al cliente lo hace el usuario desde la app.',
+            nota: 'Guardado como PENDIENTE. Bajo tu respuesta la app muestra un botón para abrirlo directamente en el presupuestador; menciónalo brevemente. El envío al cliente lo hace el usuario desde la app.',
         };
     }
 
@@ -346,6 +347,10 @@ export async function POST(req) {
     // 3. Bucle de herramientas.
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
     const acciones = []; // resumen de herramientas usadas, para la interfaz
+    // Presupuestos creados en este turno: la interfaz pinta con ellos el botón
+    // de "abrir en el presupuestador", para que del chat se salte directo al
+    // documento recién creado sin buscarlo en el historial.
+    const presupuestosCreados = [];
 
     try {
         for (let ronda = 0; ronda <= MAX_TOOL_ROUNDS; ronda++) {
@@ -379,6 +384,7 @@ export async function POST(req) {
                 return NextResponse.json({
                     text: texto || 'No he podido generar respuesta. Prueba a reformular.',
                     acciones,
+                    presupuestos: presupuestosCreados,
                 });
             }
 
@@ -394,6 +400,9 @@ export async function POST(req) {
                 } catch (err) {
                     console.error(`Tool ${name} error:`, err);
                     result = { error: 'Fallo interno ejecutando la herramienta.' };
+                }
+                if (name === 'crear_presupuesto' && result?.creado) {
+                    presupuestosCreados.push({ id: result.id, numero: result.numero, cliente: result.cliente });
                 }
                 responseParts.push({ functionResponse: { name, response: { result } } });
             }

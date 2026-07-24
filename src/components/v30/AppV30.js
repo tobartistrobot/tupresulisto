@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ToastProvider, useToast } from '../../context/ToastContext';
 import { LayoutDashboard, ShoppingCart, Archive, Settings, LogOut, Users, Cloud, CloudOff, RefreshCw, Loader2, Calculator, Crown, Bot } from 'lucide-react';
 import ThemeToggle from '../ThemeToggle';
@@ -121,6 +121,12 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
         window.scrollTo(0, 0);
     }, [view]);
 
+    // Espejo del historial para el botón "abrir presupuesto" del agente: sus
+    // reintentos son asíncronos y un closure sobre `history` se quedaría con
+    // la versión de cuando se pulsó, no con la que va llegando del onSnapshot.
+    const historyMirrorRef = useRef(history);
+    historyMirrorRef.current = history;
+
     // Caducidad automática: los pendientes que llevan demasiado tiempo sin
     // respuesta pasan a rechazado, si el usuario activó la opción en
     // Configuración. Corre al cargar y cuando cambian datos; el guardado lo
@@ -198,6 +204,25 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
         }
     };
 
+    /**
+     * Abre en el presupuestador un presupuesto recién creado por el agente.
+     * El agente escribe con el Admin SDK y el documento llega a la app por el
+     * onSnapshot "en unos segundos": si el usuario pulsa el botón antes de que
+     * llegue, esperamos con reintentos cortos en vez de fallar a la primera.
+     */
+    const openQuoteFromAgent = async (p) => {
+        for (let intento = 0; intento < 6; intento++) {
+            const quote = historyMirrorRef.current.find(q => String(q.id) === String(p.id));
+            if (quote) {
+                setShowAgent(false);
+                handleNavigate(quote);
+                return;
+            }
+            await new Promise(r => setTimeout(r, 700));
+        }
+        toast('El presupuesto aún se está sincronizando. Ábrelo desde el historial en unos segundos.', 'info');
+    };
+
     const handleDeleteQuote = (quote) => {
         // La ficha del cliente se conserva aunque este fuera su último
         // presupuesto: nos aseguramos de que esté guardada antes de quitarlo.
@@ -272,7 +297,7 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
 
     return (
         <div className="flex h-[100dvh] w-full bg-slate-100 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-100 overflow-hidden relative isolate">
-            {showAgent && <AgentChat user={user} onClose={() => setShowAgent(false)} />}
+            {showAgent && <AgentChat user={user} onClose={() => setShowAgent(false)} onOpenQuote={openQuoteFromAgent} />}
             {showUpgradeModal && (
                 <UpgradeModal
                     onClose={() => { setShowUpgradeModal(false); setUpgradeMessage(null); }}

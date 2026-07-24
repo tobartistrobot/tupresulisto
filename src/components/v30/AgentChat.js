@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, X, Send, Mic, MicOff, Loader2, Sparkles, Paperclip, FileText } from 'lucide-react';
+import { Bot, X, Send, Mic, MicOff, Loader2, Sparkles, Paperclip, FileText, ArrowRight } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 
 /**
@@ -67,7 +67,7 @@ const readPdf = (file) => new Promise((resolve, reject) => {
     reader.readAsDataURL(file);
 });
 
-const AgentChat = ({ user, onClose }) => {
+const AgentChat = ({ user, onClose, onOpenQuote }) => {
     const toast = useToast();
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
@@ -244,7 +244,7 @@ const AgentChat = ({ user, onClose }) => {
                 setMessages(m => [...m, { role: 'model', text: data.error || 'Algo ha fallado. Inténtalo de nuevo.', isError: true }]);
                 return;
             }
-            setMessages(m => [...m, { role: 'model', text: data.text, acciones: data.acciones }]);
+            setMessages(m => [...m, { role: 'model', text: data.text, acciones: data.acciones, presupuestos: data.presupuestos }]);
         } catch {
             setMessages(m => [...m, { role: 'model', text: 'No hay conexión con el agente. Comprueba tu internet e inténtalo de nuevo.', isError: true }]);
         } finally {
@@ -318,6 +318,26 @@ const AgentChat = ({ user, onClose }) => {
                                     <p className="mt-1.5 text-[10px] font-bold uppercase tracking-wide opacity-60">
                                         {[...new Set(m.acciones)].join(' · ').replaceAll('_', ' ')}
                                     </p>
+                                )}
+                                {/* Del chat al documento en un toque: el agente lo crea,
+                                    y desde aquí se abre en el presupuestador para revisarlo
+                                    y enviarlo, sin buscarlo en el historial. */}
+                                {m.presupuestos?.length > 0 && onOpenQuote && (
+                                    <div className="mt-2 space-y-1.5">
+                                        {m.presupuestos.map(p => (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => onOpenQuote(p)}
+                                                className="w-full flex items-center justify-between gap-2 text-sm font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/50 rounded-xl px-3.5 py-2.5 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                                            >
+                                                <span className="flex items-center gap-2 min-w-0">
+                                                    <FileText size={16} className="shrink-0" />
+                                                    <span className="truncate">Abrir presupuesto #{p.numero}</span>
+                                                </span>
+                                                <ArrowRight size={16} className="shrink-0" />
+                                            </button>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         </div>
