@@ -15,6 +15,13 @@ import { track, EVENTS } from '../../lib/analytics';
 
 const formatCurrency = (amount) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount || 0);
 
+// Medidas del folio A4 y límites del zoom de la vista previa (ver más abajo).
+const A4_WIDTH_PX = 794;   // 210mm en píxeles CSS
+const A4_HEIGHT_PX = 1123; // 297mm
+const MIN_SCALE = 0.2;
+const MAX_SCALE = 2.5;
+const EDGE_MARGIN = 16;    // aire entre el folio y el borde de la pantalla
+
 const CartSummaryItem = React.memo(({ item, idx, onRemove, onUpdateQty, onMove }) => (
     <div className="p-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 shadow-sm hover:shadow-lg dark:hover:shadow-black/30 transition-all duration-300 mb-2 animate-fade-in flex items-center gap-3">
         <div className="w-12 h-12 bg-slate-50 dark:bg-slate-700 rounded-lg flex items-center justify-center shrink-0 border border-slate-100 dark:border-slate-600">
@@ -50,22 +57,12 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
     const [filterCategory, setFilterCategory] = useState('Todas');
     const [viewMode, setViewMode] = useState('edit');
     const [mobileTab, setMobileTab] = useState('products');
-    const [zoomLevel, setZoomLevel] = useState(0.8);
     const [docType, setDocType] = useState('quote');
     const [showAdjustments, setShowAdjustments] = useState(false);
     const [showClientForm, setShowClientForm] = useState(false);
     const [isSharing, setIsSharing] = useState(false);
 
     const toast = useToast();
-
-    // Ajusta el zoom inicial de la vista previa para que el documento A4 (210mm ≈ 794px)
-    // quepa en el ancho de la pantalla. En móvil evita que el PDF se corte por los lados.
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const A4_WIDTH_PX = 794; // 210mm en píxeles CSS
-        const fitScale = Math.min(0.8, (window.innerWidth - 48) / A4_WIDTH_PX);
-        if (fitScale < 0.8) setZoomLevel(Math.max(0.3, fitScale));
-    }, []);
 
     // Delegate business logic to custom hook
     const {
@@ -95,6 +92,182 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
         toast
     });
     const filteredClients = clientsDb.filter(c => (c.name || '').toLowerCase().includes(clientSearchTerm.toLowerCase()) || (c.phone || '').includes(clientSearchTerm));
+
+    /* ──────────────────────────────────────────────────────────────────────
+     * Vista previa: arrastrar para mover, pellizcar para ampliar.
+     *
+     * Antes el documento se escalaba con transform y se dejaba el
+     * desplazamiento al scroll del navegador. No funcionaba en móvil: la caja
+     * de maquetación sigue midiendo 794x1123 px aunque se vea al 40%, así que
+     * el contenedor daba scroll a espacio vacío, y con justify-center no había
+     * forma de llegar al borde izquierdo del folio.
+     *
+     * Ahora el documento se coloca a mano (translate + scale desde la esquina
+     * superior izquierda) y los gestos los llevamos nosotros con Pointer
+     * Events: valen igual para dedo y para ratón, así que el escritorio sigue
+     * funcionando sin código aparte. No se añade librería de pan/zoom: son
+     * cuatro operaciones y el proyecto ya arrastra bastantes dependencias.
+     * ────────────────────────────────────────────────────────────────────── */
+    const previewRef = useRef(null);
+    const [view, setView] = useState({ scale: 0.8, x: 0, y: 0 });
+    // Espejo del estado para que los gestos calculen sobre el valor actual sin
+    // depender de que React haya vuelto a renderizar entre dos "pointermove".
+    const viewRef = useRef(view);
+    const gestureRef = useRef({ pointers: new Map(), pinch: null, last: null });
+
+    const clampScale = useCallback((s) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s)), []);
+
+    /** Ajusta la posición para que el folio no se pueda perder fuera de la pantalla. */
+    const clampView = useCallback((next) => {
+        const scale = clampScale(next.scale);
+        const el = previewRef.current;
+        if (!el) return { scale, x: next.x, y: next.y };
+        const docWidth = A4_WIDTH_PX * scale;
+        const docHeight = (printableDocRef.current?.offsetHeight || A4_HEIGHT_PX) * scale;
+        // Si cabe entero en un eje lo centramos; si no, no dejamos que su borde
+        // se despegue del borde de la pantalla.
+        const axis = (pos, docSize, viewSize) => (
+            docSize + EDGE_MARGIN * 2 <= viewSize
+                ? (viewSize - docSize) / 2
+                : Math.min(EDGE_MARGIN, Math.max(viewSize - docSize - EDGE_MARGIN, pos))
+        );
+        return {
+            scale,
+            x: axis(next.x, docWidth, el.clientWidth),
+            y: axis(next.y, docHeight, el.clientHeight),
+        };
+    }, [clampScale, printableDocRef]);
+
+    const applyView = useCallback((next) => {
+        const clamped = clampView(next);
+        viewRef.current = clamped;
+        setView(clamped);
+    }, [clampView]);
+
+    /** Deja el folio entero a la vista, centrado. */
+    const fitToScreen = useCallback(() => {
+        const el = previewRef.current;
+        if (!el) return;
+        const scale = Math.min(1, (el.clientWidth - EDGE_MARGIN * 2) / A4_WIDTH_PX);
+        applyView({ scale, x: 0, y: EDGE_MARGIN });
+    }, [applyView]);
+
+    /** Zoom desde los botones: se amplía por el centro de lo que se está viendo. */
+    const zoomBy = useCallback((factor) => {
+        const el = previewRef.current;
+        if (!el) return;
+        const v = viewRef.current;
+        const cx = el.clientWidth / 2;
+        const cy = el.clientHeight / 2;
+        const scale = clampScale(v.scale * factor);
+        applyView({
+            scale,
+            x: cx - ((cx - v.x) / v.scale) * scale,
+            y: cy - ((cy - v.y) / v.scale) * scale,
+        });
+    }, [applyView, clampScale]);
+
+    // Al entrar en la vista previa, encuadrar. Y si la ventana cambia de tamaño
+    // (girar el móvil, barra de direcciones que aparece) solo recolocamos: sería
+    // molesto perder el zoom que el usuario acaba de hacer.
+    useEffect(() => {
+        if (viewMode !== 'print') return;
+        // Si se salió de la vista con el dedo apoyado, no heredamos ese gesto.
+        gestureRef.current = { pointers: new Map(), pinch: null, last: null };
+        const frame = requestAnimationFrame(fitToScreen);
+        const onResize = () => applyView(viewRef.current);
+        window.addEventListener('resize', onResize);
+        return () => {
+            cancelAnimationFrame(frame);
+            window.removeEventListener('resize', onResize);
+        };
+    }, [viewMode, fitToScreen, applyView]);
+
+    // La rueda hay que escucharla a mano: React registra onWheel como pasivo y
+    // preventDefault() no surtiría efecto, así que la página entera haría scroll.
+    useEffect(() => {
+        if (viewMode !== 'print') return;
+        const el = previewRef.current;
+        if (!el) return;
+        const onWheel = (e) => {
+            e.preventDefault();
+            const v = viewRef.current;
+            if (e.ctrlKey) { // pellizco del trackpad o Ctrl+rueda
+                const rect = el.getBoundingClientRect();
+                const px = e.clientX - rect.left;
+                const py = e.clientY - rect.top;
+                const scale = clampScale(v.scale * (1 - e.deltaY / 300));
+                applyView({
+                    scale,
+                    x: px - ((px - v.x) / v.scale) * scale,
+                    y: py - ((py - v.y) / v.scale) * scale,
+                });
+            } else {
+                applyView({ scale: v.scale, x: v.x - e.deltaX, y: v.y - e.deltaY });
+            }
+        };
+        el.addEventListener('wheel', onWheel, { passive: false });
+        return () => el.removeEventListener('wheel', onWheel);
+    }, [viewMode, applyView, clampScale]);
+
+    /** Fija el punto del documento que hay bajo los dos dedos: es el que no se moverá. */
+    const startPinch = useCallback(() => {
+        const g = gestureRef.current;
+        const el = previewRef.current;
+        if (!el || g.pointers.size < 2) return;
+        const [a, b] = [...g.pointers.values()];
+        const rect = el.getBoundingClientRect();
+        const midX = (a.x + b.x) / 2 - rect.left;
+        const midY = (a.y + b.y) / 2 - rect.top;
+        const v = viewRef.current;
+        g.pinch = {
+            dist: Math.hypot(b.x - a.x, b.y - a.y) || 1,
+            scale: v.scale,
+            docX: (midX - v.x) / v.scale,
+            docY: (midY - v.y) / v.scale,
+        };
+        g.last = null;
+    }, []);
+
+    const handlePointerDown = useCallback((e) => {
+        const g = gestureRef.current;
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+        g.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (g.pointers.size >= 2) startPinch();
+        else g.last = { x: e.clientX, y: e.clientY };
+    }, [startPinch]);
+
+    const handlePointerMove = useCallback((e) => {
+        const g = gestureRef.current;
+        if (!g.pointers.has(e.pointerId)) return;
+        g.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        const v = viewRef.current;
+
+        if (g.pinch && g.pointers.size >= 2) {
+            const el = previewRef.current;
+            const [a, b] = [...g.pointers.values()];
+            const rect = el.getBoundingClientRect();
+            const midX = (a.x + b.x) / 2 - rect.left;
+            const midY = (a.y + b.y) / 2 - rect.top;
+            const scale = clampScale(g.pinch.scale * (Math.hypot(b.x - a.x, b.y - a.y) / g.pinch.dist));
+            // Mover los dos dedos a la vez también desplaza: el punto anclado
+            // sigue al punto medio.
+            applyView({ scale, x: midX - g.pinch.docX * scale, y: midY - g.pinch.docY * scale });
+        } else if (g.last) {
+            applyView({ scale: v.scale, x: v.x + (e.clientX - g.last.x), y: v.y + (e.clientY - g.last.y) });
+            g.last = { x: e.clientX, y: e.clientY };
+        }
+    }, [applyView, clampScale]);
+
+    const handlePointerUp = useCallback((e) => {
+        const g = gestureRef.current;
+        g.pointers.delete(e.pointerId);
+        g.pinch = null;
+        // Si levantar un dedo deja otro apoyado, se sigue arrastrando con ese.
+        const remaining = [...g.pointers.values()][0];
+        g.last = remaining ? { x: remaining.x, y: remaining.y } : null;
+        if (g.pointers.size >= 2) startPinch();
+    }, [startPinch]);
 
     /**
      * Genera el PDF del presupuesto y lo entrega al cliente en un solo paso:
@@ -166,11 +339,33 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
 
     if (viewMode === 'print') return (
         <div className={`fixed inset-0 z-[100] bg-slate-100 flex flex-col h-safe-screen w-full fixed-print-view smooth-scroll`}>
-            <div className="absolute top-4 left-4 z-50 bg-white shadow-xl rounded-lg p-1 flex border border-slate-200 doc-type-switch"><button onClick={() => setDocType('quote')} className={`px-4 py-2 text-xs font-bold rounded-md transition-all ${docType === 'quote' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>PRESUPUESTO</button><button onClick={() => setDocType('invoice')} className={`px-4 py-2 text-xs font-bold rounded-md transition-all ${docType === 'invoice' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>FACTURA</button></div>
-            <div className="zoom-controls absolute top-4 right-4 z-50 bg-white shadow-xl rounded-full p-2 flex gap-4 items-center border border-slate-200"><button onClick={() => setZoomLevel(Math.max(0.3, zoomLevel - 0.1))} className="p-2 text-slate-600 hover:text-blue-600"><ZoomOut size={20} /></button><span className="text-xs font-bold w-8 text-center">{Math.round(zoomLevel * 100)}%</span><button onClick={() => setZoomLevel(Math.min(1.5, zoomLevel + 0.1))} className="p-2 text-slate-600 hover:text-blue-600"><ZoomIn size={20} /></button></div>
-            <div className="flex-1 overflow-x-auto overflow-y-auto p-4 md:p-8 flex justify-center items-start print:p-0 print:block">
-                <div className="print-scale-wrapper origin-top transition-transform duration-200" style={{ transform: `scale(${zoomLevel})` }}>
-                    <div ref={printableDocRef} className="w-[210mm] min-w-[210mm] min-h-[297mm] bg-white print-container shadow-2xl p-[15mm] mx-auto text-sm relative">
+            {/* Barra superior REAL, no flotante: cuando las pestañas y el zoom
+                iban en absolute tapaban la cabecera del documento en móvil, que
+                es justo la parte que el usuario quiere enseñar al cliente. */}
+            <div className="shrink-0 z-50 bg-white border-b border-slate-200 px-2 py-1.5 flex items-center justify-between gap-2 no-print">
+                <div className="flex bg-slate-100 rounded-lg p-1 doc-type-switch">
+                    <button onClick={() => setDocType('quote')} className={`px-3 md:px-4 py-2 text-[11px] md:text-xs font-bold rounded-md transition-all ${docType === 'quote' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-white'}`}>PRESUPUESTO</button>
+                    <button onClick={() => setDocType('invoice')} className={`px-3 md:px-4 py-2 text-[11px] md:text-xs font-bold rounded-md transition-all ${docType === 'invoice' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-white'}`}>FACTURA</button>
+                </div>
+                <div className="zoom-controls flex items-center gap-1 bg-slate-100 rounded-full p-1">
+                    <button onClick={() => zoomBy(1 / 1.2)} title="Alejar" className="p-2 text-slate-600 hover:text-blue-600 touch-sm w-10 h-10 flex items-center justify-center"><ZoomOut size={20} /></button>
+                    <button onClick={fitToScreen} title="Ajustar a la pantalla" className="text-xs font-bold w-11 text-center text-slate-600 hover:text-blue-600 touch-sm h-10">{Math.round(view.scale * 100)}%</button>
+                    <button onClick={() => zoomBy(1.2)} title="Acercar" className="p-2 text-slate-600 hover:text-blue-600 touch-sm w-10 h-10 flex items-center justify-center"><ZoomIn size={20} /></button>
+                </div>
+            </div>
+            {/* touch-action:none es imprescindible: sin él el navegador se queda
+                el gesto para hacer scroll y nunca llegan los "pointermove". */}
+            <div
+                ref={previewRef}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                style={{ touchAction: 'none' }}
+                className="relative flex-1 min-h-0 overflow-hidden select-none bg-slate-200 cursor-grab active:cursor-grabbing print:overflow-visible print:bg-white"
+            >
+                <div className="print-scale-wrapper absolute top-0 left-0 origin-top-left will-change-transform" style={{ transform: `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.scale})` }}>
+                    <div ref={printableDocRef} className="w-[210mm] min-w-[210mm] min-h-[297mm] bg-white print-container shadow-2xl p-[15mm] text-sm relative">
                         <div className="flex justify-between items-start border-b-2 pb-6 mb-8" style={{ borderColor: config.color }}><div>{config.logo ? <img src={config.logo} className="h-16 mb-4 object-contain" /> : <h1 className="text-4xl font-black mb-2" style={{ color: config.color }}>{config.name}</h1>}<div className="text-xs text-slate-500 space-y-1"><p>{config.address}</p>{config.cif && <p>CIF/NIF: {config.cif}</p>}<p>{config.phone} • {config.email}</p><p>{config.website}</p></div></div><div className="text-right"><h2 className="text-4xl font-black tracking-tight text-slate-800 mb-2">{docType === 'invoice' ? 'FACTURA' : 'PRESUPUESTO'}</h2><div className="flex flex-col items-end my-2"><span className="text-lg font-bold text-slate-600">#{quoteMeta.number}</span><span className="text-sm text-slate-400">{quoteMeta.date}</span></div><div className="mt-4 text-left bg-slate-50 p-4 rounded-lg border border-slate-100 min-w-[250px]"><p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1">Facturar a</p><p className="font-bold text-slate-800 text-lg leading-none mb-1">{client.name}</p><p className="text-sm text-slate-600">{client.phone}</p><p className="text-sm text-slate-600">{client.address}</p></div></div></div>
                         <table className="w-full mb-8"><thead><tr className="border-b-2 text-xs uppercase text-slate-500 font-bold tracking-wider"><th className="text-left py-3 pl-2">Concepto</th><th className="text-center py-3">Medidas</th><th className="text-center py-3">Cant.</th><th className="text-right py-3 pr-2">Total</th></tr></thead><tbody>{cart.map(i => (<tr key={i.id} className="avoid-break border-b border-slate-100 last:border-0"><td className="py-4 pl-2"><div className="flex items-start gap-4">{i.product.image && <img src={i.product.image} className="w-16 h-16 object-cover rounded-lg border border-slate-200 print-visible" />}<div><p className="font-bold text-slate-800 text-base">{i.product.name}</p><p className="text-xs text-slate-500 mt-1">{i.product.category} {i.locationLabel && <span className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 ml-1">{i.locationLabel}</span>}</p>{i.selectedExtras?.length > 0 && <div className="text-[10px] text-slate-500 mt-2 flex flex-wrap gap-1">{i.selectedExtras.map(e => <span className="bg-slate-50 px-1 border border-slate-200 rounded">+{e.qty > 1 ? e.qty + 'x ' : ''}{e.name}</span>)}</div>}</div></div></td><td className="text-center text-sm py-4 text-slate-600 font-medium">{i.width} x {i.height}</td><td className="text-center font-bold text-slate-800 py-4">{i.quantity}</td><td className="text-right font-bold text-slate-800 py-4 pr-2">{formatCurrency(i.price)}</td></tr>))}</tbody></table>
                         <div className="flex justify-end avoid-break"><div className="w-80 space-y-2">
