@@ -15,6 +15,23 @@ import AgentChat from './AgentChat';
 import UpgradeModal from '../UpgradeModal';
 import VerificationPending from '../VerificationPending';
 
+/**
+ * Momento desde el que cuenta la caducidad de un presupuesto pendiente.
+ * Preferimos el último cambio de estado manual (statusChangedAt): si el
+ * usuario devuelve un presupuesto viejo a "pendiente" a propósito, el
+ * contador se reinicia en vez de re-rechazárselo al instante. Si no lo hay,
+ * la creación: el id ES un timestamp; y como red de seguridad, la fecha
+ * impresa (dd/mm/aaaa).
+ */
+const quoteClockStart = (q) => {
+    if (q.statusChangedAt) return q.statusChangedAt;
+    const fromId = Number(q.id);
+    if (Number.isFinite(fromId) && fromId > 0) return fromId;
+    const [d, m, y] = String(q.date || '').split('/').map(Number);
+    const fromDate = new Date(y, (m || 1) - 1, d || 1).getTime();
+    return Number.isFinite(fromDate) ? fromDate : Date.now();
+};
+
 class ErrorBoundary extends React.Component {
     constructor(props) { super(props); this.state = { hasError: false, error: null }; }
     static getDerivedStateFromError(error) { return { hasError: true, error }; }
@@ -104,6 +121,39 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
         window.scrollTo(0, 0);
     }, [view]);
 
+    // Caducidad automática: los pendientes que llevan demasiado tiempo sin
+    // respuesta pasan a rechazado, si el usuario activó la opción en
+    // Configuración. Corre al cargar y cuando cambian datos; el guardado lo
+    // hace el motor de sincronización (solo escribe los que cambian).
+    useEffect(() => {
+        if (status !== 'READY' || config.autoRejectEnabled !== true) return;
+        const days = Math.max(1, Number(config.autoRejectDays) || 30);
+        const cutoff = Date.now() - days * 86400000;
+        const isStalePending = (q) => (!q.status || q.status === 'pending') && quoteClockStart(q) < cutoff;
+
+        const staleCount = history.filter(isStalePending).length;
+        if (staleCount === 0) return;
+
+        setHistory(h => h.map(q => isStalePending(q)
+            ? {
+                ...q,
+                status: 'rejected',
+                // Registrar la intención: esto lo hizo la caducidad automática,
+                // no una decisión del usuario. Sin esta marca, un rechazo
+                // automático y uno manual serían indistinguibles para siempre.
+                autoRejected: true,
+                autoRejectedAt: new Date().toISOString(),
+                statusChangedAt: Date.now(),
+            }
+            : q));
+        toast(
+            staleCount === 1
+                ? `1 presupuesto pendiente pasó a rechazado por llevar más de ${days} días sin respuesta`
+                : `${staleCount} presupuestos pendientes pasaron a rechazado por llevar más de ${days} días sin respuesta`,
+            'info'
+        );
+    }, [status, config.autoRejectEnabled, config.autoRejectDays, history, setHistory, toast]);
+
     // ✨ LOADING STATE (Full Screen)
     if (status === 'LOADING') {
         return (
@@ -115,7 +165,11 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
         );
     }
 
-    const handleSaveQuote = (quote) => {
+    const handleSaveQuote = (rawQuote) => {
+        // Guardar es actividad: reinicia el reloj de la caducidad automática.
+        // Sin esto, editar un pendiente antiguo no impediría que se rechazara
+        // solo justo después, con el usuario aún trabajando en él.
+        const quote = { ...rawQuote, statusChangedAt: Date.now() };
         const exists = history.find(q => q.id === quote.id);
         if (exists) {
             setHistory(history.map(q => q.id === quote.id ? quote : q));
@@ -357,7 +411,7 @@ const AppContent = ({ onLogout, isPro, user, isImpersonating, subscription }) =>
                         onLimitReached={() => { setUpgradeMessage(null); setShowUpgradeModal(true); }}
                     />
                 </div>
-                <div className={view === 'clients' ? 'h-full' : 'hidden h-full'}><ClientManager quotesHistory={history} savedClients={clients} deletedHistory={deletedHistory} onLoadQuote={(q) => handleNavigate(q)} onDeleteClient={handleDeleteClient} onDeleteQuote={handleDeleteQuote} onRestoreItem={handleRestore} onNewQuoteForClient={(c) => { handleImportClient(c) }} onPermanentDelete={(it) => setDeletedHistory(d => d.filter(x => x.deletedAt !== it.deletedAt))} onUpdateStatus={(id, st) => setHistory(h => h.map(x => x.id === id ? { ...x, status: st } : x))} onImportClient={handleImportClient} className="h-full" /></div>
+                <div className={view === 'clients' ? 'h-full' : 'hidden h-full'}><ClientManager quotesHistory={history} savedClients={clients} deletedHistory={deletedHistory} onLoadQuote={(q) => handleNavigate(q)} onDeleteClient={handleDeleteClient} onDeleteQuote={handleDeleteQuote} onRestoreItem={handleRestore} onNewQuoteForClient={(c) => { handleImportClient(c) }} onPermanentDelete={(it) => setDeletedHistory(d => d.filter(x => x.deletedAt !== it.deletedAt))} onUpdateStatus={(id, st) => setHistory(h => h.map(x => x.id === id ? { ...x, status: st, statusChangedAt: Date.now(), autoRejected: false } : x))} onImportClient={handleImportClient} className="h-full" /></div>
                 <div className={view === 'config' ? 'h-full' : 'hidden h-full'}><SysConfig config={config} setConfig={setConfig} className="h-full" user={user} isPro={isPro} products={products} setProducts={setProducts} categories={categories} setCategories={setCategories} /></div>
             </main>
         </div>

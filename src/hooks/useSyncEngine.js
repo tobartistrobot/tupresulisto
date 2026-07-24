@@ -94,7 +94,11 @@ export const useSyncEngine = (user) => {
         website: '',
         bankAccount: '',
         legalText: 'Presupuesto válido por 15 días.',
-        iva: 21
+        iva: 21,
+        // Caducidad automática de pendientes: apagada por defecto para no
+        // cambiar el comportamiento a nadie que no la active a propósito.
+        autoRejectEnabled: false,
+        autoRejectDays: 30
     });
     const [history, setHistory] = useState([]);
     const [deletedHistory, setDeletedHistory] = useState([]);
