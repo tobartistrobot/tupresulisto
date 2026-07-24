@@ -155,7 +155,7 @@ const eur = (n) => Math.round(n * 100) / 100;
  */
 async function executeTool(uid, name, args = {}) {
     if (name === 'listar_productos') {
-        const products = await loadProducts(uid);
+        const products = await loadProducts(uid, { conFoto: false });
         if (products.length === 0) return { error: 'El catálogo está vacío. El usuario debe crear productos en la app antes de poder presupuestar.' };
         return { unidadMedidas: 'mm', productos: products.map(productView) };
     }
@@ -195,7 +195,8 @@ async function executeTool(uid, name, args = {}) {
     }
 
     if (name === 'calcular_precio') {
-        const [products, iva] = await Promise.all([loadProducts(uid), loadIva(uid)]);
+        // Sin fotos: aquí solo se calcula, no se guarda nada.
+        const [products, iva] = await Promise.all([loadProducts(uid, { conFoto: false }), loadIva(uid)]);
         if (products.length === 0) return { error: 'El catálogo está vacío: no hay productos con los que presupuestar.' };
         const { items, error } = buildQuoteItems(products, args.lineas || []);
         if (error) return { error };
@@ -211,7 +212,8 @@ async function executeTool(uid, name, args = {}) {
 
     if (name === 'crear_presupuesto') {
         if (!args.cliente?.nombre) return { error: 'Falta el nombre del cliente.' };
-        const [products, iva, history] = await Promise.all([loadProducts(uid), loadIva(uid), loadHistory(uid)]);
+        // CON fotos: la foto del producto se guarda en la línea y sale en el PDF.
+        const [products, iva, history] = await Promise.all([loadProducts(uid, { conFoto: true }), loadIva(uid), loadHistory(uid)]);
         if (products.length === 0) return { error: 'El catálogo está vacío: no hay productos con los que presupuestar.' };
         const { items, error } = buildQuoteItems(products, args.lineas || []);
         if (error) return { error };

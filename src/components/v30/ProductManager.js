@@ -86,7 +86,13 @@ const processImage = (file) => new Promise((resolve, reject) => {
         const image = new Image();
         image.onload = () => {
             const canvas = document.createElement('canvas');
-            const max_size = 800; let w = image.width; let h = image.height;
+            // 600 px con margen sobre el uso más exigente: la ficha del
+            // catálogo son 2 columnas en móvil (~170 px) que en una pantalla
+            // de densidad 3x pide ~510 px. En el PDF la foto sale a 64 px con
+            // captura al doble (128 px) y en el carrito a 20 px. Guardarlas a
+            // 800 px era pagar el doble de peso en cada sincronización para
+            // unos píxeles que nadie llega a ver.
+            const max_size = 600; let w = image.width; let h = image.height;
             if (w > h) { if (w > max_size) { h *= max_size / w; w = max_size; } } else { if (h > max_size) { w *= max_size / h; h = max_size; } }
             canvas.width = w; canvas.height = h;
             const ctx = canvas.getContext('2d');
