@@ -135,7 +135,7 @@ Un ref `isMounted` que el cleanup pone a `false` debe volver a `true` DENTRO del
 
 ### `html2canvas-pro`, nunca `html2canvas`
 
-Tailwind v4 genera colores `oklch()` que el clásico no sabe parsear y revienta el PDF. Vale para cualquier librería que lea colores computados del DOM.
+Tailwind v4 define su paleta en `oklch()` y el compilador de Next la emite como `lab()` (medido: 0 `oklch` y 116 `lab(` en el CSS final; el `getComputedStyle` del navegador también devuelve `lab(...)`). Cualquiera de los dos espacios modernos revienta al `html2canvas` clásico, que no sabe parsearlos. Vale para toda librería que lea colores computados del DOM: compruébalo antes de instalarla.
 
 ### El service worker solo se registra en producción
 
