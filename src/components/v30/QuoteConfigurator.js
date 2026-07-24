@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import MatrixEditor from './MatrixEditor';
 import StatusSelector from './StatusSelector';
+import PaginatedQuoteDocument from './PaginatedQuoteDocument';
 import { round2, sanitizeFloat } from '../../utils/mathUtils';
 import { useQuoteLogic } from '../../hooks/useQuoteLogic';
 import { track, EVENTS } from '../../lib/analytics';
@@ -281,7 +282,12 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
             const { generateQuotePdfBlob, shareQuotePdf, buildQuoteFilename, buildQuoteMessage } =
                 await import('../../utils/quoteSharing');
 
-            const blob = await generateQuotePdfBlob(printableDocRef.current);
+            // Cada folio A4 ya viene paginado en el DOM; capturamos uno por uno
+            // para que el PDF respete los mismos saltos que se ven en pantalla.
+            const pageNodes = printableDocRef.current
+                ? [...printableDocRef.current.querySelectorAll('.pdf-page')]
+                : [];
+            const blob = await generateQuotePdfBlob(pageNodes);
             const filename = buildQuoteFilename({
                 docType,
                 number: quoteMeta.number,
@@ -365,19 +371,19 @@ const QuoteConfigurator = ({ products, categories, config, cart, setCart, onSave
                 className="relative flex-1 min-h-0 overflow-hidden select-none bg-slate-200 cursor-grab active:cursor-grabbing print:overflow-visible print:bg-white"
             >
                 <div className="print-scale-wrapper absolute top-0 left-0 origin-top-left will-change-transform" style={{ transform: `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.scale})` }}>
-                    <div ref={printableDocRef} className="w-[210mm] min-w-[210mm] min-h-[297mm] bg-white print-container shadow-2xl p-[15mm] text-sm relative">
-                        <div className="flex justify-between items-start border-b-2 pb-6 mb-8" style={{ borderColor: config.color }}><div>{config.logo ? <img src={config.logo} className="h-16 mb-4 object-contain" /> : <h1 className="text-4xl font-black mb-2" style={{ color: config.color }}>{config.name}</h1>}<div className="text-xs text-slate-500 space-y-1"><p>{config.address}</p>{config.cif && <p>CIF/NIF: {config.cif}</p>}<p>{config.phone} • {config.email}</p><p>{config.website}</p></div></div><div className="text-right"><h2 className="text-4xl font-black tracking-tight text-slate-800 mb-2">{docType === 'invoice' ? 'FACTURA' : 'PRESUPUESTO'}</h2><div className="flex flex-col items-end my-2"><span className="text-lg font-bold text-slate-600">#{quoteMeta.number}</span><span className="text-sm text-slate-400">{quoteMeta.date}</span></div><div className="mt-4 text-left bg-slate-50 p-4 rounded-lg border border-slate-100 min-w-[250px]"><p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1">Facturar a</p><p className="font-bold text-slate-800 text-lg leading-none mb-1">{client.name}</p><p className="text-sm text-slate-600">{client.phone}</p><p className="text-sm text-slate-600">{client.address}</p></div></div></div>
-                        <table className="w-full mb-8"><thead><tr className="border-b-2 text-xs uppercase text-slate-500 font-bold tracking-wider"><th className="text-left py-3 pl-2">Concepto</th><th className="text-center py-3">Medidas</th><th className="text-center py-3">Cant.</th><th className="text-right py-3 pr-2">Total</th></tr></thead><tbody>{cart.map(i => (<tr key={i.id} className="avoid-break border-b border-slate-100 last:border-0"><td className="py-4 pl-2"><div className="flex items-start gap-4">{i.product.image && <img src={i.product.image} className="w-16 h-16 object-cover rounded-lg border border-slate-200 print-visible" />}<div><p className="font-bold text-slate-800 text-base">{i.product.name}</p><p className="text-xs text-slate-500 mt-1">{i.product.category} {i.locationLabel && <span className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 ml-1">{i.locationLabel}</span>}</p>{i.selectedExtras?.length > 0 && <div className="text-[10px] text-slate-500 mt-2 flex flex-wrap gap-1">{i.selectedExtras.map(e => <span className="bg-slate-50 px-1 border border-slate-200 rounded">+{e.qty > 1 ? e.qty + 'x ' : ''}{e.name}</span>)}</div>}</div></div></td><td className="text-center text-sm py-4 text-slate-600 font-medium">{i.width} x {i.height}</td><td className="text-center font-bold text-slate-800 py-4">{i.quantity}</td><td className="text-right font-bold text-slate-800 py-4 pr-2">{formatCurrency(i.price)}</td></tr>))}</tbody></table>
-                        <div className="flex justify-end avoid-break"><div className="w-80 space-y-2">
-                            <div className="flex justify-between text-sm text-slate-600"><span>Subtotal</span><span className="font-medium">{formatCurrency(grossTotal)}</span></div>
-                            {financials.discountPercent > 0 && <div className="flex justify-between text-sm font-bold text-emerald-600"><span>Descuento ({financials.discountPercent}%)</span><span>-{formatCurrency(discountAmount)}</span></div>}
-                            {financials.discountPercent > 0 && <div className="flex justify-between text-sm text-slate-600 pb-2 border-b border-dashed"><span>Base imponible</span><span className="font-medium">{formatCurrency(netTotal)}</span></div>}
-                            <div className="flex justify-between text-sm text-slate-600 pb-3 border-b"><span>IVA ({vatRate}%)</span><span className="font-medium">{formatCurrency(netTotal * (vatRate / 100))}</span></div>
-                            <div className="flex justify-between text-3xl font-black bg-slate-50 p-2 rounded-lg -mx-2" style={{ color: config.color }}><span>TOTAL</span><span>{formatCurrency(grandTotal)}</span></div>
-                            {financials.deposit > 0 && <div className="flex justify-between text-sm font-bold text-slate-500 pt-2 border-t border-dashed mt-1"><span>Entrega a cuenta</span><span>-{formatCurrency(financials.deposit)}</span></div>}
-                            {financials.deposit > 0 && <div className="flex justify-between font-black text-lg border-t pt-2"><span>PENDIENTE</span><span>{formatCurrency(remainingBalance)}</span></div>}
-                        </div></div>
-                        <div className="mt-12 pt-6 border-t-2 border-slate-100 text-[10px] text-slate-500 grid grid-cols-2 gap-12"><div><b className="block mb-2 text-slate-800 uppercase tracking-wider">Método de Pago</b><div className="p-3 bg-slate-50 rounded border">{config.bankAccount || 'Consultar'}</div></div><div><b className="block mb-2 text-slate-800 uppercase tracking-wider">Términos y Condiciones</b><p style={{ whiteSpace: 'pre-line' }} className="leading-relaxed">{config.legalText}</p></div></div>
+                    {/* Contenedor de todas las páginas A4. printableDocRef envuelve
+                        el conjunto: react-to-print imprime todas, y la exportación
+                        recorre sus .pdf-page para capturarlas una a una. */}
+                    <div ref={printableDocRef} className="print-container text-sm">
+                        <PaginatedQuoteDocument
+                            config={config}
+                            docType={docType}
+                            quoteMeta={quoteMeta}
+                            client={client}
+                            cart={cart}
+                            financials={financials}
+                            totals={{ grossTotal, discountAmount, netTotal, grandTotal, remainingBalance, vatRate }}
+                        />
                     </div>
                 </div>
             </div>

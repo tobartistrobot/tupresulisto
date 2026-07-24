@@ -8,52 +8,61 @@
  */
 
 /**
- * Convierte el documento A4 ya renderizado en pantalla a un PDF (Blob).
+ * Convierte el presupuesto —ya paginado en folios A4 en el DOM— a un PDF (Blob).
+ *
+ * Antes recibía UN nodo con el documento entero, lo rasterizaba a un canvas
+ * altísimo y lo troceaba en alturas fijas de A4: el corte caía por donde pillara
+ * y partía filas y totales. Ahora recibe la lista de folios ya paginados
+ * (PaginatedQuoteDocument decide los saltos) y captura cada uno por separado:
+ * un folio = una página del PDF, sin cortes a ciegas.
  *
  * Usamos html2canvas-pro (no el html2canvas clásico) porque Tailwind v4 genera
  * colores en oklch() y el original no sabe interpretarlos.
  *
- * @param {HTMLElement} node - El div del documento A4 (printableDocRef).
+ * @param {HTMLElement[]|HTMLElement} pageNodes - Los folios .pdf-page (o uno).
  * @returns {Promise<Blob>}
  */
-export async function generateQuotePdfBlob(node) {
-    if (!node) throw new Error('No se encontró el documento a exportar');
+export async function generateQuotePdfBlob(pageNodes) {
+    const nodes = (Array.isArray(pageNodes) ? pageNodes : [pageNodes]).filter(Boolean);
+    if (!nodes.length) throw new Error('No se encontró el documento a exportar');
 
     const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
         import('html2canvas-pro'),
         import('jspdf'),
     ]);
 
-    // En pantalla el documento se muestra escalado (zoom). Lo neutralizamos
-    // durante la captura para exportar a resolución completa, y lo restauramos.
-    const wrapper = node.closest('.print-scale-wrapper');
+    // En pantalla los folios se muestran escalados (zoom). Neutralizamos el
+    // transform del contenedor durante la captura para exportar a resolución
+    // completa, y lo restauramos al terminar.
+    const wrapper = nodes[0].closest('.print-scale-wrapper');
     const previousTransform = wrapper?.style.transform ?? null;
     if (wrapper) wrapper.style.transform = 'none';
 
     try {
-        const canvas = await html2canvas(node, {
-            scale: 2, // nitidez suficiente sin disparar el peso del archivo
-            useCORS: true,
-            backgroundColor: '#ffffff',
-            logging: false,
-        });
-
         const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
 
-        const imageData = canvas.toDataURL('image/jpeg', 0.92);
-        const imageHeight = (canvas.height * pageWidth) / canvas.width;
+        for (let i = 0; i < nodes.length; i++) {
+            const canvas = await html2canvas(nodes[i], {
+                scale: 2, // nitidez suficiente sin disparar el peso del archivo
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+            });
+            const imageData = canvas.toDataURL('image/jpeg', 0.92);
+            const imageHeight = (canvas.height * pageWidth) / canvas.width;
 
-        // Primera página + tantas como haga falta si el presupuesto es largo.
-        pdf.addImage(imageData, 'JPEG', 0, 0, pageWidth, imageHeight);
-        let remaining = imageHeight - pageHeight;
-        let offset = 0;
-        while (remaining > 0) {
-            offset -= pageHeight;
-            pdf.addPage();
-            pdf.addImage(imageData, 'JPEG', 0, offset, pageWidth, imageHeight);
-            remaining -= pageHeight;
+            if (i > 0) pdf.addPage();
+            if (imageHeight > pageHeight + 1) {
+                // Salvaguarda: si un folio saliera algo más alto que el A4 (error
+                // de medición), lo encajamos a la altura de página en vez de
+                // dejar que desborde a un segundo trozo.
+                const width = (canvas.width * pageHeight) / canvas.height;
+                pdf.addImage(imageData, 'JPEG', (pageWidth - width) / 2, 0, width, pageHeight);
+            } else {
+                pdf.addImage(imageData, 'JPEG', 0, 0, pageWidth, imageHeight);
+            }
         }
 
         return pdf.output('blob');
